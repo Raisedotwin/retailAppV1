@@ -26,8 +26,50 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+.bg-beige {
+  background-color: #f5f5dc; /* Beige color */
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+}
+
+th {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  font-weight: 600;
+}
+
+tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+tr:hover {
+  background-color: #f1f5f9;
+}
+
+td {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table-container {
+  max-width: 4xl;
+  margin: 0 auto;
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
