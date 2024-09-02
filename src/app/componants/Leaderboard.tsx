@@ -1,7 +1,18 @@
 import React from 'react';
 
+interface LeaderboardEntry {
+  rank: number;
+  wallet: string;
+  rewards: number; // or string, depending on your data structure
+  apy: number;
+  daysStaked: number;
+}
 
-const Leaderboard = ({ data }) => (
+interface LeaderboardProps {
+  data: LeaderboardEntry[];
+}
+
+const Leaderboard: React.FC<LeaderboardProps> = ({ data }) => (
   <div className="table-container">
     <h2 className="text-2xl font-bold mb-4">Leaderboard</h2>
     <table className="w-full border-collapse">
@@ -30,5 +41,3 @@ const Leaderboard = ({ data }) => (
 );
 
 export default Leaderboard;
-
-  

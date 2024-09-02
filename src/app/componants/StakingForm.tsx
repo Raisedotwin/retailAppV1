@@ -16,14 +16,19 @@ const StakeForm: React.FC = () => {
   const [stake, setStake] = useState(true); // State to track staking status
 
   const estimateMintCost = async () => {
+    if (!account) {
+      alert('Please connect your wallet first.');
+      return;
+    }
+  
     try {
       const response = await Wallet.request('runes_estimateMint', {
-        destinationAddress: account,
+        destinationAddress: account ?? '', // Use an empty string or handle the null case
         feeRate: 0,
         repeats: 1,
         runeName: token,
       });
-
+  
       if (response.status === 'success') {
         setMintCost(response.result.totalCost);
       } else {
@@ -35,17 +40,26 @@ const StakeForm: React.FC = () => {
       alert(err.message);
     }
   };
-
+  
   const handleMint = async () => {
+    if (!account) {
+      alert('Please connect your wallet first.');
+      return;
+    }
+  
     try {
       const response = await Wallet.request('runes_mint', {
-        destinationAddress: account,
+        destinationAddress: account ?? '',
         feeRate: 1,
-        repeats: 1,
+        repeats: 2,
         runeName: token,
-        refundAddress: account,
+        refundAddress: account ?? '',
       });
-
+  
+      console.log('Mint response:', response);
+      console.log('Mint response status:', account);
+      console.log('Mint response result:', token);
+  
       if (response.status === 'success') {
         console.log("Fund Transaction ID:", response.result.fundTransactionId);
         console.log("Order ID:", response.result.orderId);
@@ -61,6 +75,7 @@ const StakeForm: React.FC = () => {
       alert(err.message);
     }
   };
+  
 
   const handleStake = async (e: React.FormEvent) => {
     e.preventDefault();

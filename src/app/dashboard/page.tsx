@@ -17,7 +17,7 @@ const DashboardPage = () => {
 
   return (
     <div style={pageStyle}>
-      <Dashboard data={data} />
+
     </div>
   );
 };

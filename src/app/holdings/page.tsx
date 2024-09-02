@@ -17,7 +17,6 @@ const HoldingsPage = () => {
 
   return (
     <div style={pageStyle}>
-      <Holdings data={data} />
     </div>
   );
 };

@@ -18,7 +18,6 @@ const Leaderboards = () => {
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: '#edf2f7' }}>
-      <Leaderboard data={data} />
     </div>
   );
 };
