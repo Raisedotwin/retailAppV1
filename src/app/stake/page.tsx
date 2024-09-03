@@ -5,6 +5,10 @@ import StakeForm from '../componants/StakingForm';
 import StakingVault from '../componants/StakingVault';
 import Wallet from 'sats-connect';
 import { useAccount } from '../context/AccountContext';
+import FeaturedTrader from '../componants/FeaturedTrader';
+import Categories from '../componants/Categories';
+import TrendingTop from '../componants/TrendingTop';
+import LatestActivity from '../componants/LatestActivity';
 
 interface Balance {
   runeName: string;
@@ -23,38 +27,12 @@ const StakePage: React.FC = () => {
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: '#edf2f7' }}>
-      <div className="max-w-4xl w-full mx-auto p-6 bg-white rounded-lg shadow-md">
-        <StakeForm />
-        <div className="mt-10">
-          <h2 className="text-xl font-bold mb-4">Staking Vaults</h2>
-          {loading ? (
-            <p>Loading balances...</p>
-          ) : (
-            <>
-              <StakingVault 
-                token="DOG-TO-THE-MOON" 
-                apy={10.65} 
-                rewards={0} 
-                balance={getTokenBalance('DOG-TO-THE-MOON')}
-                staked={false}
-              />
-              <StakingVault 
-                token="RUNIVERSE-TOKEN" 
-                apy={15} 
-                rewards={0} 
-                balance={getTokenBalance('RUNIVERSE-TOKEN')}
-                staked={false}
-              />
-              <StakingVault 
-                token="STAKINGDOGTOKEN" 
-                apy={8.5} 
-                rewards={0.00001} 
-                balance={getTokenBalance('STAKINGDOGTOKEN')}
-                staked={true}
-              />
-            </>
-          )}
-        </div>
+      {/* Adjusted max width to occupy more space */}
+      <div className="max-w-7xl w-full mx-auto p-6 bg-white rounded-lg shadow-md">
+         <FeaturedTrader />
+         <TrendingTop />
+         <Categories />
+         <LatestActivity />
       </div>
     </div>
   );

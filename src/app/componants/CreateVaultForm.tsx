@@ -50,7 +50,7 @@ const CreateVaultForm: React.FC = () => {
     <div className="min-h-screen p-6" style={{ backgroundColor: '#edf2f7' }}>
       <form onSubmit={handleSubmit} className="p-10 bg-black rounded-lg shadow-md max-w-lg mx-auto">
         <div className="mb-4">
-          <label className="block text-white text-sm font-bold mb-2">Token To Stake</label>
+          <label className="block text-white text-sm font-bold mb-2">Input Token</label>
           <input
             type="text"
             value={tokenToStake}
@@ -60,7 +60,7 @@ const CreateVaultForm: React.FC = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-white text-sm font-bold mb-2">Vault Name</label>
+          <label className="block text-white text-sm font-bold mb-2">Output Token</label>
           <input
             type="text"
             value={vaultName}
@@ -69,17 +69,9 @@ const CreateVaultForm: React.FC = () => {
             className="bg-gray-800 border border-gray-700 text-white p-3 w-full rounded"
           />
         </div>
+  
         <div className="mb-4">
-          <label className="block text-white text-sm font-bold mb-2">Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description"
-            className="bg-gray-800 border border-gray-700 text-white p-3 w-full rounded"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-white text-sm font-bold mb-2">Pre Mine</label>
+          <label className="block text-white text-sm font-bold mb-2">Amount</label>
           <input
             type="number"
             value={initialDeposit}
@@ -92,7 +84,7 @@ const CreateVaultForm: React.FC = () => {
           type="submit"
           className="bg-gradient-to-r from-orange-400 to-purple-500 text-white py-2 px-4 rounded w-full shadow-md"
         >
-          Create Vault
+          Swap
         </button>
       </form>
     </div>
