@@ -1,14 +1,15 @@
 "use client";
 
 import React from 'react';
-import CreateVaultForm from '../componants/CreateVaultForm';
+import PerpsForm from '../componants/PerpsForm';
 
-const CreatePage: React.FC = () => (
+
+const PerpsPage: React.FC = () => (
   <div className="min-h-screen p-6" style={{ backgroundColor: '#edf2f7' }}>
     <div className="max-w-4xl w-full mx-auto p-6">
-      <CreateVaultForm />
+        <PerpsForm />
     </div>
   </div>
 );
 
-export default CreatePage;
+export default PerpsPage;

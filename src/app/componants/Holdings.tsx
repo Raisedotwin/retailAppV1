@@ -1,15 +1,15 @@
 import React from 'react';
 
 interface HoldingsEntry {
-  rank: number;
-  wallet: string;
+  rank: number; //string
+  wallet: string; 
   rewards: number; // or string, depending on your data structure
   apy: number;
   daysStaked: number;
 }
 
 interface HoldingsProps {
-  data: HoldingsEntry[];
+  data: any[];
 }
 
 const Holdings: React.FC<HoldingsProps> = ({ data }) => (
@@ -18,7 +18,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data }) => (
     <table className="w-full border-collapse">
       <thead>
         <tr className="bg-gray-200 text-left">
-          <th className="p-3">Rank</th>
+          <th className="p-3">Name</th>
           <th className="p-3">Wallet</th>
           <th className="p-3">Rewards Earned</th>
           <th className="p-3">Average APY</th>

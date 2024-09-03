@@ -3,7 +3,7 @@
 import React from 'react';
 import Leaderboard from '../componants/Leaderboard';
 
-const Leaderboards = () => {
+const PositionsPage = () => {
   const data = [
     // Example data
     { rank: 1, wallet: 'bc1p7...p5ym0', rewards: '1,125', apy: '12.5', daysStaked: 121 },
@@ -18,9 +18,10 @@ const Leaderboards = () => {
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: '#edf2f7' }}>
+      <Leaderboard data={data} />
     </div>
   );
 };
 
-export default Leaderboards;
+export default PositionsPage;
 

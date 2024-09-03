@@ -9,20 +9,20 @@ interface LeaderboardEntry {
 }
 
 interface LeaderboardProps {
-  data: LeaderboardEntry[];
+  data: any[];
 }
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ data }) => (
   <div className="table-container">
-    <h2 className="text-2xl font-bold mb-4">Leaderboard</h2>
+    <h2 className="text-2xl font-bold mb-4">Positions</h2>
     <table className="w-full border-collapse">
       <thead>
         <tr className="bg-gray-200 text-left">
-          <th className="p-3">Rank</th>
-          <th className="p-3">Wallet</th>
-          <th className="p-3">Rewards Earned</th>
-          <th className="p-3">Average APY</th>
-          <th className="p-3">Days Staked</th>
+          <th className="p-3">Position</th>
+          <th className="p-3">Token</th>
+          <th className="p-3">Amount</th>
+          <th className="p-3">Cost Basis</th>
+          <th className="p-3">Days</th>
         </tr>
       </thead>
       <tbody>

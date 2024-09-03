@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Wallet from 'sats-connect';
 import { useAccount } from '../context/AccountContext';
 
-const CreateVaultForm: React.FC = () => {
+const SwapForm: React.FC = () => {
   const { account } = useAccount();
   const [vaultName, setVaultName] = useState('');
   const [description, setDescription] = useState('');
@@ -91,6 +91,6 @@ const CreateVaultForm: React.FC = () => {
   );
 };
 
-export default CreateVaultForm;
+export default SwapForm;
 
 
