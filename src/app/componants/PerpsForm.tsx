@@ -103,7 +103,7 @@ const StyledCard = styled.div`
 
 const StyledText = styled.h2`
   margin-bottom: 20px;
-  color: black;
+  color: gray;
   text-align: center;
   font-size: 20px;
 `;
@@ -180,7 +180,9 @@ const PerpsForm: React.FC = () => {
         </SwapContainer>
       ) : (
         <StyledCard>
+          <div className="flex justify-center"> 
           <Image alt="feed icon" src="/icons/logo.png" width="170" height="170" />
+          </div>
           <br />
           <StyledText>Perp Trading Coming Soon!</StyledText>
         </StyledCard>

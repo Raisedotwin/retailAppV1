@@ -95,7 +95,7 @@ const StyledCard = styled.div`
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
   transition: transform 0.3s;
-
+  justifyContent: 'center';
 
    &:hover {
     transform: scale(1.05);
@@ -103,8 +103,8 @@ const StyledCard = styled.div`
 `;
 
 const StyledText = styled.h2`
-    margin-bottom: 20px;
-  color: black;
+  margin-bottom: 20px;
+  color: gray;
   text-align: center;
   font-size: 20px;
 `;
@@ -115,7 +115,9 @@ const ChatPage: React.FC = () => (
   <div className="min-h-screen p-6" style={{ backgroundColor: '#edf2f7' }}>
     <div className="max-w-4xl w-full mx-auto p-6">
         <StyledCard>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
           <Image alt="feed icon" src="/icons/logo.png" width="170" height="170" />
+          </div>
           <br />
           <StyledText>Private Messaging Coming Soon!</StyledText>
         </StyledCard>

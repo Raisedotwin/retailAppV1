@@ -103,7 +103,7 @@ const StyledCard = styled.div`
 
 const StyledText = styled.h2`
   margin-bottom: 20px;
-  color: black;
+  color: gray;
   text-align: center;
   font-size: 20px;
 `;
@@ -185,7 +185,9 @@ const FollowSwapsForm: React.FC = () => {
       ) : (
         <StyledCard>
           <StyledImage>
+          <div className="flex items-center justify-center">
             <Image alt="feed icon" src="/icons/logo.png" width={170} height={170} />
+          </div>
           </StyledImage>
           <StyledText>Follow Swaps Coming Soon!</StyledText>
         </StyledCard>

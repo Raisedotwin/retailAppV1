@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useAccount } from '../context/AccountContext';
 
 const DashboardPage: React.FC = () => {

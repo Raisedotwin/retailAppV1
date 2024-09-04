@@ -1,168 +1,145 @@
-// Code to authenticate with Twitter API and fetch user data
-//require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const session = require('express-session');
+const { TwitterApi } = require('twitter-api-v2');
+require('dotenv').config();
 
 const app = express();
-app.use(cors());
+
+// CORS configuration
+const corsOptions = {
+    origin: 'http://localhost:3000', // Replace with your frontend URL
+    credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your_secret_key', // Use environment variable for security
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false } // Set secure cookies to false for local development
+}));
+
+const client = new TwitterApi({
+    appKey: "Gid7XqRwbOq0lsYOgojpZdRyG",
+    appSecret: "eDFa3gz5cCoUwXrV0T37q3jYW58OXQhM0aSCi8WFOCBeCyGrDp",
+    accessToken: "1810715074291740672-Yr7eSmoT5bF8k6yPj5yBtt6QcDHSO2",
+    accessSecret: "LtCLCu0CeS95FFtxI1ukc8Wnebui7RZR31V6AhiePdd3b",
+});
+
+const callbackUrl = "http://localhost:3001/api/callback";
+
+// Proxy endpoint to handle Twitter API requests
+app.get('/api/proxy/twitter', async (req, res) => {
+    const { accessToken, accessSecret } = req.session;
+
+    if (!accessToken || !accessSecret) {
+        return res.status(400).send('Not authenticated');
+    }
+
+    try {
+        const userClient = new TwitterApi({
+            appKey: "Gid7XqRwbOq0lsYOgojpZdRyG",
+            appSecret: "eDFa3gz5cCoUwXrV0T37q3jYW58OXQhM0aSCi8WFOCBeCyGrDp",
+            accessToken,
+            accessSecret,
+        });
+
+        const user = await userClient.v2.me();
+        res.json({ user, accessToken, accessSecret }); // Return user data and tokens
+    } catch (error) {
+        console.error('Error fetching user data:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/auth/twitter', async (req, res) => {
+    try {
+        const { url, oauth_token, oauth_token_secret } = await client.generateAuthLink(callbackUrl);
+        req.session.oauth_token = oauth_token; // Store tokens in session
+        req.session.oauth_token_secret = oauth_token_secret;
+        res.redirect(url);
+    } catch (error) {
+        console.error('Error generating auth link:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Step 2: Handle callback from Twitter
+app.get('/api/callback', async (req, res) => {
+    const { oauth_token, oauth_verifier } = req.query;
+    const { oauth_token: token, oauth_token_secret } = req.session;
+
+    if (!oauth_token || !oauth_verifier || !token || !oauth_token_secret) {
+        return res.status(400).send('Missing required parameters');
+    }
+
+    try {
+        const { client: loggedClient, accessToken, accessSecret } = await client.login(oauth_token, oauth_token_secret, oauth_verifier);
+        req.session.accessToken = accessToken;
+        req.session.accessSecret = accessSecret;
+        res.redirect('http://localhost:3000'); // Redirect to your front-end application
+    } catch (error) {
+        console.error('Error logging in with Twitter:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+//SEARCHING FOR TWTTIER USERS 
+// Step 3: Use the access token to fetch user data
+app.get('/api/user/:username', async (req, res) => {
+    try {
+        const userClient = new TwitterApi({
+            appKey: "Gid7XqRwbOq0lsYOgojpZdRyG",
+            appSecret: "eDFa3gz5cCoUwXrV0T37q3jYW58OXQhM0aSCi8WFOCBeCyGrDp",
+            accessToken: "1810715074291740672-Yr7eSmoT5bF8k6yPj5yBtt6QcDHSO2",
+            accessSecret: "LtCLCu0CeS95FFtxI1ukc8Wnebui7RZR31V6AhiePdd3b",
+        });
+        const user = await userClient.v2.userByUsername(req.params.username);
+        res.json(user);
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Route with preset username
+app.get('/api/test-user', async (req, res) => {
+    try {
+        const userClient = new TwitterApi({
+            appKey: "Gid7XqRwbOq0lsYOgojpZdRyG",
+            appSecret: "eDFa3gz5cCoUwXrV0T37q3jYW58OXQhM0aSCi8WFOCBeCyGrDp",
+            accessToken: "1810715074291740672-Yr7eSmoT5bF8k6yPj5yBtt6QcDHSO2",
+            accessSecret: "LtCLCu0CeS95FFtxI1ukc8Wnebui7RZR31V6AhiePdd3b",
+        });
+        const presetUsername = 'btc_lyric'; // Replace with any username you want to test
+        const user = await userClient.v2.userByUsername(presetUsername);
+        res.json(user);
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/users/:usernames', async (req, res) => {
+    try {
+        const userClient = new TwitterApi({
+            appKey: "Gid7XqRwbOq0lsYOgojpZdRyG",
+            appSecret: "eDFa3gz5cCoUwXrV0T37q3jYW58OXQhM0aSCi8WFOCBeCyGrDp",
+            accessToken: "1810715074291740672-Yr7eSmoT5bF8k6yPj5yBtt6QcDHSO2",
+            accessSecret: "LtCLCu0CeS95FFtxI1ukc8Wnebui7RZR31V6AhiePdd3b",
+        });
+        const user = await userClient.v2.usersByUsernames(req.params.usernames.split(','));
+        res.json(user);
+    } catch (error) {
+        console.error('Error fetching profile:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 const PORT = process.env.PORT || 5001;
-const API_KEY = '220eea5947c2c8a51648836523e5115d21659734b85a5bcad8b001e5bf6713c6'; // Your API key
-
-app.use(cors());
-
-// MongoDB connection
-//mongoose.connect('mongodb://localhost:27017/vaults', {
-  //useNewUrlParser: true,
-  //useUnifiedTopology: true,
-//});
-
-// Define a schema and model for the vaults
-//const vaultSchema = new mongoose.Schema({
-  //runeName: String,
-  //vaultId: Number,
-  //etcherAddress: String,
-//});
-
-//const Vault = mongoose.model('Vault', vaultSchema);
-
-// Routes
-//app.post('/api/vaults', async (req, res) => {
-  //const { runeName, vaultId, etcherAddress } = req.body;
-
-  //const newVault = new Vault({
-    //runeName,
-    //vaultId,
-    //etcherAddress,
-  //});
-
-  // try {
-    //const savedVault = await newVault.save();
-    //res.status(201).json(savedVault);
-  //} catch (error) {
-    //res.status(500).json({ message: error.message });
-  //}
-//});
-
-// Example endpoint to fetch runes holders
-app.get('/api/getRunesHolders', async (req, res) => {
-  const runeid = req.query.runeid;
-  if (!runeid) {
-    return res.status(400).json({ message: 'runeid parameter is required' });
-  }
-
-  try {
-    const fetch = (await import('node-fetch')).default;
-    const response = await fetch(`https://open-api.unisat.io/v1/indexer/runes/${runeid}/holders?start=0&limit=16`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`, // Include the API key in the headers
-      },
-    });
-
-    if (!response.ok) {
-      return res.status(response.status).json({ message: 'Failed to fetch data from Unisat API' });
-    }
-
-    const data = await response.json();
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Test endpoint to fetch runes holders with a preset rune ID
-app.get('/api/getRunesHoldersTest', async (req, res) => {
-  try {
-    const runeid = 'DOG-TO-THE-MOON'; // replace with your preset rune ID
-    const fetch = (await import('node-fetch')).default;
-    const response = await fetch(`https://open-api.unisat.io/v1/indexer/runes/${runeid}/holders?start=0&limit=16`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`, // Include the API key in the headers
-      },
-    });
-
-    if (!response.ok) {
-      return res.status(response.status).json({ message: 'Failed to fetch data from Unisat API' });
-    }
-
-    const data = await response.json();
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Endpoint to fetch runes balance list by address
-//If DOG To THE MOON IS NOT LISTED WRITE UNST%AKED ON STAKING PAGE FALSE INPUT 
-app.get('/api/getRunesBalance', async (req, res) => {
-  const address = req.query.address;
-  if (!address) {
-    return res.status(400).json({ message: 'address parameter is required' });
-  }
-
-  try {
-    const fetch = (await import('node-fetch')).default;
-    const response = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/runes/balance-list`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`, // Include the API key in the headers
-      },
-    });
-
-    if (!response.ok) {
-      return res.status(response.status).json({ message: 'Failed to fetch data from Unisat API' });
-    }
-
-    const data = await response.json();
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// Test endpoint to fetch runes balance list with a preset address
-app.get('/api/getRunesBalanceTest', async (req, res) => {
-  try {
-    const address = 'bc1pzt6grd05x82lued9qkv3rht4cdhy9m7lhl23ad997s8tkh5c4mfs9wgxd0'; // replace with your preset test address
-    const fetch = (await import('node-fetch')).default;
-    const response = await fetch(`https://open-api.unisat.io/v1/indexer/address/${address}/runes/balance-list`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`, // Include the API key in the headers
-      },
-    });
-
-    if (!response.ok) {
-      return res.status(response.status).json({ message: 'Failed to fetch data from Unisat API' });
-    }
-
-    const data = await response.json();
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  // Periodically fetch runes holders
-  //setInterval(fetchRunesHolders, 2 * 60 * 1000); // every 2 minutes
+    console.log(`Server is running on port ${PORT}`);
 });
-
-async function fetchRunesHolders() {
-  try {
-    const runeid = '10'; // replace with your rune ID
-    const fetch = (await import('node-fetch')).default;
-    const response = await fetch(`http://localhost:${PORT}/api/getRunesHolders?runeid=${runeid}`);
-    const data = await response.json();
-    console.log('Runes holders:', data);
-  } catch (error) {
-    console.error('Failed to fetch runes holders:', error);
-  }
-}
-
-
-

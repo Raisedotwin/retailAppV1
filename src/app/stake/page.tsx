@@ -1,9 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import StakeForm from '../componants/StakingForm';
-import StakingVault from '../componants/StakingVault';
-import Wallet from 'sats-connect';
 import { useAccount } from '../context/AccountContext';
 import FeaturedTrader from '../componants/FeaturedTrader';
 import Categories from '../componants/Categories';
@@ -19,11 +16,6 @@ const StakePage: React.FC = () => {
   const { account } = useAccount();
   const [balances, setBalances] = useState<Balance[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const getTokenBalance = (tokenName: string): number => {
-    const tokenBalance = balances.find(balance => balance.runeName === tokenName);
-    return tokenBalance ? tokenBalance.amount : 0;
-  };
 
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: '#edf2f7' }}>

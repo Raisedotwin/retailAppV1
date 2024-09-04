@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState } from 'react';
 import Wallet from 'sats-connect';
 import { useAccount } from '../context/AccountContext';
@@ -11,7 +9,8 @@ const SwapForm: React.FC = () => {
   const [initialDeposit, setInitialDeposit] = useState('');
   const [tokenToStake, setTokenToStake] = useState('');
 
-  console.log("CreateVaultForm account:", account);
+  // Example contract balance, you should fetch this value dynamically
+  const contractBalance = "0.00028989077453048 ETH";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +48,12 @@ const SwapForm: React.FC = () => {
   return (
     <div className="min-h-screen p-6" style={{ backgroundColor: '#edf2f7' }}>
       <form onSubmit={handleSubmit} className="p-10 bg-black rounded-lg shadow-md max-w-lg mx-auto">
+        
+        {/* Balance Box */}
+        <div className="bg-gray-800 text-white p-4 rounded mb-6 text-center shadow-md">
+          <p>Balance: {contractBalance}</p>
+        </div>
+
         <div className="mb-4">
           <label className="block text-white text-sm font-bold mb-2">Input Token</label>
           <input
@@ -59,6 +64,7 @@ const SwapForm: React.FC = () => {
             className="bg-gray-800 border border-gray-700 text-white p-3 w-full rounded"
           />
         </div>
+
         <div className="mb-4">
           <label className="block text-white text-sm font-bold mb-2">Output Token</label>
           <input
@@ -80,6 +86,7 @@ const SwapForm: React.FC = () => {
             className="bg-gray-800 border border-gray-700 text-white p-3 w-full rounded"
           />
         </div>
+
         <button
           type="submit"
           className="bg-gradient-to-r from-orange-400 to-purple-500 text-white py-2 px-4 rounded w-full shadow-md"
