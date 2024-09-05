@@ -11,6 +11,7 @@
   "dependencies": {
     "@headlessui/react": "^2.1.2",
     "@heroicons/react": "^2.1.4",
+    "@nextui-org/react": "^2.4.6",
     "@privy-io/react-auth": "^1.81.2",
     "bitcore-lib": "^10.2.1",
     "body-parser": "^1.20.2",

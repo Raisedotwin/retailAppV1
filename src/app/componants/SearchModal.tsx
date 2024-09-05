@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import Image from 'next/image'; // For future use of images in the search results
+import TraderCard from './TraderCard'; // Import the TraderCard component
+import Image from 'next/image'; // For the search icon
 
 interface User {
   id: string;
   name: string;
+  username: string;
   profile_image_url: string;
   description: string;
 }
@@ -15,8 +17,6 @@ interface SearchModalProps {
 
 const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
   const modalRef = useRef<HTMLDivElement>(null);
-  const [searchText, setSearchText] = useState('');
-  const [searchResult, setSearchResult] = useState<User | null>(null); // Updated type
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<User[]>([]); // Type as User array
 
@@ -26,8 +26,8 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
       if (!response.ok) {
         throw new Error(`Error: ${response.status}`);
       }
-      const user: { data: User } = await response.json(); // Add a type here for the user
-      setResults([user.data]);
+      const user: { data: User } = await response.json();
+      setResults([user.data]); // Assuming the API returns a single user, update it as needed
     } catch (error) {
       console.error('Error fetching profile:', error);
       setResults([]);
@@ -64,7 +64,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
         <div className="flex items-center mb-6 border border-gray-300 rounded-md p-2">
           <input
             type="text"
-            placeholder="Type a command or search..."
+            placeholder="Search Twitter profile..."
             className="w-full p-2 focus:outline-none"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -74,7 +74,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
             className="ml-2 bg-transparent hover:bg-gray-200 rounded-full p-1"
           >
             <Image
-              src="/icons/search-icon.svg" // Use the search icon you uploaded
+              src="/icons/search-icon.svg"
               alt="Search"
               width={20}
               height={20}
@@ -83,30 +83,21 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
         </div>
 
         {/* Search Results */}
-        {results.length > 0 && results.map((user) => (
-          <div key={user.id} className="flex items-center justify-between p-4 bg-gray-700 text-white rounded-md shadow-md mb-4">
-            {/* Image Placeholder */}
-            <div className="flex items-center">
-              <div className="rounded-full bg-gray-700 w-10 h-10 mr-4 overflow-hidden">
-                <Image
-                  src={user.profile_image_url || "/icons/user-placeholder.png"} // Placeholder for user image
-                  alt={user.name}
-                  width={40}
-                  height={40}
-                />
-              </div>
-              {/* Search Text */}
-              <div>
-                <div className="font-bold">{user.name}</div>
-                <div className="text-gray-400">{user.description}</div>
-              </div>
-            </div>
-            {/* Right Arrow for Navigation */}
-            <div className="text-gray-400 hover:text-white cursor-pointer">
-              &rarr;
-            </div>
+        {results.length > 0 && (
+          <div>
+            {results.map((user) => (
+              <TraderCard
+                key={user.id}
+                name={user.name}
+                username={user.username}
+                logo={`https://unavatar.io/twitter/${user.username}`} // Assuming you are getting a URL for profile image
+                url={`https://twitter.com/${user.username}`}
+              />
+            ))}
           </div>
-        ))}
+        )}
+
+        {results.length === 0 && <div>No results found</div>}
 
         {/* Default Content */}
         <div>
