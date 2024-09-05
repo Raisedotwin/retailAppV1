@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation'; // Use this to access query parameters
 import { Avatar } from '@nextui-org/react';
 import Image from 'next/image';
 
-const TraderPage: React.FC = () => {
+const TraderPageContent: React.FC = () => {
   const searchParams = useSearchParams();
   
   // Extracting the query parameters from the searchParams object
@@ -214,5 +214,11 @@ const TraderPage: React.FC = () => {
     </div>
   );
 };
+
+const TraderPage: React.FC = () => (
+  <Suspense fallback={<div>Loading...</div>}>
+    <TraderPageContent />
+  </Suspense>
+);
 
 export default TraderPage;
