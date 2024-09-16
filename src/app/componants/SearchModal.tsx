@@ -84,19 +84,25 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
 
         {/* Search Results */}
         {results.length > 0 && (
-          <div>
-            {results.map((user) => (
-              <TraderCard
-                key={user.id}
-                name={user.name}
-                username={user.username}
-                logo={`https://unavatar.io/twitter/${user.username}`} // Assuming you are getting a URL for profile image
-                url={`https://twitter.com/${user.username}`}
-              />
-            ))}
-          </div>
-        )}
-
+        <div>
+          {results.map((result, index) => (
+            result?.name && result?.username && result?.id ? ( // Checking if user and necessary fields exist
+            <TraderCard
+              key={index}
+              name={result.name}
+              username={result.username}
+              logo={`https://unavatar.io/twitter/${result.username}`} // Assuming you are getting a URL for profile image
+              url={`https://twitter.com/${result.username}`}
+            />
+          ) : (
+            <div className="text-red-500">
+              User data is incomplete
+            </div>
+          )
+          ))}
+        </div>
+      )}
+      
         {results.length === 0 && <div>No results found</div>}
 
         {/* Default Content */}

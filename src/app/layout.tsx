@@ -15,30 +15,39 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-
     <html lang="en">
- 
       <body className={inter.className}>
-      <PrivyProvider
+        <PrivyProvider
           appId="clzo969qv00otb7t90m9k47tr" // Replace with your actual Privy app ID
           config={{
             appearance: {
-            theme: 'light',
-            accentColor: '#676FFF',
-            logo: "/icons/logo.png"
-          },
-          embeddedWallets: {
-            createOnLogin: 'users-without-wallets',
-          },
-        }}
-      >
-        <AccountProvider>
-          <NavBar />
-          {children}
-        </AccountProvider>
+              theme: 'light',
+              accentColor: '#676FFF',
+              logo: "/icons/logo.png"
+            },
+            embeddedWallets: {
+              createOnLogin: 'users-without-wallets',
+            },
+            fundingMethodConfig: {
+              moonpay: {
+                paymentMethod: 'credit_debit_card', // Example payment method
+                uiConfig: {
+                  accentColor: '#696FFD',
+                  theme: 'light'
+                },
+                useSandbox: false // Set to false in production
+              }
+            }
+          }}
+        >
+          <AccountProvider>
+            <NavBar />
+            {children}
+          </AccountProvider>
         </PrivyProvider>
       </body>
     </html>
   );
 }
+
 

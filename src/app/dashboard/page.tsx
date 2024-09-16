@@ -1,20 +1,114 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback  } from 'react';
 import { useAccount } from '../context/AccountContext';
+import { ethers } from 'ethers';
+import { EIP155_CHAINS, TEIP155Chain } from '@/data/EIP155Data';
+import { usePrivy } from '@privy-io/react-auth'; // Import usePrivy hook
+
+interface Position {
+  token: string;
+  amount: string;
+}
 
 const DashboardPage: React.FC = () => {
   const { account } = useAccount();
   const [switchAddress, setSwitchAddress] = useState('');
   const [spendAmount, setSpendAmount] = useState('20%');
+  const [supply, setSupply] = useState('0');  
+  const [marketC, setMarketC] = useState('0');
+  const [holders, setHolders] = useState('0');
+  const [profileExists, setProfileExists] = useState(false);
+  const { user } = usePrivy(); // Use the usePrivy hoo
 
-  // Example data; in a real app, these would be fetched from a backend or blockchain API
-  const tokenomics = {
-    supply: 2,
-    holders: 5,
-    marketCap: 0.0005,
-  };
+  const nativeAddress = user?.wallet?.address; //right now supply isd not showing because this is not a connected address
 
+  const [balance, setBalance] = useState('0');
+  const [positions, setPositions] = useState([]);
+
+  let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
+
+  const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
+
+  const tokenContractAddr = '0xa9A9D98f70E79E90ad515472B56480A48891DB5c';
+  const tokenMarketABI = require("../abi/tokenMarket");
+
+  const tokenPoolABI = require("../abi/traderPool");
+  const traderPayoutsABI = require("../abi/traderPayouts");
+
+  const profileAddr = '0x1dF214861B5A87F3751D1442ec7802d01c07072E';
+  const profileABI = require("../abi/profile");
+
+  const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
+  const tokenMarket = useMemo(() => new ethers.Contract(tokenContractAddr, tokenMarketABI, provider), [tokenContractAddr, tokenMarketABI, provider]);
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      let username = user?.twitter?.username;
+      if (username) {
+        const profile = await profileContract.getProfileByName(username);
+        if (profile) {
+          setProfileExists(true);
+          return profile;
+        } else {
+          setProfileExists(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setProfileExists(false);
+    }
+  }, [profileContract, user?.twitter?.username]);
+
+  useEffect(() => {
+    const initContract = async () => {
+      try {
+        let profile = await fetchProfile();
+
+          if (profile && profile.length > 5) {
+            const traderPoolAddr = profile[5];
+            console.log(traderPoolAddr);
+
+            const traderAcc = profile[1];
+            console.log("trader account", traderAcc.toString());
+
+            const MCAP = await tokenMarket.getMarketCap(traderAcc);
+            const MCAPFormat = ethers.formatEther(MCAP);
+            console.log("market cap", MCAPFormat.toString());
+            setMarketC(MCAPFormat.toString());
+
+            const holders = await tokenMarket.holders(nativeAddress);
+            console.log("holders", holders.toString());
+            setHolders(holders.toString());
+
+            if (traderPoolAddr) {
+              const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
+              const balance = await traderPoolInstance.getTotal();
+              setBalance(ethers.formatEther(balance));
+              console.log(balance);
+
+              const tokenSupply = await tokenMarket.sharesSupply(nativeAddress);
+              console.log("tokenSupply", tokenSupply.toString());
+              setSupply(tokenSupply.toString());
+
+            }
+          } else {
+            console.log('Profile does not contain sufficient data.');
+          }
+
+          console.log(user);
+    
+      } catch (error) {
+        console.error('Error initializing contract:', error);
+      }
+    };
+
+    initContract();
+  }, [
+    user,
+    tokenPoolABI
+  ]);
+  
   return (
     <div className="min-h-screen bg-black p-6">
       <div className="max-w-4xl w-full mx-auto p-6 bg-gray-900 rounded-lg shadow-md">
@@ -27,15 +121,15 @@ const DashboardPage: React.FC = () => {
         <div className="mt-8 p-6 bg-gray-800 rounded-lg shadow-md">
           <h3 className="text-xl font-semibold text-white mb-4">Tokenomics</h3>
           <div className="text-gray-400">
-            <p className="mb-2"><strong>Supply:</strong> {tokenomics.supply}</p>
-            <p className="mb-2"><strong>Holders:</strong> {tokenomics.holders}</p>
-            <p className="mb-2"><strong>Market Cap:</strong> {tokenomics.marketCap}</p>
+            <p className="mb-2"><strong>Supply:</strong> {supply}</p>
+            <p className="mb-2"><strong>Holders:</strong> {holders}</p>
+            <p className="mb-2"><strong>Market Cap:</strong> {marketC}</p>
           </div>
         </div>
 
         {/* Update Wallet Section */}
         <div className="mt-8 p-6 bg-gray-800 rounded-lg shadow-md">
-          <h3 className="text-xl font-semibold text-white mb-4">Raise Wallet Settings</h3>
+          <h3 className="text-xl font-semibold text-white mb-4">Raise Wallet Settings <span className="text-purple-300">(Coming Soon)</span></h3>
           <div className="mb-6">
             <label className="block text-white text-sm font-bold mb-2">Switch Address</label>
             <div className="flex">
@@ -45,10 +139,12 @@ const DashboardPage: React.FC = () => {
                 onChange={(e) => setSwitchAddress(e.target.value)}
                 placeholder="Enter new wallet address"
                 className="bg-gray-800 border border-gray-700 text-white p-3 w-full rounded-l focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled // Disable input field
               />
               <button
                 type="button"
-                className="bg-gradient-to-r from-blue-400 to-purple-500 text-white px-4 py-3 rounded-r shadow-lg hover:from-blue-500 hover:to-purple-600 transition duration-300"
+                className="bg-gradient-to-r from-gray-500 to-gray-700 text-white px-4 py-3 rounded-r shadow-lg cursor-not-allowed"
+                disabled // Disable button
               >
                 Switch
               </button>
@@ -61,6 +157,7 @@ const DashboardPage: React.FC = () => {
                 value={spendAmount}
                 onChange={(e) => setSpendAmount(e.target.value)}
                 className="bg-gray-800 border border-gray-700 text-white p-3 w-full rounded-l focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled // Disable select input
               >
                 <option value="20%">20%</option>
                 <option value="40%">40%</option>
@@ -69,7 +166,8 @@ const DashboardPage: React.FC = () => {
               </select>
               <button
                 type="button"
-                className="bg-gradient-to-r from-blue-400 to-purple-500 text-white px-4 py-3 rounded-r shadow-lg hover:from-blue-500 hover:to-purple-600 transition duration-300"
+                className="bg-gradient-to-r from-gray-500 to-gray-700 text-white px-4 py-3 rounded-r shadow-lg cursor-not-allowed"
+                disabled // Disable button
               >
                 Set
               </button>
