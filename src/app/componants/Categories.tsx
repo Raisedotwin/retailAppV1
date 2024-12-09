@@ -7,16 +7,16 @@ const Categories: React.FC = () => {
       <h2 className="text-2xl font-bold mb-4">Browse Categories</h2>
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-gray-200 p-6 rounded-lg text-center">
-          <p className="font-semibold">Founders</p>
-          <p className="text-gray-500">Get advice from proven entrepreneurs</p>
+          <p className="font-semibold">Base</p>
+          <p className="text-gray-500">Traders on base</p>
         </div>
         <div className="bg-gray-200 p-6 rounded-lg text-center">
-          <p className="font-semibold">Investors</p>
-          <p className="text-gray-500">Pitch your product or get advice on raising</p>
+          <p className="font-semibold">Avax</p>
+          <p className="text-gray-500">Traders on avalanche</p>
         </div>
         <div className="bg-gray-200 p-6 rounded-lg text-center">
-          <p className="font-semibold">Tax/Legal</p>
-          <p className="text-gray-500">Navigating complexities to secure peace of mind</p>
+          <p className="font-semibold">Meme Coins</p>
+          <p className="text-gray-500">Top trading degens</p>
         </div>
         {/* Add more categories as needed */}
       </div>

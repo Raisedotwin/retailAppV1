@@ -24,7 +24,7 @@ const WalletPage: React.FC = () => {
 
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const { user } = usePrivy(); // Use the usePrivy hook
+  const { login, logout, user } = usePrivy(); // Use the usePrivy hook
 
   const { wallets } = useWallets(); // Use useWallets to get connected wallets
 
@@ -324,6 +324,24 @@ const WalletPage: React.FC = () => {
     }
   };
 
+  const loginWithPrivy = async () => {
+    try {
+      await login();
+      console.log('Logged in with Privy:', user);
+    } catch (error) {
+      console.error('Error logging in with Privy:', error);
+    }
+  };
+
+  const logoutWithPrivy = async () => {
+    try {
+      await logout();
+      console.log('Logged out with Privy');
+    } catch (error) {
+      console.error('Error logging out with Privy:', error);
+    }
+  };
+
   useEffect(() => {
     const initContract = async () => {
       try {
@@ -484,8 +502,13 @@ const WalletPage: React.FC = () => {
             <br />
             <p className="mb-2 text-gray-700 font-semibold" >Please Authenticate With X To View Wallet</p>
               <div className="mt-4">
+              <button
+                onClick={loginWithPrivy}
+                className="bg-black text-white px-4 py-2 rounded-lg"
+              >
+              Login
+              </button>
               </div>
-           
           </div>
         </div>
       )}

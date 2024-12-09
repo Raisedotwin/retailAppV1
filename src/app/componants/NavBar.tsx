@@ -3,17 +3,18 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAccount } from '../context/AccountContext';
 import { usePrivy } from '@privy-io/react-auth';
-import SearchModal from './SearchModal';  // Import the SearchModal
+import SearchModal from './SearchModal';
 
 const NavBar: React.FC = () => {
   const { account } = useAccount();
   const { login, logout, user } = usePrivy();
-
+  
   const [search, setSearch] = useState('');
   const [isModalVisible, setIsModalVisible] = useState(false);
-  
-  const modalRef = useRef<HTMLDivElement>(null); // Ref to track clicks outside the modal
-  const inputRef = useRef<HTMLInputElement>(null); // Ref for the search input
+  const [dropdownVisible, setDropdownVisible] = useState(false); // State for dropdown visibility
+  const modalRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const loginWithPrivy = async () => {
     try {
@@ -33,31 +34,25 @@ const NavBar: React.FC = () => {
     }
   };
 
-  // Show the modal when the search input is clicked
   const handleInputClick = () => {
     setIsModalVisible(true);
   };
 
-  // Close the modal if a user clicks outside of it
+  // Close dropdown if clicked outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
-        modalRef.current && 
-        !modalRef.current.contains(event.target as Node) && 
-        !inputRef.current?.contains(event.target as Node)
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
       ) {
-        setIsModalVisible(false);
+        setDropdownVisible(false);
       }
     }
-
-    // Attach the event listener for detecting outside clicks
     document.addEventListener('mousedown', handleClickOutside);
-
     return () => {
-      // Cleanup the event listener
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [modalRef, inputRef]);
+  }, []);
 
   return (
     <nav className="flex items-center justify-between p-4 bg-white shadow-md w-full">
@@ -65,11 +60,11 @@ const NavBar: React.FC = () => {
         {/* Logo */}
         <Link href="/">
           <div className="text-xl font-bold text-gray-800 cursor-pointer flex items-center">
-            <Image 
+            <Image
               src="/icons/logo.png"  // Path to the logo in the public/icons/ directory
-              alt="Logo" 
-              width={32} 
-              height={32} 
+              alt="Logo"
+              width={32}
+              height={32}
               className="mr-2"
             />
             raise.win
@@ -89,17 +84,13 @@ const NavBar: React.FC = () => {
               <Link href="/perps">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Perps</div>
               </Link>
-              <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">
-                Soon
-              </span>
+              <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">Soon</span>
             </div>
             <div className="flex items-center space-x-2">
               <Link href="/chat">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Chat</div>
               </Link>
-              <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">
-                Soon
-              </span>
+              <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">Soon</span>
             </div>
           </>
         )}
@@ -117,46 +108,61 @@ const NavBar: React.FC = () => {
             className="absolute left-3 text-gray-500"
           />
           <input
-            ref={inputRef} // Attach ref to search input
+            ref={inputRef}
             type="text"
             value={search}
-            onClick={handleInputClick}  // Show the modal when the input is clicked
-            //onChange={(e) => setSearch(e.target.value)}  // Keep the search input working
+            onClick={handleInputClick}
             placeholder="Search..."
             className="pl-10 pr-8 py-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md"
           />
-          <span className="absolute right-3 bg-gray-100 text-gray-500 text-xs rounded-md p-1">
-            ⌘K
-          </span>
+          <span className="absolute right-3 bg-gray-100 text-gray-500 text-xs rounded-md p-1">⌘K</span>
         </div>
 
         {/* Display the SearchModal */}
         {isModalVisible && (
-          <div ref={modalRef}> {/* Attach ref to the modal */}
+          <div ref={modalRef}>
             <SearchModal visible={isModalVisible} setVisible={setIsModalVisible} />
           </div>
         )}
 
         {user && (
           <>
-            <Link href="/settings">
-              <Image 
-                src="/icons/settings-icon.svg"  // Path to the wallet icon SVG in the public/icons/ directory
-                alt="Settings Icon" 
-                width={32} 
-                height={32} 
-                className="cursor-pointer"
-              />
-            </Link>
+            {/* Wallet Icon */}
             <Link href="/wallet">
-              <Image 
-                src="/icons/wallet-icons.svg"  // Path to the wallet icon SVG in the public/icons/ directory
-                alt="Wallet Icon" 
-                width={30} 
-                height={30} 
+              <Image
+                src="/icons/wallet-icons.svg"  // Path to the wallet icon
+                alt="Wallet Icon"
+                width={30}
+                height={30}
                 className="cursor-pointer"
               />
             </Link>
+
+            {/* Settings Icon with Dropdown */}
+            <div className="relative">
+              <Image
+                src="/icons/accounts-icon.svg"  // Path to the settings icon
+                alt="Settings Icon"
+                width={32}
+                height={32}
+                className="cursor-pointer"
+                onClick={() => setDropdownVisible(!dropdownVisible)} // Toggle dropdown visibility
+              />
+
+              {dropdownVisible && (
+                <div
+                  ref={dropdownRef}
+                  className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10"
+                >
+                  <Link href="/settings">
+                    <div className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Settings</div>
+                  </Link>
+                  <Link href="/affiliate">
+                    <div className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Affiliate</div>
+                  </Link>
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -182,4 +188,3 @@ const NavBar: React.FC = () => {
 };
 
 export default NavBar;
-

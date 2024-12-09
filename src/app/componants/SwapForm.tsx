@@ -381,14 +381,6 @@ const SwapForm: React.FC<SwapFormProps> = ({ balance, profile }) => {
         </button>
       </form>
 
-      <button 
-        onClick={handleSelectToken}
-        className="bg-gradient-to-r from-orange-400 to-purple-500 text-white py-2 px-4 rounded w-full shadow-md"
-      >
-
-        Test Modal Lists
-      </button>
-
       {/* Modal for Processing */}
       {isModalVisible && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">

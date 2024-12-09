@@ -16,7 +16,7 @@ const TrendingTop: React.FC = () => {
             <div className="flex items-center space-x-4 mb-4">
               <img src="/path-to-image.jpg" alt="Creator" className="rounded-full w-8 h-8"/>
               <div>
-                <p className="font-semibold">Creator Name</p>
+                <p className="font-semibold">Trader Name</p>
                 <p className="text-gray-500">$198</p>
               </div>
             </div>

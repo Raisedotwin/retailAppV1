@@ -73,7 +73,7 @@ const ProfilePage: React.FC = () => {
       const signer: any  = privyProvider?.getSigner(); // Get signer
 
       // Get user's Ethereum public address
-      const address =   await signer.getAddress();
+      const address =   await signer?.getAddress();
       console.log(address);
   
       // Get user's balance in ether
