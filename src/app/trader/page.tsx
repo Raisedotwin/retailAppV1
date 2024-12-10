@@ -69,6 +69,7 @@ const TraderPageContent: React.FC = () => {
   const [holdingsNow, setHoldings] = useState('0');
   const { user } = usePrivy();
   const { wallets } = useWallets(); // Use useWallets to get connected wallets
+  const [isActive, setIsActive] = useState(true); // You can control this state as needed
 
   let wallet: any = wallets[0] // Get the first connected wallet privy wallet specifiy privy wallet
 
@@ -356,17 +357,30 @@ const TraderPageContent: React.FC = () => {
         <div className="flex items-center justify-start mb-8">
           {/* Avatar */}
           <Avatar 
-            src={params.logo} // Dynamic avatar
-            style={{ width: '95px', height: '95px', paddingTop: "35px" }} // Custom size
+            src={params.logo}
+            className="w-24 h-24" // Using Tailwind classes for width and height
           />
 
-          <div className="ml-4">
-            <h2 className="text-2xl font-bold">{params.name}</h2>
-            <p className="text-gray-500">@{params.username}</p>
+          <div className="ml-4 flex items-center">
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold">{params.name}</h2>
+                <a href={`https://twitter.com/${params.username}`} target="_blank" className="flex items-center">
+                  <Image src="/icons/x-logo-2.png" alt="Twitter Icon" width={30} height={30} />
+                </a>
+              </div>
+              <p className="text-gray-500">@{params.username}</p>
+              <p className={`
+                animate-pulse font-medium px-2 py-0.5 rounded-full inline-block
+                ${isActive 
+                  ? "text-green-500 bg-green-100 shadow-[0_0_8px_rgba(34,197,94,0.6)]" 
+                  : "text-red-500 bg-red-100 shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                }
+              `}>
+                {isActive ? 'active' : 'inactive'}
+              </p>
+            </div>
           </div>
-          <a href={`https://twitter.com/${params.username}`} target="_blank" className="ml-4">
-            <Image src="/icons/x-logo-2.png" alt="Twitter Icon" width={30} height={30} />
-          </a>
         </div>
 
         <br />
@@ -374,7 +388,7 @@ const TraderPageContent: React.FC = () => {
         <div className="grid grid-cols-5 gap-4 mb-8">
           <div className="text-center">
             <p className="text-xl font-semibold">{supply}</p>
-            <p className="text-gray-500">Holders</p>
+            <p className="text-gray-500">Marketcap %</p>
           </div>
           <div className="text-center">
             <p className="text-xl font-semibold">{lastBuybackValue}</p>
@@ -382,11 +396,11 @@ const TraderPageContent: React.FC = () => {
           </div>
           <div className="text-center">
             <p className="text-xl font-semibold">{marketCap}</p>
-            <p className="text-gray-500">Market Cap</p>
+            <p className="text-gray-500">Marketcap</p>
           </div>
           <div className="text-center">
             <p className="text-xl font-semibold">{stats.price}</p>
-            <p className="text-gray-500">Keys Purchased</p>
+            <p className="text-gray-500">Volume</p>
           </div>
           <div className="text-center">
             <p className="text-xl font-semibold">{winRatio}</p>
@@ -413,7 +427,7 @@ const TraderPageContent: React.FC = () => {
 
             {activeTab === 'buy' && (
               <div>
-                <h3 className="text-lg font-semibold mb-4">Buy Keys</h3>
+                <h3 className="text-lg font-semibold mb-4">Buy ${params.username}</h3>
                 <div className="flex flex-col mb-4">
                   <label className="mb-2 text-gray-700 font-semibold">Amount</label>
                   <input
@@ -434,7 +448,7 @@ const TraderPageContent: React.FC = () => {
 
             {activeTab === 'sell' && (
               <div>
-                <h3 className="text-lg font-semibold mb-4">Sell Keys</h3>
+                <h3 className="text-lg font-semibold mb-4">Sell ${params.username}</h3>
                 <div className="flex flex-col mb-4">
                   <label className="mb-2 text-gray-700 font-semibold">Amount</label>
                   <input
@@ -453,9 +467,27 @@ const TraderPageContent: React.FC = () => {
               </div>
             )}
             {/* Display User Balance */}
-            <div className="flex justify-between items-center bg-gray-50 p-4 rounded-md mt-6 shadow-sm">
-              <p className="text-lg font-semibold text-gray-700">Your Balance</p>
-              <p className="text-lg font-bold text-blue-500">{holdingsNow}</p>
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md mt-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {/* Warning icon */}
+                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    <strong>Warning:</strong> These tokens are taxable at 50%+ when sent to{' '}
+                    <a 
+                      href="https://example.com/restricted-addresses" 
+                      target="_blank" 
+                      className="font-medium underline text-yellow-700 hover:text-yellow-600"
+                    >
+                      these addresses
+                    </a>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
           <BarChart />
@@ -468,13 +500,7 @@ const TraderPageContent: React.FC = () => {
             className={`text-lg font-semibold ${activeModalTab === 'activity' ? 'text-blue-500' : 'text-gray-500'}`}
             onClick={() => setActiveModalTab('activity')}
           >
-            Activity
-          </button>
-          <button 
-            className={`text-lg font-semibold ${activeModalTab === 'topHolders' ? 'text-blue-500' : 'text-gray-500'}`}
-            onClick={() => setActiveModalTab('topHolders')}
-          >
-            Top Holders
+            Token Activity
           </button>
           <button 
             className={`text-lg font-semibold ${activeModalTab === 'tradingActivity' ? 'text-blue-500' : 'text-gray-500'}`}
@@ -486,13 +512,7 @@ const TraderPageContent: React.FC = () => {
             className={`text-lg font-semibold ${activeModalTab === 'shorts' ? 'text-blue-500' : 'text-gray-500'}`}
             onClick={() => setActiveModalTab('shorts')}
           >
-            Short (Coming Soon)
-          </button>
-          <button 
-            className={`text-lg font-semibold ${activeModalTab === 'tradingActivity' ? 'text-blue-500' : 'text-gray-500'}`}
-            onClick={() => testing()}
-          >
-            Test
+            Short
           </button>
         </div>
 

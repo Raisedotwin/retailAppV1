@@ -75,7 +75,7 @@ const NavBar: React.FC = () => {
         {user && (
           <>
             <Link href="/profile">
-              <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Portfolio</div>
+              <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Profile</div>
             </Link>
             <Link href="/swaps">
               <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Swap</div>
@@ -84,11 +84,10 @@ const NavBar: React.FC = () => {
               <Link href="/perps">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Perps</div>
               </Link>
-              <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">Soon</span>
             </div>
             <div className="flex items-center space-x-2">
               <Link href="/chat">
-                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Chat</div>
+                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">NFT</div>
               </Link>
               <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">Soon</span>
             </div>

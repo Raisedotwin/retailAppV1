@@ -1,27 +1,48 @@
-// components/BrowseCategories.tsx
 import React from 'react';
 
-const Categories: React.FC = () => {
+const BrowseCategories: React.FC = () => {
   return (
     <section className="mb-12">
-      <h2 className="text-2xl font-bold mb-4">Browse Categories</h2>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-gray-200 p-6 rounded-lg text-center">
-          <p className="font-semibold">Base</p>
-          <p className="text-gray-500">Traders on base</p>
+      {/* Title */}
+      <h2 className="text-2xl font-bold mb-6 text-center">How It Works: Video Tutorials</h2>
+
+      {/* Video Tutorials */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Video Slot 1 */}
+        <div className="bg-gray-200 p-4 rounded-lg shadow-lg">
+          <video
+            controls
+            className="rounded-lg w-full"
+            src="/path-to-video-1.mp4"
+            poster="/path-to-thumbnail-1.jpg"
+          />
+          <h3 className="mt-4 text-lg font-semibold text-center">Step 1: Fundraise</h3>
         </div>
-        <div className="bg-gray-200 p-6 rounded-lg text-center">
-          <p className="font-semibold">Avax</p>
-          <p className="text-gray-500">Traders on avalanche</p>
+
+        {/* Video Slot 2 */}
+        <div className="bg-gray-200 p-4 rounded-lg shadow-lg">
+          <video
+            controls
+            className="rounded-lg w-full"
+            src="/path-to-video-2.mp4"
+            poster="/path-to-thumbnail-2.jpg"
+          />
+          <h3 className="mt-4 text-lg font-semibold text-center">Step 2: Trading</h3>
         </div>
-        <div className="bg-gray-200 p-6 rounded-lg text-center">
-          <p className="font-semibold">Meme Coins</p>
-          <p className="text-gray-500">Top trading degens</p>
+
+        {/* Video Slot 3 */}
+        <div className="bg-gray-200 p-4 rounded-lg shadow-lg">
+          <video
+            controls
+            className="rounded-lg w-full"
+            src="/path-to-video-3.mp4"
+            poster="/path-to-thumbnail-3.jpg"
+          />
+          <h3 className="mt-4 text-lg font-semibold text-center">Step 3: Fund Expiration</h3>
         </div>
-        {/* Add more categories as needed */}
       </div>
     </section>
   );
 };
 
-export default Categories;
+export default BrowseCategories;

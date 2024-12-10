@@ -119,7 +119,7 @@ const ChatPage: React.FC = () => (
           <Image alt="feed icon" src="/icons/logo.png" width="170" height="170" />
           </div>
           <br />
-          <StyledText>Private Messaging Coming Soon!</StyledText>
+          <StyledText>Opensea Integration Soon!</StyledText>
         </StyledCard>
     </div>
   </div>

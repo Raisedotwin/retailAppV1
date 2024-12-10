@@ -1,173 +1,141 @@
 import React, { useState } from 'react';
 
-const Short: React.FC = () => {
+const Short = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState('');
   const [availableShares, setAvailableShares] = useState(0);
   const [pricePerShare, setPricePerShare] = useState(0);
   const [showAddSharesModal, setShowAddSharesModal] = useState(false);
   const [userShares, setUserShares] = useState(0);
-  const [sharePrice, setSharePrice] = useState(0);
 
-  // Function to open the modal for shorting shares
-  const handleOpenShort = (user: string, shares: number, price: number) => {
+  const handleOpenShort = (user: any, shares: any, price: any) => {
     setSelectedUser(user);
     setAvailableShares(shares);
     setPricePerShare(price);
     setShowModal(true);
   };
 
-  // Function to close the modal
-  const handleCloseModal = () => {
-    setShowModal(false);
-  };
-
-  // Function to open the modal for adding shares to short
-  const handleOpenAddSharesModal = () => {
-    setShowAddSharesModal(true);
-  };
-
-  // Function to close the "add shares" modal
-  const handleCloseAddSharesModal = () => {
-    setShowAddSharesModal(false);
-  };
-
   return (
-    <div className="bg-gray-100 p-6 rounded-lg shadow-lg mt-8">
-      <table className="w-full text-left">
-        <thead>
-          <tr>
-            <th>User</th>
-            <th>Available Shares</th>
-            <th>Price per Share</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>0x42b9 ... 3B148</td>
-            <td>100</td>
-            <td>$1.70</td>
-            <td>
-              <button
-                onClick={() => handleOpenShort('0x42b9 ... 3B148', 100, 1.70)}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-              >
-                Open Short
-              </button>
-            </td>
-          </tr>
-          <tr>
-            <td>0x82a9 ... 4C229</td>
-            <td>50</td>
-            <td>$1.50</td>
-            <td>
-              <button
-                onClick={() => handleOpenShort('0x82a9 ... 4C229', 50, 1.50)}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-              >
-                Open Short
-              </button>
-            </td>
-          </tr>
-          <tr>
-            <td>0x13a2 ... 5D310</td>
-            <td>200</td>
-            <td>$1.80</td>
-            <td>
-              <button
-                onClick={() => handleOpenShort('0x13a2 ... 5D310', 200, 1.80)}
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-              >
-                Open Short
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="mb-4">
+        <h2 className="text-xl text-gray-700">Shorting Arena</h2>
+      </div>
 
-      {/* Button to open modal for adding shares to short */}
-      <div className="mt-6 text-center">
+      <div className="bg-gray-50 rounded-lg overflow-hidden">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="p-4 text-gray-600">User</th>
+              <th className="p-4 text-gray-600">Available Tokens</th>
+              <th className="p-4 text-gray-600">Price per Token</th>
+              <th className="p-4 text-gray-600">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { user: '0x42b9 ... 3B148', tokens: 100, price: 1.70 },
+              { user: '0x82a9 ... 4C229', tokens: 50, price: 1.50 },
+              { user: '0x13a2 ... 5D310', tokens: 200, price: 1.80 }
+            ].map((row, index) => (
+              <tr key={index} className="border-b border-gray-200 hover:bg-gray-100">
+                <td className="p-4 font-mono text-gray-700">{row.user}</td>
+                <td className="p-4 text-green-600">{row.tokens}</td>
+                <td className="p-4 text-blue-600">${row.price.toFixed(2)}</td>
+                <td className="p-4">
+                  <button
+                    onClick={() => handleOpenShort(row.user, row.tokens, row.price)}
+                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+                  >
+                    Short Position
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 text-center">
         <button
-          onClick={handleOpenAddSharesModal}
-          className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
+          onClick={() => setShowAddSharesModal(true)}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors inline-flex items-center"
         >
-          Add Your Shares as Open to Short
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Add Your Tokens to Pool
         </button>
       </div>
 
-      {/* Modal for opening a short position */}
+      {/* Short Position Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-lg">
-            <h2 className="text-xl font-bold mb-4">Open Short Position</h2>
-            <p className="mb-2">User: {selectedUser}</p>
-            <p className="mb-2">Available Shares: {availableShares}</p>
-            <p className="mb-4">Price per Share: ${pricePerShare.toFixed(2)}</p>
-            
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Number of Shares to Short
-              </label>
-              <input
-                type="number"
-                min="1"
-                max={availableShares}
-                className="border border-gray-300 rounded py-2 px-4 w-full"
-              />
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h2 className="text-xl font-semibold mb-4 text-gray-700">Open Short Position</h2>
+            <div className="space-y-4">
+              <p className="text-gray-600">User: <span className="font-mono text-gray-700">{selectedUser}</span></p>
+              <p className="text-gray-600">Available Tokens: <span className="text-green-600">{availableShares}</span></p>
+              <p className="text-gray-600">Price per Token: <span className="text-blue-600">${pricePerShare.toFixed(2)}</span></p>
+              
+              <div>
+                <label className="block text-gray-600 text-sm mb-2">
+                  Number of Tokens to Short
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={availableShares}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-700"
+                />
+              </div>
 
-            <div className="flex justify-between">
-              <button
-                onClick={handleCloseModal}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                Cancel
-              </button>
-              <button
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-              >
-                Confirm Short
-              </button>
+              <div className="flex justify-between gap-4 mt-6">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors">
+                  Confirm Short
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal for adding user's shares as open to short */}
+      {/* Add Shares Modal */}
       {showAddSharesModal && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-lg">
-            <h2 className="text-xl font-bold mb-4">Add Your Shares for Shorting</h2>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Number of Shares to Make Available
-              </label>
-              <input
-                type="number"
-                min="1"
-                className="border border-gray-300 rounded py-2 px-4 w-full"
-                value={userShares}
-                onChange={(e) => setUserShares(parseInt(e.target.value))}
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Current Price per Share: $1.80
-              </label>
-            </div>
-            <div className="flex justify-between">
-              <button
-                onClick={handleCloseAddSharesModal}
-                className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-              >
-                Cancel
-              </button>
-              <button
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-              >
-                Confirm
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+            <h2 className="text-xl font-semibold mb-4 text-gray-700">Add Your Tokens for Shorting</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-600 text-sm mb-2">
+                  Number of Tokens to Make Available
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={userShares}
+                  onChange={(e) => setUserShares(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded focus:outline-none focus:border-blue-500 text-gray-700"
+                />
+              </div>
+              <p className="text-gray-600">Current Price per Token: <span className="text-blue-600">$1.80</span></p>
+
+              <div className="flex justify-between gap-4 mt-6">
+                <button
+                  onClick={() => setShowAddSharesModal(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                  Confirm
+                </button>
+              </div>
             </div>
           </div>
         </div>

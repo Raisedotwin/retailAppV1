@@ -399,7 +399,7 @@ const WalletPage: React.FC = () => {
  
   return (
     <div className="min-h-screen bg-black flex flex-col p-6">
-      <div className="max-w-3xl w-full mx-auto p-8 bg-gray-900 rounded-lg shadow-lg flex flex-col justify-between">
+      <div className="max-w-3xl w-full mx-auto p-8 bg-gray-900 rounded-lg shadow-lg flex flex-col">
         <div>
           <div className="flex flex-col md:flex-row justify-between items-center mb-8">
             <div className="flex items-center space-x-4">
@@ -422,12 +422,7 @@ const WalletPage: React.FC = () => {
                 </button>
               )}
             </div>
-            <div className="flex space-x-4">
-              <Link href="/dashboard">
-                <div className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300 cursor-pointer">
-                  Dashboard
-                </div>
-              </Link>
+            <div>
               <Link href="/positions">
                 <div className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300 cursor-pointer">
                   Positions
@@ -436,7 +431,7 @@ const WalletPage: React.FC = () => {
             </div>
           </div>
 
-          {user?.wallet?.address? (
+          {user?.wallet?.address ? (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-white">Connected Address:</h3>
               <p className="text-gray-400 break-words">{user?.wallet?.address}</p>
@@ -447,102 +442,85 @@ const WalletPage: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Balance Display */}
+        <div className="mb-8">
+          <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
+            <div className="text-center">
+              <p className="text-gray-400 text-sm mb-2">Available Balance</p>
+              <p className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
+                {ethBalance} ETH
+              </p>
+            </div>
+          </div>
+        </div>
         
+        {/* Video Guide Section */}
         <div>
-          <div className="p-4 mb-6 bg-gray-800 rounded-lg shadow-lg text-center text-white text-lg">
-            {ethBalance}
+          <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-4">
+            How To Use Your Raise Wallet
+          </h2>
+          <div className="relative w-full aspect-video bg-gray-800 rounded-xl overflow-hidden shadow-xl">
+            <video 
+              controls 
+              className="w-full h-full object-cover"
+              poster="/api/placeholder/400/320"
+            >
+              <source src="/path-to-your-wallet-guide-video.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
           </div>
-          <form className="p-8 bg-gray-800 rounded-lg shadow-md">
-            <div className="mb-6">
-              <label className="block text-white text-sm font-bold mb-2">Deposit</label>
-              <div className="flex">
-                <input
-                  type="number"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  placeholder="e.g. 100"
-                  className="bg-gray-800 border border-gray-700 text-white p-3 w-full rounded-l focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
+        </div>
+
+        {/* Modals */}
+        {!loggedInToX && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
+            <div className="bg-white p-6 rounded-md shadow-md flex flex-col items-center w-1/5 h-1/3.5 max-w-1xl max-h- 1xl">
+              <Image src="/icons/logo.png" alt="Twitter Icon" width={120} height={120} />
+              <br />
+              <p className="mb-2 text-gray-700 font-semibold">Please Authenticate With X To View Wallet</p>
+              <div className="mt-4">
                 <button
-                  type="button"
-                  onClick={handleDeposit}
-                  className="bg-gradient-to-r from-blue-400 to-purple-500 text-white px-4 py-3 rounded-r shadow-lg hover:from-blue-500 hover:to-purple-600 transition duration-300"
+                  onClick={loginWithPrivy}
+                  className="bg-black text-white px-4 py-2 rounded-lg"
                 >
-                  Deposit
+                  Login
                 </button>
               </div>
             </div>
-            <div className="mb-6">
-              <label className="block text-white text-sm font-bold mb-2">Withdraw</label>
-              <div className="flex">
-                <input
-                  type="number"
-                  value={withdrawAmount}
-                  onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="e.g. 50"
-                  className="bg-gray-800 border border-gray-700 text-white p-3 w-full rounded-l focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-                <button
-                  type="button"
-                  onClick={handleWithdraw}
-                  className="bg-gradient-to-r from-blue-400 to-purple-500 text-white px-4 py-3 rounded-r shadow-lg hover:from-blue-500 hover:to-purple-600 transition duration-300"
+          </div>
+        )}
+
+        {isModalVisible && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
+            <div className="bg-white p-6 rounded-md shadow-md flex flex-col items-center w-1/5 h-1/3.5 max-w-1xl max-h- 1xl">
+              <Image src="/icons/waitlogo.png" alt="Twitter Icon" width={120} height={120} />
+              <p className="mb-2 text-gray-700 font-semibold">{modalMessage} ... </p>
+            </div>
+          </div>
+        )}
+
+        {showCreateWalletModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
+            <div className="bg-white p-6 rounded-md shadow-md">
+              <p className="text-lg">Create wallet for trader?</p>
+              <div className="flex justify-end mt-4">
+                <button 
+                  className="mr-2 px-4 py-2 bg-green-500 text-white rounded-lg" 
+                  onClick={handleCreateWallet}
                 >
-                  Withdraw
+                  Create Wallet
+                </button>
+                <button 
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg" 
+                  onClick={() => setShowCreateWalletModal(false)}
+                >
+                  Cancel
                 </button>
               </div>
             </div>
-          </form>
-        </div>
-
-      {/* Modal for Processing */}
-      {!loggedInToX && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-md shadow-md flex flex-col items-center w-1/5 h-1/3.5 max-w-1xl max-h- 1xl">
-            <Image src="/icons/logo.png" alt="Twitter Icon" width={120} height={120} />
-            <br />
-            <p className="mb-2 text-gray-700 font-semibold" >Please Authenticate With X To View Wallet</p>
-              <div className="mt-4">
-              <button
-                onClick={loginWithPrivy}
-                className="bg-black text-white px-4 py-2 rounded-lg"
-              >
-              Login
-              </button>
-              </div>
           </div>
-        </div>
-      )}
-
-      {/* Modal for Processing */}
-      {isModalVisible && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-md shadow-md flex flex-col items-center w-1/5 h-1/3.5 max-w-1xl max-h- 1xl">
-            <Image src="/icons/waitlogo.png" alt="Twitter Icon" width={120} height={120} />
-            <p className="mb-2 text-gray-700 font-semibold" >{modalMessage} ... </p>
-              <div className="mt-4">
-              </div>
-           
-          </div>
-        </div>
-      )}
-
-
-      {/* Modal for Creating Wallet */}
-      {showCreateWalletModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-md shadow-md">
-            <p className="text-lg">Create wallet for trader?</p>
-            <div className="flex justify-end mt-4">
-              <button className="mr-2 px-4 py-2 bg-green-500 text-white rounded-lg" onClick={handleCreateWallet}>
-                Create Wallet
-              </button>
-              <button className="px-4 py-2 bg-red-500 text-white rounded-lg" onClick={() => setShowCreateWalletModal(false)}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
       </div>
     </div>
   );
