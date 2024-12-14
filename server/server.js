@@ -94,13 +94,29 @@ app.get('/api/callback', async (req, res) => {
 
 //SEARCHING FOR TWTTIER USERS 
 // Step 3: Use the access token to fetch user data
+//app.get('/api/user/:username', async (req, res) => {
+    //try {
+        //const userClient = new TwitterApi({
+            //appKey: "Gid7XqRwbOq0lsYOgojpZdRyG",
+            //appSecret: "eDFa3gz5cCoUwXrV0T37q3jYW58OXQhM0aSCi8WFOCBeCyGrDp",
+            //accessToken: "1810715074291740672-Yr7eSmoT5bF8k6yPj5yBtt6QcDHSO2",
+            //accessSecret: "LtCLCu0CeS95FFtxI1ukc8Wnebui7RZR31V6AhiePdd3b",
+        //});
+        //const user = await userClient.v2.userByUsername(req.params.username);
+        //res.json(user);
+    //} catch (error) {
+        //console.error('Error fetching profile:', error);
+        //res.status(500).json({ error: error.message });
+    //}
+//});
+
 app.get('/api/user/:username', async (req, res) => {
     try {
         const userClient = new TwitterApi({
-            appKey: "Gid7XqRwbOq0lsYOgojpZdRyG",
-            appSecret: "eDFa3gz5cCoUwXrV0T37q3jYW58OXQhM0aSCi8WFOCBeCyGrDp",
-            accessToken: "1810715074291740672-Yr7eSmoT5bF8k6yPj5yBtt6QcDHSO2",
-            accessSecret: "LtCLCu0CeS95FFtxI1ukc8Wnebui7RZR31V6AhiePdd3b",
+            appKey: process.env.TWITTER_API_KEY,
+            appSecret: process.env.TWITTER_API_SECRET,
+            accessToken: process.env.TWITTER_ACCESS_TOKEN,
+            accessSecret: process.env.TWITTER_ACCESS_SECRET,
         });
         const user = await userClient.v2.userByUsername(req.params.username);
         res.json(user);
