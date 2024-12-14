@@ -10,7 +10,7 @@ const app = express();
 const corsOptions = {
     origin: [
         'http://localhost:3000',
-        'https://raise-xi.vercel.app/',
+        'https://raise-xi.vercel.app',
         'https://*.vercel.app' // Or allow all Vercel subdomains
     ],
     credentials: true,
@@ -33,7 +33,8 @@ const client = new TwitterApi({
     accessSecret: "LtCLCu0CeS95FFtxI1ukc8Wnebui7RZR31V6AhiePdd3b",
 });
 
-const callbackUrl = "http://localhost:3001/api/callback";
+//const callbackUrl = "http://localhost:3001/api/callback";
+const callbackUrl = "https://raise-xi.vercel.app/api/callback";
 
 // Proxy endpoint to handle Twitter API requests
 app.get('/api/proxy/twitter', async (req, res) => {
