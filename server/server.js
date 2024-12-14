@@ -6,9 +6,13 @@ require('dotenv').config();
 
 const app = express();
 
-// CORS configuration
+// CORS configuration https://raise-xi.vercel.app/
 const corsOptions = {
-    origin: 'http://localhost:3000', // Replace with your frontend URL
+    origin: [
+        'http://localhost:3000',
+        'https://raise-xi.vercel.app/',
+        'https://*.vercel.app' // Or allow all Vercel subdomains
+    ],
     credentials: true,
 };
 
