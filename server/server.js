@@ -9,11 +9,13 @@ const app = express();
 // CORS configuration https://raise-xi.vercel.app/
 const corsOptions = {
     origin: [
-        'http://localhost:3000',
-        'https://raise-xi.vercel.app',
-        'https://*.vercel.app' // Or allow all Vercel subdomains
+        'http://localhost:3000',  // for local development
+        'https://raisedotwin-3011aff35157.herokuapp.com', // your frontend
+        'https://*.herokuapp.com' // allows all Heroku subdomains if needed
     ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cors(corsOptions));
@@ -94,29 +96,13 @@ app.get('/api/callback', async (req, res) => {
 
 //SEARCHING FOR TWTTIER USERS 
 // Step 3: Use the access token to fetch user data
-//app.get('/api/user/:username', async (req, res) => {
-    //try {
-        //const userClient = new TwitterApi({
-            //appKey: "Gid7XqRwbOq0lsYOgojpZdRyG",
-            //appSecret: "eDFa3gz5cCoUwXrV0T37q3jYW58OXQhM0aSCi8WFOCBeCyGrDp",
-            //accessToken: "1810715074291740672-Yr7eSmoT5bF8k6yPj5yBtt6QcDHSO2",
-            //accessSecret: "LtCLCu0CeS95FFtxI1ukc8Wnebui7RZR31V6AhiePdd3b",
-        //});
-        //const user = await userClient.v2.userByUsername(req.params.username);
-        //res.json(user);
-    //} catch (error) {
-        //console.error('Error fetching profile:', error);
-        //res.status(500).json({ error: error.message });
-    //}
-//});
-
 app.get('/api/user/:username', async (req, res) => {
     try {
         const userClient = new TwitterApi({
-            appKey: process.env.TWITTER_API_KEY,
-            appSecret: process.env.TWITTER_API_SECRET,
-            accessToken: process.env.TWITTER_ACCESS_TOKEN,
-            accessSecret: process.env.TWITTER_ACCESS_SECRET,
+            appKey: "Gid7XqRwbOq0lsYOgojpZdRyG",
+            appSecret: "eDFa3gz5cCoUwXrV0T37q3jYW58OXQhM0aSCi8WFOCBeCyGrDp",
+            accessToken: "1810715074291740672-Yr7eSmoT5bF8k6yPj5yBtt6QcDHSO2",
+            accessSecret: "LtCLCu0CeS95FFtxI1ukc8Wnebui7RZR31V6AhiePdd3b",
         });
         const user = await userClient.v2.userByUsername(req.params.username);
         res.json(user);
@@ -125,6 +111,22 @@ app.get('/api/user/:username', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+//app.get('/api/user/:username', async (req, res) => {
+    //try {
+        //const userClient = new TwitterApi({
+            //appKey: process.env.TWITTER_API_KEY,
+            //appSecret: process.env.TWITTER_API_SECRET,
+            //accessToken: process.env.TWITTER_ACCESS_TOKEN,
+            //accessSecret: process.env.TWITTER_ACCESS_SECRET,
+        //});
+        //const user = await userClient.v2.userByUsername(req.params.username);
+        //res.json(user);
+    //} catch (error) {
+        //console.error('Error fetching profile:', error);
+        //res.status(500).json({ error: error.message });
+    //}
+//});
 
 // Route with preset username
 app.get('/api/test-user', async (req, res) => {
