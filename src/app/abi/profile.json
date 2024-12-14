@@ -54,7 +54,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "FailedInnerCall",
+		"name": "FailedCall",
 		"type": "error"
 	},
 	{
@@ -756,11 +756,6 @@
 			},
 			{
 				"internalType": "address",
-				"name": "nftContractAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
 				"name": "initialAdmin",
 				"type": "address"
 			}
@@ -854,19 +849,6 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "_tokenMarket",
-				"type": "address"
-			}
-		],
-		"name": "setUpTokenMarket",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
 				"internalType": "bytes4",
 				"name": "interfaceId",
 				"type": "bytes4"
@@ -878,19 +860,6 @@
 				"internalType": "bool",
 				"name": "",
 				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "tokenMarket",
-		"outputs": [
-			{
-				"internalType": "contract ITokenMarket",
-				"name": "",
-				"type": "address"
 			}
 		],
 		"stateMutability": "view",

@@ -1,42 +1,6 @@
 [
 	{
-		"anonymous": false,
 		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "traderPayoutsAddress",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "nftContract",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "profileAddr",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "accountId",
-				"type": "uint256"
-			}
-		],
-		"name": "TraderPayoutsCreated",
-		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_nftContract",
-				"type": "address"
-			},
 			{
 				"internalType": "address",
 				"name": "_profileAddr",
@@ -57,25 +21,6 @@
 			}
 		],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "index",
-				"type": "uint256"
-			}
-		],
-		"name": "getTraderPayouts",
-		"outputs": [
-			{
-				"internalType": "contract TraderPayouts",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{

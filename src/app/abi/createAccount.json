@@ -3,11 +3,6 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_nftContractAddr",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
 				"name": "_traderPayoutsFactory",
 				"type": "address"
 			},
@@ -34,6 +29,11 @@
 			{
 				"internalType": "address",
 				"name": "_marketData",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_perp",
 				"type": "address"
 			}
 		],
@@ -75,6 +75,39 @@
 	{
 		"inputs": [
 			{
+				"internalType": "string",
+				"name": "_userName",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_bio",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_avatarURL",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_preSetWalletPurchase",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "userAddress",
+				"type": "address"
+			}
+		],
+		"name": "createAccount",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "implementation",
 				"type": "address"
@@ -90,7 +123,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "FailedInnerCall",
+		"name": "FailedCall",
 		"type": "error"
 	},
 	{
@@ -185,39 +218,6 @@
 		],
 		"name": "AccountCreated",
 		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "_userName",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "_bio",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "_avatarURL",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_preSetWalletPurchase",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "userAddress",
-				"type": "address"
-			}
-		],
-		"name": "createAccount",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	},
 	{
 		"anonymous": false,
@@ -341,6 +341,80 @@
 			}
 		],
 		"name": "RoleRevoked",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "traderPayoutsAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "profile",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "accountCounter",
+				"type": "uint256"
+			}
+		],
+		"name": "TraderPayoutsCreated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "traderPoolAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "accountCounter",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "tokenMarket",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "profile",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "traderPayoutsAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "dexAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "marketData",
+				"type": "address"
+			}
+		],
+		"name": "TraderPoolCreated",
 		"type": "event"
 	},
 	{
@@ -557,7 +631,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "nftContractAddress",
+		"name": "perps",
 		"outputs": [
 			{
 				"internalType": "address",

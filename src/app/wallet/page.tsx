@@ -37,13 +37,13 @@ const WalletPage: React.FC = () => {
   const tokenPoolABI = require("../abi/traderPool");
   const traderPayoutsABI = require("../abi/traderPayouts");
 
-  const tokenContractAddr = '0xa9A9D98f70E79E90ad515472B56480A48891DB5c';
+  const tokenContractAddr = '0xc3369746eeC430A3D79EfA908698E1323333BB1d';
   const tokenMarketABI = require("../abi/tokenMarket");
 
-  const profileAddr = '0x1dF214861B5A87F3751D1442ec7802d01c07072E';
+  const profileAddr = '0x4731d542b3137EA9469c7ba76cD16E4a563f0a16';
   const profileABI = require("../abi/profile");
 
-  const createAccountAddr = '0xf1AEFC101507e508e77CDA8080a4Fb10899eb620';
+  const createAccountAddr = '0x65fe166D99CD92B0e19B4bAF47300A7866B9D249';
   const createAccountABI = require("../abi/createAccount");
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
@@ -134,88 +134,6 @@ const WalletPage: React.FC = () => {
         await new Promise((resolve) => setTimeout(resolve, 500));
         setIsModalVisible(false);
 
-      }
-    }
-  };
-
-  const handleWithdraw = async () => {
-    if (profileAddr && wallet) {
-      setModalMessage('Withdraw Funds');
-      setIsModalVisible(true);
-      try {
-        getPrivyProvider("base"); // Switch The Chain Of The UseContext Setting base or Avax
-        //const privyProvider = await wallets[0].getEthersProvider(); // Working Implementation
-        const privyProvider = await wallet.getEthersProvider(); // Get Privy provider
-        const signer: any  = privyProvider?.getSigner(); // Get signer
-
-        const profileContractTwo = new ethers.Contract(profileAddr, profileABI, signer);
-        const username = user?.twitter?.username;
-        const profile = await profileContractTwo.getProfileByName(username);
-
-        if (profile[5] !== "0x0000000000000000000000000000000000000000") {
-          const addr = profile[5];
-          const traderPoolInstance = new ethers.Contract(addr, tokenPoolABI, signer);
-          const amountToWei = ethers.parseEther(withdrawAmount);
-          //const estimatedGas = await traderPoolInstance.estimateGas.withdraw(amountToWei);
-          //const gasPrice = await provider.getGasPrice();
-
-          const tx = await traderPoolInstance.withdraw(amountToWei, {
-            //gasLimit: estimatedGas,
-            //gasPrice,
-          });
-          await tx.wait();
-
-          setModalMessage('Withdraw Successful');
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          setIsModalVisible(false);
-        }
-      } catch (error) {
-        console.error('Error withdrawing funds:', error);
-        setModalMessage('Withdraw Failed');
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setIsModalVisible(false);
-      }
-    }
-  };
-
-  const handleDeposit = async () => {
-    if (profileAddr && wallet) {
-      setModalMessage('Deposit Funds');
-      setIsModalVisible(true);
-      try {
-        getPrivyProvider("base"); // Switch The Chain Of The UseContext Setting base or Avax
-        //const privyProvider = await wallets[0].getEthersProvider(); // Working Implementation
-        const privyProvider = await wallet.getEthersProvider(); // Get Privy provider
-        const signer: any  = privyProvider?.getSigner(); // Get signer
-
-        const profileContractTwo = new ethers.Contract(profileAddr, profileABI, signer);
-        const username = user?.twitter?.username;
-        const profile = await profileContractTwo.getProfileByName(username);
-
-        if (profile[5] !== "0x0000000000000000000000000000000000000000") {
-          const addr = profile[5];
-          const traderPoolInstance = new ethers.Contract(addr, tokenPoolABI, signer);
-          const amountToWei = ethers.parseEther(depositAmount);
-          //const estimatedGas = await traderPoolInstance.estimateGas.deposit({ value: amountToWei });
-          //const gasPrice = await provider.getGasPrice();
-
-          const tx = await traderPoolInstance.deposit({
-            value: amountToWei,
-            //gasLimit: estimatedGas,
-            //gasPrice,
-          });
-          await tx.wait();
-
-          setModalMessage('Deposit Successful');
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          setIsModalVisible(false);
-  
-        }
-      } catch (error) {
-        console.error('Error depositing funds:', error);
-        setModalMessage('Deposit Failed');
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setIsModalVisible(false);
       }
     }
   };
@@ -359,7 +277,9 @@ const WalletPage: React.FC = () => {
 
             if (traderPoolAddr) {
               const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
-              const balance = await traderPoolInstance.getTotal();
+              //console.log(traderPoolInstance);
+              const balance = await traderPoolInstance.getNativeBalanceView();
+              console.log("balance", balance);
               setEthBalance(ethers.formatEther(balance));
               console.log(balance);
             }

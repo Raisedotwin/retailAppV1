@@ -5,6 +5,11 @@
 				"internalType": "address",
 				"name": "_profileAddr",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_tokenFactoryAddr",
+				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
@@ -60,7 +65,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "FailedInnerCall",
+		"name": "FailedCall",
 		"type": "error"
 	},
 	{
@@ -100,6 +105,31 @@
 			}
 		],
 		"name": "Initialized",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "tokenAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "price",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "marketCap",
+				"type": "uint256"
+			}
+		],
+		"name": "Price",
 		"type": "event"
 	},
 	{
@@ -182,6 +212,37 @@
 		"inputs": [
 			{
 				"indexed": true,
+				"internalType": "uint256",
+				"name": "accountNum",
+				"type": "uint256"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "tokenAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "name",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			}
+		],
+		"name": "TokenCreated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
 				"internalType": "address",
 				"name": "trader",
 				"type": "address"
@@ -189,7 +250,7 @@
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "sharesSubject",
+				"name": "tokenAddress",
 				"type": "address"
 			},
 			{
@@ -201,31 +262,13 @@
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "shareAmount",
+				"name": "tokenAmount",
 				"type": "uint256"
 			},
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "ethAmount",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "protocolEthAmount",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "subjectEthAmount",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "supply",
+				"name": "price",
 				"type": "uint256"
 			}
 		],
@@ -253,6 +296,19 @@
 				"internalType": "bytes32",
 				"name": "",
 				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "INITIAL_TOKEN_SUPPLY",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -288,6 +344,25 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "accountTokens",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
 				"name": "accNum",
 				"type": "uint256"
 			},
@@ -305,8 +380,31 @@
 	{
 		"inputs": [
 			{
+				"internalType": "uint256",
+				"name": "accNum",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
 				"internalType": "address",
-				"name": "sharesSubject",
+				"name": "_sender",
+				"type": "address"
+			}
+		],
+		"name": "buySharesWithAddress",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "tokenAddress",
 				"type": "address"
 			},
 			{
@@ -330,7 +428,7 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "sharesSubject",
+				"name": "tokenAddress",
 				"type": "address"
 			},
 			{
@@ -353,12 +451,12 @@
 	{
 		"inputs": [
 			{
-				"internalType": "string",
-				"name": "_name",
-				"type": "string"
+				"internalType": "uint256",
+				"name": "accNum",
+				"type": "uint256"
 			}
 		],
-		"name": "getHoldersBalance",
+		"name": "getContractBalance",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -391,9 +489,9 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "_traderAddr",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "_accNum",
+				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
@@ -401,7 +499,7 @@
 				"type": "uint256"
 			}
 		],
-		"name": "getNumberOfSharesForAmount",
+		"name": "getNumberOfTokensForAmount",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -485,7 +583,7 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "sharesSubject",
+				"name": "tokenAddress",
 				"type": "address"
 			},
 			{
@@ -509,7 +607,7 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "sharesSubject",
+				"name": "tokenAddress",
 				"type": "address"
 			},
 			{
@@ -519,6 +617,63 @@
 			}
 		],
 		"name": "getSellPriceAfterFee",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "accNum",
+				"type": "uint256"
+			}
+		],
+		"name": "getTokenAddressByAccount",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "accNum",
+				"type": "uint256"
+			}
+		],
+		"name": "getTokenLiquidity",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "tokenAddress",
+				"type": "address"
+			}
+		],
+		"name": "getTokenLiquidityByAddress",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -588,25 +743,6 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "holders",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
 				"name": "defaultAdmin",
 				"type": "address"
 			},
@@ -619,6 +755,19 @@
 		"name": "initialize",
 		"outputs": [],
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "lastGlobalCost",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -687,6 +836,32 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "raiseFeePercent",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "raiseFeeSale",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "bytes32",
@@ -743,6 +918,29 @@
 	{
 		"inputs": [
 			{
+				"internalType": "uint256",
+				"name": "accNum",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_sender",
+				"type": "address"
+			}
+		],
+		"name": "sellSharesWithAddress",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "_address",
 				"type": "address"
@@ -787,6 +985,32 @@
 				"type": "uint256"
 			}
 		],
+		"name": "setRaiseBuyFee",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_feePercent",
+				"type": "uint256"
+			}
+		],
+		"name": "setRaiseSaleFee",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_feePercent",
+				"type": "uint256"
+			}
+		],
 		"name": "setSubjectFeePercent",
 		"outputs": [],
 		"stateMutability": "nonpayable",
@@ -803,49 +1027,6 @@
 		"name": "setTraderProfitFeePercent",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "sharesBalance",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "sharesSupply",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -882,7 +1063,26 @@
 	},
 	{
 		"inputs": [],
-		"name": "traderProfitFee",
+		"name": "tokenFactory",
+		"outputs": [
+			{
+				"internalType": "contract TraderTokenFactory",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "tokenLiquidity",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -897,18 +1097,32 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_traderAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_payouts",
+				"name": "",
 				"type": "address"
 			}
 		],
-		"name": "updateTraderMarketAddr",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"name": "tokenSupply",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "traderProfitFee",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{

@@ -19,7 +19,7 @@ const SwapsPage: React.FC = () => {
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const profileAddr = '0x1dF214861B5A87F3751D1442ec7802d01c07072E';
+  const profileAddr = '0x4731d542b3137EA9469c7ba76cD16E4a563f0a16';
   const profileABI = require("../abi/profile");
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
 

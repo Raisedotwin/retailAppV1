@@ -44,7 +44,7 @@ const HowToTrade = () => {
             <path d="M15 3h6v6" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M10 14L21 3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <span>Go to Exchange</span>
+          <span>Go to JOJO</span>
         </button>
 
       </div>

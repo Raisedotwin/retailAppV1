@@ -1,42 +1,5 @@
 [
 	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newTraderPool",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "accountNumber",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "traderMarket",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "profile",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "traderPayouts",
-				"type": "address"
-			}
-		],
-		"name": "TraderPoolCreated",
-		"type": "event"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -67,6 +30,11 @@
 				"internalType": "address",
 				"name": "_marketData",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_perps",
+				"type": "address"
 			}
 		],
 		"name": "createTraderPool",
@@ -78,25 +46,6 @@
 			}
 		],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "index",
-				"type": "uint256"
-			}
-		],
-		"name": "getTraderPool",
-		"outputs": [
-			{
-				"internalType": "contract TraderPool",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{

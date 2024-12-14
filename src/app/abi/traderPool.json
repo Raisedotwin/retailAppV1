@@ -30,6 +30,11 @@
 				"internalType": "address",
 				"name": "_marketData",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_jojoDealer",
+				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
@@ -85,7 +90,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "FailedInnerCall",
+		"name": "FailedCall",
 		"type": "error"
 	},
 	{
@@ -118,50 +123,6 @@
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "_customer",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "_amount",
-				"type": "uint256"
-			}
-		],
-		"name": "Claimed",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "value",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "timeOfDeposit",
-				"type": "uint256"
-			}
-		],
-		"name": "Deposited",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
 				"indexed": false,
 				"internalType": "uint64",
 				"name": "version",
@@ -169,32 +130,6 @@
 			}
 		],
 		"name": "Initialized",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "balance",
-				"type": "uint256"
-			}
-		],
-		"name": "NativeBalanceChecked",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "newValue",
-				"type": "uint256"
-			}
-		],
-		"name": "PoolValueUpdated",
 		"type": "event"
 	},
 	{
@@ -278,99 +213,11 @@
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "_customer",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "_totalStake",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "_amount",
-				"type": "uint256"
-			}
-		],
-		"name": "Staked",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "token",
-				"type": "address"
-			}
-		],
-		"name": "TokenAdded",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "customer",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "totalStake",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "UnStaked",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
 				"name": "implementation",
 				"type": "address"
 			}
 		],
 		"name": "Upgraded",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "value",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "timeOfWithdrawal",
-				"type": "uint256"
-			}
-		],
-		"name": "Withdrawn",
 		"type": "event"
 	},
 	{
@@ -417,16 +264,29 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "MAX_POSITIONS",
-		"outputs": [
+		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "_amountIn",
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "view",
+		"name": "JOJOGetProfitFast",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_amountIn",
+				"type": "uint256"
+			}
+		],
+		"name": "JOJOwithdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -510,60 +370,33 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "_amount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "oldPrice",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "newPrice",
+				"name": "_amountIn",
 				"type": "uint256"
 			}
 		],
-		"name": "calculateProfit",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "pure",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "deposit",
+		"name": "depositCollateralEth",
 		"outputs": [],
-		"stateMutability": "payable",
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "depositBalances",
-		"outputs": [
-			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "_amountIn",
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "view",
+		"name": "depositCollateralUSDC",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "disconnectJOJO",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -581,91 +414,12 @@
 	},
 	{
 		"inputs": [],
-		"name": "getCurrentPositions",
-		"outputs": [
-			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "token",
-						"type": "address"
-					},
-					{
-						"internalType": "uint256",
-						"name": "amount",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "lastPrice",
-						"type": "uint256"
-					}
-				],
-				"internalType": "struct TraderPool.Position[]",
-				"name": "",
-				"type": "tuple[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "getNativeBalance",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "getNativeBalanceView",
 		"outputs": [
 			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "index",
-				"type": "uint256"
-			}
-		],
-		"name": "getPosition",
-		"outputs": [
-			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "token",
-						"type": "address"
-					},
-					{
-						"internalType": "uint256",
-						"name": "amount",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "lastPrice",
-						"type": "uint256"
-					}
-				],
-				"internalType": "struct TraderPool.Position",
-				"name": "",
-				"type": "tuple"
 			}
 		],
 		"stateMutability": "view",
@@ -724,7 +478,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "getWETHBalance",
+		"name": "getVersion",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -732,12 +486,12 @@
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "view",
+		"stateMutability": "pure",
 		"type": "function"
 	},
 	{
 		"inputs": [],
-		"name": "globalNetProfit",
+		"name": "getWETHBalance",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -791,19 +545,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "inProfit",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -823,12 +564,32 @@
 	},
 	{
 		"inputs": [],
-		"name": "lastSharePurchase",
+		"name": "interactWithJOJO",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "jojo",
 		"outputs": [
 			{
-				"internalType": "uint256",
+				"internalType": "contract IJOJO",
 				"name": "",
-				"type": "uint256"
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "jojoDealer",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -872,48 +633,6 @@
 	},
 	{
 		"inputs": [],
-		"name": "positionCount",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "positions",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "token",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "lastPrice",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "profile",
 		"outputs": [
 			{
@@ -927,12 +646,12 @@
 	},
 	{
 		"inputs": [],
-		"name": "profileAddr",
+		"name": "profitAmountOut",
 		"outputs": [
 			{
-				"internalType": "address",
+				"internalType": "uint256",
 				"name": "",
-				"type": "address"
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -946,19 +665,6 @@
 				"internalType": "bytes32",
 				"name": "",
 				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "recentProfit",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -1003,12 +709,12 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "_wethAddress",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "_amountOut",
+				"type": "uint256"
 			}
 		],
-		"name": "setWETHAddress",
+		"name": "sellPositions",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -1059,25 +765,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "tokenBalances",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [],
 		"name": "tokenMarket",
 		"outputs": [
@@ -1092,49 +779,10 @@
 	},
 	{
 		"inputs": [],
-		"name": "tokenMarketAddr",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "totalPool",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
 		"name": "traderPayouts",
 		"outputs": [
 			{
 				"internalType": "contract ITraderPayouts",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "traderPayoutsAddr",
-		"outputs": [
-			{
-				"internalType": "address",
 				"name": "",
 				"type": "address"
 			}
@@ -1162,6 +810,19 @@
 	},
 	{
 		"inputs": [],
+		"name": "usdcToken",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "weth",
 		"outputs": [
 			{
@@ -1184,19 +845,6 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_amount",
-				"type": "uint256"
-			}
-		],
-		"name": "withdraw",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
