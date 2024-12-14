@@ -11,7 +11,8 @@ const corsOptions = {
     origin: [
         'http://localhost:3000',  // for local development
         'https://raisedotwin-3011aff35157.herokuapp.com', // your frontend
-        'https://*.herokuapp.com' // allows all Heroku subdomains if needed
+        'https://raisedotwin-backend-5df2969fc61f.herokuapp.com'
+
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -36,7 +37,8 @@ const client = new TwitterApi({
 });
 
 //const callbackUrl = "http://localhost:3001/api/callback";
-const callbackUrl = "https://raise-xi.vercel.app/api/callback";
+const callbackUrl = "https://raisedotwin-3011aff35157.herokuapp.com/api/callback";
+
 
 // Proxy endpoint to handle Twitter API requests
 app.get('/api/proxy/twitter', async (req, res) => {
