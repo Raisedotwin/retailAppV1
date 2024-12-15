@@ -19,7 +19,9 @@ const app = express();
 const corsOptions = {
     origin: [
         'http://localhost:3000',  // for local development
-        'https://raisedotwin-3011aff35157.herokuapp.com' // for production
+        'https://raisedotwin-3011aff35157.herokuapp.com', // for production
+        'https://raise-xi.vercel.app' // add your Vercel domain
+
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
