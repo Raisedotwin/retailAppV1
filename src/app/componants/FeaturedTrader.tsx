@@ -65,7 +65,7 @@ const FeaturedTrader: React.FC = () => {
             <BlinkingEmoji delay="0.2s">⭐</BlinkingEmoji>
             <BlinkingEmoji delay="0.3s">💫</BlinkingEmoji>
             <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mx-4">
-              Worlds #1 Buyback Marketplace
+              Raise Your Token Price
             </h2>
             <BlinkingEmoji delay="0.4s">💰</BlinkingEmoji>
             <BlinkingEmoji delay="0.5s">🌟</BlinkingEmoji>

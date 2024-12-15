@@ -51,9 +51,9 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
       // 'https://raise-xi.vercel.app/',
       //const API_URL = 'https://raise-xi.vercel.app/' || 'http://localhost:5001';
 
-      //const response = await fetch(`http://localhost:5001/api/user/${searchTerm}`);
+      const response = await fetch(`http://localhost:5001/api/user/${searchTerm}`);
       //const response = await fetch(`https://raise-xi.vercel.app/api/user/${searchTerm}`);
-      const response = await fetch(`https://raisedotwin-backend-5df2969fc61f.herokuapp.com/api/user/${searchTerm}`);
+      //const response = await fetch(`https://raisedotwin-backend-5df2969fc61f.herokuapp.com/api/user/${searchTerm}`);
       if (!response.ok) throw new Error(`Error: ${response.status}`);
       const user: { data: User } = await response.json();
       setResults([user.data]);
