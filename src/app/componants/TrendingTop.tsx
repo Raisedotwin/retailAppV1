@@ -7,7 +7,7 @@ const HowItWorks = () => {
     {
       number: '01',
       title: 'Fundraise',
-      description: 'Creators have a set period to fundraise the desired amount. This fair launch ensures everyone gets in at the same price. Once the goal is met, the protocol unlocks the next phase.',
+      description: 'Sign in with your X account and create a token. Or create a token for a friend by searching for their account. Your token will be traded on a curve and fees will fund your Raise wallet.',
       icon: (
         <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -17,7 +17,7 @@ const HowItWorks = () => {
     {
       number: '02',
       title: 'Trading',
-      description: 'After fundraising, the funds are used to trade on supported platforms (e.g., perps, swaps). Token prices fluctuate based on the trading activity, creating a dynamic market curve with uncapped upside potential.',
+      description: 'As your wallet gathers funds, you can trade your funds on supperted platforms (NFTs, swaps and perps). You can take a percentage of the profits whenever you sell. All setrtlements are in WETH.',
       icon: (
         <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 3v18h18" />
@@ -27,8 +27,8 @@ const HowItWorks = () => {
     },
     {
       number: '03',
-      title: 'Fund Expiration',
-      description: 'At expiration, the fund locks, and profits are distributed to token holders. You can redeem tokens for their underlying value or sell them on the market.',
+      title: 'Auto Buybacks',
+      description: 'Wehnever a sale is made 70% of the proceeds will go toward buying back the trader tokens. This will help to increase the value of the tokens and provide liquidity.',
       icon: (
         <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="10" />
@@ -40,16 +40,16 @@ const HowItWorks = () => {
 
   const faqs = [
     {
-      question: 'Why are DAO tokens mintable?',
-      answer: 'DAO tokens are mintable to ensure dynamic participation and funding flexibility.'
+      question: 'What is shorting and how does it work?',
+      answer: 'Raise provides a built in marketplace to short trader tokens, allowing you to profit from a token price decrease.'
     },
     {
-      question: 'How is token value calculated?',
-      answer: 'Token value is determined by trading activity and underlying asset performance.'
+      question: 'How do you trackl buybacks?',
+      answer: 'Raise offers a panel where you can view a buyback frequencyt counter to see often the trader is selling. Whenever positions are sold the buy back is made.'
     },
     {
-      question: 'What happens after fund expiration?',
-      answer: 'After expiration, profits are distributed and tokens can be redeemed or sold.'
+      question: 'What is the token tax?',
+      answer: 'Raise tokens can be traded anywhere on the Ethereum network. A 50% tax is applied to specific addresses (Uniswap and others) to incentivize purchasing on Raise first. eventually taxes will be phased out as the platform grows.'
     }
   ];
 
