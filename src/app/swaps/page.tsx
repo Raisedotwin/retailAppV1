@@ -14,7 +14,7 @@ const SwapsPage: React.FC = () => {
   const [loggedIntoWallet, setLoggedIntoWallet] = useState(true);
   const [loggedInToX, setLoggedInToXChain] = useState(true);
   const [ethBalance, setEthBalance] = useState('0');
-  const [profile, setProfile] = useState<any>(null); // State for the profile
+  const [profile, setProfile] = useState<any>(null);
 
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
@@ -30,7 +30,7 @@ const SwapsPage: React.FC = () => {
       let username = user?.twitter?.username;
       if (username) {
         const profile = await profileContract.getProfileByName(username);
-        setProfile(profile); // Set the profile state
+        setProfile(profile);
         return profile;
       }
     } catch (error) {
@@ -43,7 +43,6 @@ const SwapsPage: React.FC = () => {
       try {
         if (user?.twitter?.username) {
           setLoggedInToXChain(true);
-
           let profile = await fetchProfile();
 
           if (profile && profile.length > 5) {
@@ -53,7 +52,7 @@ const SwapsPage: React.FC = () => {
             if (traderPoolAddr) {
               const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
               const balance = await traderPoolInstance.getTotal();
-              setEthBalance(ethers.formatEther(balance)); // Set the balance
+              setEthBalance(ethers.formatEther(balance));
             }
           } else {
             console.log('Profile does not contain sufficient data.');
@@ -88,33 +87,44 @@ const SwapsPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Conditionally render the forms based on the active tab */}
         {activeTab === 'followSwaps' && <FollowSwapsForm />}
-        {activeTab === 'swapDirect' && <SwapForm balance={ethBalance} profile={profile} />} {/* Pass balance and profile */}
+        {activeTab === 'swapDirect' && <SwapForm balance={ethBalance} profile={profile} />}
       </div>
-      {/* Modal for Processing */}
+
+      {/* Updated X Authentication Modal */}
       {!loggedInToX && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-md shadow-md flex flex-col items-center w-1/5 h-1/3.5 max-w-1xl max-h- 1xl">
-            <Image src="/icons/logo.png" alt="Twitter Icon" width={120} height={120} />
-            <br />
-            <p className="mb-2 text-gray-700 font-semibold" >Please Authenticate With X To View Wallet</p>
-              <div className="mt-4">
-              </div>
-           
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
+          <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
+            <div className="bg-white/10 p-4 rounded-full mb-6">
+              <Image src="/icons/logo.png" alt="X Logo" width={80} height={80} className="rounded-full" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-4">Authentication Required</h3>
+            <p className="text-gray-300 text-center mb-6">
+              Please authenticate with X to access your trading wallet and begin trading.
+            </p>
+            <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-6"></div>
+            <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200">
+              Connect with X
+            </button>
           </div>
         </div>
       )}
 
-  {!loggedIntoWallet && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-md shadow-md flex flex-col items-center w-1/5 h-1/3.5 max-w-1xl max-h- 1xl">
-            <Image src="/icons/logo.png" alt="Twitter Icon" width={120} height={120} />
-            <br />
-            <p className="mb-2 text-gray-700 font-semibold" >Please Create A Wallet With This Address</p>
-              <div className="mt-4">
-              </div>
-           
+      {/* Updated Wallet Setup Modal */}
+      {!loggedIntoWallet && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
+          <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
+            <div className="bg-white/10 p-4 rounded-full mb-6">
+              <Image src="/icons/logo.png" alt="Wallet Logo" width={80} height={80} className="rounded-full" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-4">Wallet Setup Required</h3>
+            <p className="text-gray-300 text-center mb-6">
+              Please create a wallet with this address to start trading.
+            </p>
+            <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-6"></div>
+            <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200">
+              Create Wallet
+            </button>
           </div>
         </div>
       )}

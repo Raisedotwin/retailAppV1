@@ -106,7 +106,7 @@ const ProfilePage: React.FC = () => {
     console.log(address);
 
     const balance = ethers.formatEther(
-      (await privyProvider.getBalance(address)).toString()
+      (await privyProvider?.getBalance(address))?.toString()
     );
     console.log(balance);
     setBalance(balance);

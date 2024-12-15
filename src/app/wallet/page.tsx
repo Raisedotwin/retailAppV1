@@ -10,9 +10,6 @@ import Image from 'next/image';
 import { EIP155_CHAINS, TEIP155Chain } from '@/data/EIP155Data';
 
 const WalletPage: React.FC = () => {
-  const { account } = useAccount();
-  const [depositAmount, setDepositAmount] = useState('');
-  const [withdrawAmount, setWithdrawAmount] = useState('');
   const [profileExists, setProfileExists] = useState(false);
   const [ethBalance, setEthBalance] = useState('0.00');
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -392,50 +389,68 @@ const WalletPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Modals */}
-        {!loggedInToX && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-            <div className="bg-white p-6 rounded-md shadow-md flex flex-col items-center w-1/5 h-1/3.5 max-w-1xl max-h- 1xl">
-              <Image src="/icons/logo.png" alt="Twitter Icon" width={120} height={120} />
-              <br />
-              <p className="mb-2 text-gray-700 font-semibold">Please Authenticate With X To View Wallet</p>
-              <div className="mt-4">
-                <button
-                  onClick={loginWithPrivy}
-                  className="bg-black text-white px-4 py-2 rounded-lg"
-                >
-                  Login
-                </button>
+         {/* Updated X Authentication Modal */}
+         {!loggedInToX && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
+            <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
+              <div className="bg-white/10 p-4 rounded-full mb-6">
+                <Image src="/icons/logo.png" alt="X Logo" width={80} height={80} className="rounded-full" />
               </div>
+              <h3 className="text-2xl font-bold text-white mb-4">Authentication Required</h3>
+              <p className="text-gray-300 text-center mb-6">
+                Please authenticate with X to access your trading wallet.
+              </p>
+              <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-6"></div>
+              <button
+                onClick={loginWithPrivy}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200"
+              >
+                Connect with X
+              </button>
             </div>
           </div>
         )}
 
+        {/* Updated Processing Modal */}
         {isModalVisible && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-            <div className="bg-white p-6 rounded-md shadow-md flex flex-col items-center w-1/5 h-1/3.5 max-w-1xl max-h- 1xl">
-              <Image src="/icons/waitlogo.png" alt="Twitter Icon" width={120} height={120} />
-              <p className="mb-2 text-gray-700 font-semibold">{modalMessage} ... </p>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
+            <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
+              <div className="bg-white/10 p-4 rounded-full mb-6">
+                <Image src="/icons/waitlogo.png" alt="Processing" width={80} height={80} className="rounded-full" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">Processing</h3>
+              <p className="text-gray-300 text-center mb-6">
+                {modalMessage}
+              </p>
+              <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
             </div>
           </div>
         )}
 
+        {/* Updated Create Wallet Confirmation Modal */}
         {showCreateWalletModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center">
-            <div className="bg-white p-6 rounded-md shadow-md">
-              <p className="text-lg">Create wallet for trader?</p>
-              <div className="flex justify-end mt-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
+            <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
+              <div className="bg-white/10 p-4 rounded-full mb-6">
+                <Image src="/icons/logo.png" alt="Wallet" width={80} height={80} className="rounded-full" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-4">Create Wallet</h3>
+              <p className="text-gray-300 text-center mb-6">
+                Would you like to create a new wallet for this trader?
+              </p>
+              <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-6"></div>
+              <div className="flex space-x-4 w-full">
                 <button 
-                  className="mr-2 px-4 py-2 bg-green-500 text-white rounded-lg" 
-                  onClick={handleCreateWallet}
-                >
-                  Create Wallet
-                </button>
-                <button 
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg" 
                   onClick={() => setShowCreateWalletModal(false)}
+                  className="w-full py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all duration-200"
                 >
                   Cancel
+                </button>
+                <button 
+                  onClick={handleCreateWallet}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200"
+                >
+                  Create Wallet
                 </button>
               </div>
             </div>
