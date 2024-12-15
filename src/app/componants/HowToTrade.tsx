@@ -28,9 +28,9 @@ const HowToTrade = () => {
           </div>
         </div>
 
-        {/* Exchange Link Button */}
+        {/* Exchange Link Button */} 
         <button 
-          onClick={() => window.open('https://example-exchange.com', '_blank')}
+          onClick={() => window.open('https://jojo.exchange','blank')}
           className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg text-white font-medium transition-all duration-200 shadow-lg shadow-blue-500/20 flex items-center justify-center space-x-2"
         >
           <svg 

@@ -44,7 +44,7 @@ const HowItWorks = () => {
       answer: 'Raise provides a built in marketplace to short trader tokens, allowing you to profit from a token price decrease.'
     },
     {
-      question: 'How do you trackl buybacks?',
+      question: 'How do you track buybacks?',
       answer: 'Raise offers a panel where you can view a buyback frequencyt counter to see often the trader is selling. Whenever positions are sold the buy back is made.'
     },
     {
