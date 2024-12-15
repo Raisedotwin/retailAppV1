@@ -28,6 +28,8 @@ const TraderPageContent: React.FC = () => {
 
   //const provider = useMemo(() => new ethers.BrowserProvider(window.ethereum), []);
 
+  const tokenPoolABI = require("../abi/traderPool");
+
   const tokenContractAddr = '0xc3369746eeC430A3D79EfA908698E1323333BB1d';
   const tokenMarketABI = require('../abi/tokenMarket.json');
 
@@ -176,63 +178,70 @@ const TraderPageContent: React.FC = () => {
 // Add loading states
 const [isPriceLoading, setIsPriceLoading] = useState(false);
 
-  useEffect(() => {
-    const initContract = async () => {
-
-        //if logged into twitter set to embedded wallet
-        if(user?.twitter?.username) {
-          let embeddedWallet = getEmbeddedConnectedWallet(wallets);
-          let privyProvider = await embeddedWallet?.address;
-          wallet = wallets.find((wallet) => wallet.address === privyProvider);
-        }
-
-        //const signer = await provider.getSigner(user.wallet.address);
-        getPrivyProvider("base"); // Switch The Chain Of The UseContext Setting base or Avax
-        //const privyProvider = await wallets[0].getEthersProvider(); // Working Implementation
-        const privyProvider = await wallet?.getEthersProvider(); // Get Privy provider
-        const signer: any  = privyProvider?.getSigner(); // Get signer
-
-        const marketContractInstance = new ethers.Contract(tokenContractAddr, tokenMarketABI, signer);
-        setContract(marketContractInstance);
-        const profileContractInstance = new ethers.Contract(profileAddr, profileABI, signer);
-        setProfileContract(profileContractInstance);
-        const createContractInstance = new ethers.Contract(createAccountAddr, createAccountABI, signer);
-        setCreateContract(createContractInstance);
-        const marketDataContractInstance = new ethers.Contract(marketDataAddr, marketDataABI, signer);
-        setMarketDataContract(marketDataContractInstance);
-
-        const address = await signer?.getAddress();
-        setWalletAddress(address);
-
-        if (name && marketDataContractInstance) {
-          try {
-            const profile = await profileContractInstance.getProfileByName(username as string);
-            const nativeAddr = profile[0];
-            const traderAcc = profile[1];
-
-            const tokenAddress = await marketContractInstance.getTokenAddressByAccount(traderAcc.toString());
-
-            const MCAP = await marketContractInstance.getMarketCap(traderAcc.toString());
-            setMarketCap(ethers.formatEther(MCAP).toString());
-            console.log("market", MCAP);
-
-            const lastBuyback = await marketDataContractInstance.getLastBuybackValue(username as string);
-            setLastBuybackValue(lastBuyback.toString());
-
-            const winRatio = await marketDataContractInstance.calculateWinRatio(username as string);
-            setWinRatio(winRatio.toString());
-
-            const freq = await marketDataContractInstance.getBuybackFrequency(username as string);
-            setFrequency(freq.toString());
-
-            setBalance("0");
-          } catch (error) {
-            console.error('Error fetching market data:', error);
+useEffect(() => {
+  const initContract = async () => {
+      try {
+          //if logged into twitter set to embedded wallet
+          if(user?.twitter?.username) {
+              let embeddedWallet = getEmbeddedConnectedWallet(wallets);
+              let privyProvider = await embeddedWallet?.address;
+              wallet = wallets.find((wallet) => wallet.address === privyProvider);
           }
-        }
-    };
-    initContract();
-  }, [user, name, username, provider]);
+
+          getPrivyProvider("base");
+          const privyProvider = await wallet?.getEthersProvider();
+          const signer: any = privyProvider?.getSigner();
+
+          const marketContractInstance = new ethers.Contract(tokenContractAddr, tokenMarketABI, signer);
+          setContract(marketContractInstance);
+          const profileContractInstance = new ethers.Contract(profileAddr, profileABI, signer);
+          setProfileContract(profileContractInstance);
+          const createContractInstance = new ethers.Contract(createAccountAddr, createAccountABI, signer);
+          setCreateContract(createContractInstance);
+          const marketDataContractInstance = new ethers.Contract(marketDataAddr, marketDataABI, signer);
+          setMarketDataContract(marketDataContractInstance);
+
+          const address = await signer?.getAddress();
+          setWalletAddress(address);
+
+          if (name && marketDataContractInstance) {
+              try {
+                  const profile = await profileContractInstance.getProfileByName(username as string);
+                  const nativeAddr = profile[0];
+                  const traderAcc = profile[1];
+                  const traderPoolAddr = profile[5]; // Get the pool address
+
+                  // Create instance of pool contract
+                  if (traderPoolAddr) {
+                      const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, signer);
+                      const balance = await traderPoolInstance.getTotal();
+                      setBalance(ethers.formatEther(balance));
+                  }
+
+                  const tokenAddress = await marketContractInstance.getTokenAddressByAccount(traderAcc.toString());
+
+                  const MCAP = await marketContractInstance.getMarketCap(traderAcc.toString());
+                  setMarketCap(MCAP.toString());
+
+                  const lastBuyback = await marketDataContractInstance.getLastBuybackValue(username as string);
+                  setLastBuybackValue(lastBuyback.toString());
+
+                  const winRatio = await marketDataContractInstance.calculateWinRatio(username as string);
+                  setWinRatio(winRatio.toString());
+
+                  const freq = await marketDataContractInstance.getBuybackFrequency(username as string);
+                  setFrequency(freq.toString());
+
+              } catch (error) {
+                  console.error('Error fetching market data:', error);
+              }
+          }
+      } catch (error) {
+          console.error('Error initializing contracts:', error);
+      }
+  };
+  initContract();
+}, [user, name, username, provider]);
 
   const getPrivyProvider = async (chainName: string) => {
     if (!wallet) {
@@ -513,9 +522,9 @@ const [isPriceLoading, setIsPriceLoading] = useState(false);
         <p className="text-xs text-gray-500">Marketcap</p>
       </div>
       <div className="text-center px-4">
-        <p className="text-lg font-bold text-gray-800">{stats.price}</p>
-        <p className="text-xs text-gray-500">AUM</p>
-      </div>
+      <p className="text-lg font-bold text-gray-800">{balance} ETH</p>
+      <p className="text-xs text-gray-500">AUM</p>
+    </div>
       <div className="text-center px-4">
         <p className="text-lg font-bold text-gray-800">{winRatio}</p>
         <p className="text-xs text-gray-500">Win Rate</p>

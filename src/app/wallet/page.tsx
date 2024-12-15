@@ -275,7 +275,7 @@ const WalletPage: React.FC = () => {
             if (traderPoolAddr) {
               const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
               //console.log(traderPoolInstance);
-              const balance = await traderPoolInstance.getNativeBalanceView();
+              const balance = await traderPoolInstance.getTotal();
               console.log("balance", balance);
               setEthBalance(ethers.formatEther(balance));
               console.log(balance);
