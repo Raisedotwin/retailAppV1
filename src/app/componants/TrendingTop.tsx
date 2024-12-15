@@ -7,7 +7,7 @@ const HowItWorks = () => {
     {
       number: '01',
       title: 'Fundraise',
-      description: 'Sign in with your X account and create a token. Or create a token for a friend by searching for their account. Your token will be traded on a curve and fees will fund your Raise wallet.',
+      description: "Sign in with your X account to create a token. Alternatively, create a token for a friend by searching for their account. Your token will trade on a curve, and the fees will fund your Raise wallet.",
       icon: (
         <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -17,7 +17,7 @@ const HowItWorks = () => {
     {
       number: '02',
       title: 'Trading',
-      description: 'As your wallet gathers funds, you can trade your funds on supperted platforms (NFTs, swaps and perps). You can take a percentage of the profits whenever you sell. All setrtlements are in WETH.',
+      description: "As your wallet gathers funds, you can trade them on supported platforms (NFTs, swaps, and perps). You can take a percentage of the profits whenever you sell. All settlements are in WETH.",
       icon: (
         <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 3v18h18" />
@@ -28,7 +28,7 @@ const HowItWorks = () => {
     {
       number: '03',
       title: 'Auto Buybacks',
-      description: 'Wehnever a sale is made 70% of the proceeds will go toward buying back the trader tokens. This will help to increase the value of the tokens and provide liquidity.',
+      description: "Whenever a sale is made, 70% of the proceeds will go toward buying back the trader tokens. This will help increase the tokens' value and provide liquidity.",
       icon: (
         <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="10" />

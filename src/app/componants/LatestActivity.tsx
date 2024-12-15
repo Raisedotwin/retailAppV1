@@ -17,7 +17,7 @@ const CommunityLinks = () => {
     },
     {
       name: 'YouTube',
-      url: 'https://www.youtube.com/',
+      url: 'https://www.youtube.com/@raisedotwin',
       icon: (
         <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
           <path d="M23.498 6.186a2.84 2.84 0 00-1.996-2.016C19.42 3.513 12 3.513 12 3.513s-7.42 0-9.502.657A2.84 2.84 0 00.502 6.186C0 8.268 0 12 0 12s0 3.732.502 5.814a2.84 2.84 0 001.996 2.016c2.082.656 9.502.656 9.502.656s7.42 0 9.502-.657a2.84 2.84 0 001.996-2.016C24 15.732 24 12 24 12s0-3.732-.502-5.814zM9.546 15.568V8.432L15.818 12l-6.272 3.568z" />
@@ -26,7 +26,7 @@ const CommunityLinks = () => {
       color: 'from-red-400 to-red-600',
       hoverColor: 'group-hover:from-red-500 group-hover:to-red-700',
       label: 'Subscribe to YouTube',
-      stats: '5K+ Subscribers'
+      stats: '1K+ Subscribers'
     },
     {
       name: 'Telegram',
