@@ -70,59 +70,113 @@ const SwapsPage: React.FC = () => {
   }, [fetchProfile, user?.twitter?.username, provider]);
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: '#edf2f7' }}>
-      <div className="max-w-4xl w-full mx-auto p-6">
-        <div className="flex justify-center space-x-4 mb-6">
-          <button
-            className={`px-6 py-3 rounded-full transition-colors duration-300 ${activeTab === 'followSwaps' ? 'bg-purple-600 text-white shadow-lg transform scale-105' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-            onClick={() => setActiveTab('followSwaps')}
-          >
-            Follow Swaps
-          </button>
-          <button
-            className={`px-6 py-3 rounded-full transition-colors duration-300 ${activeTab === 'swapDirect' ? 'bg-purple-600 text-white shadow-lg transform scale-105' : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'}`}
-            onClick={() => setActiveTab('swapDirect')}
-          >
-            Swap Direct
-          </button>
+    <div className="min-h-screen bg-[#0e1016]"> {/* Dark background */}
+      {/* Stats Section */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-[#1c1f2a] rounded-2xl p-6 border border-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Total Balance</p>
+                <p className="text-2xl font-bold text-white">{ethBalance} ETH</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <span className="text-xl">💰</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#1c1f2a] rounded-2xl p-6 border border-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Network</p>
+                <p className="text-2xl font-bold text-white">Base Chain</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                <span className="text-xl">🌐</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#1c1f2a] rounded-2xl p-6 border border-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-400 text-sm">Status</p>
+                <p className="text-2xl font-bold text-white">Active</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center">
+                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {activeTab === 'followSwaps' && <FollowSwapsForm />}
-        {activeTab === 'swapDirect' && <SwapForm balance={ethBalance} profile={profile} />}
+        {/* Tab Navigation */}
+        <div className="max-w-xs mx-auto mt-8">
+          <div className="bg-[#1c1f2a] p-1.5 rounded-xl border border-gray-800">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setActiveTab('followSwaps')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'followSwaps'
+                    ? 'bg-violet-600 text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Follow Swaps
+              </button>
+              <button
+                onClick={() => setActiveTab('swapDirect')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeTab === 'swapDirect'
+                    ? 'bg-violet-600 text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                Swap Direct
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Forms */}
+        <div className="mt-8">
+          {activeTab === 'followSwaps' && <FollowSwapsForm />}
+          {activeTab === 'swapDirect' && <SwapForm balance={ethBalance} profile={profile} />}
+        </div>
       </div>
 
-      {/* Updated X Authentication Modal */}
+      {/* Authentication Modals */}
       {!loggedInToX && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
-            <div className="bg-white/10 p-4 rounded-full mb-6">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex justify-center items-center z-50">
+          <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-purple-500/20 flex flex-col items-center max-w-md w-full mx-4">
+            <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 p-4 rounded-full mb-6">
               <Image src="/icons/logo.png" alt="X Logo" width={80} height={80} className="rounded-full" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Authentication Required</h3>
+            <h3 className="text-2xl font-bold text-white mb-4">Welcome to Swaps</h3>
             <p className="text-gray-300 text-center mb-6">
-              Please authenticate with X to access your trading wallet and begin trading.
+              Connect with X to access advanced trading features and your personalized wallet.
             </p>
-            <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-6"></div>
-            <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200">
+            <div className="w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mb-6"></div>
+            <button className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-300 transform hover:scale-[1.02]">
               Connect with X
             </button>
           </div>
         </div>
       )}
 
-      {/* Updated Wallet Setup Modal */}
       {!loggedIntoWallet && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
-            <div className="bg-white/10 p-4 rounded-full mb-6">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex justify-center items-center z-50">
+          <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-purple-500/20 flex flex-col items-center max-w-md w-full mx-4">
+            <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 p-4 rounded-full mb-6">
               <Image src="/icons/logo.png" alt="Wallet Logo" width={80} height={80} className="rounded-full" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Wallet Setup Required</h3>
+            <h3 className="text-2xl font-bold text-white mb-4">Create Your Wallet</h3>
             <p className="text-gray-300 text-center mb-6">
-              Please create a wallet with this address to start trading.
+              Set up your trading wallet to start swapping tokens and following traders.
             </p>
-            <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-6"></div>
-            <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200">
+            <div className="w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mb-6"></div>
+            <button className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-300 transform hover:scale-[1.02]">
               Create Wallet
             </button>
           </div>

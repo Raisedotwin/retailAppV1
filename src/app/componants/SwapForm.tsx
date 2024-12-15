@@ -338,7 +338,7 @@ const SwapForm: React.FC<SwapFormProps> = ({ balance, profile }) => {
   };
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: '#edf2f7' }}>
+    <div className="bg-[#1c1f2a] rounded-2xl border border-gray-800 p-6">
       <div className="max-w-lg mx-auto">
         <div className="bg-black rounded-2xl shadow-xl p-6">
           {/* Header with Balance */}
@@ -472,12 +472,11 @@ const SwapForm: React.FC<SwapFormProps> = ({ balance, profile }) => {
         </div>
       </div>
 
-      {/* Processing Modal */}
       {isModalVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-6 flex flex-col items-center">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-[#1c1f2a] rounded-xl p-6 border border-gray-800 flex flex-col items-center">
             <Image src="/icons/waitlogo.png" alt="Processing" width={120} height={120} />
-            <p className="mt-4 text-gray-700 font-medium">{modalMessage}</p>
+            <p className="mt-4 text-white font-medium">{modalMessage}</p>
           </div>
         </div>
       )}
