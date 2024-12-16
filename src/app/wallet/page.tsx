@@ -211,7 +211,7 @@ const WalletPage: React.FC = () => {
           //onst estimatedGas = await tokenMarketTwo.buyShares(accountCounter.toString(), "1", { value: ethers.parseEther("0") });
           //const gasPrice = await provider.getGasPrice();
 
-          const tx = await tokenMarketTwo.buyShares(accountCounter.toString(), "1", {
+          const tx = await tokenMarketTwo.buyShares(accountCounter.toString(), "1000000000000000000", {
             value: ethers.parseEther("0"),
             //gasLimit: estimatedGas,
             //gasPrice: gasPrice

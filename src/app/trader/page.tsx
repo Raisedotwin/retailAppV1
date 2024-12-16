@@ -333,47 +333,69 @@ useEffect(() => {
           accNum = profile[1];
           try {
             tokenAddress = await contract.getTokenAddressByAccount(accNum.toString());
-
           } catch (error) {
-            console.error('Error fetching profile:', error);
+            console.error('Error fetching token address:', error);
+            return;
           }
         } else {
           alert('Account does not exist');
           return;
         }
+  
+        try {
+          setModalMessage('Preparing purchase');
+          setIsModalVisible(true);
+  
+          // Calculate amounts and price
+          const amountInWei = ethers.parseEther(amount);
+          const amountInTokens = await contract.getNumberOfTokensForAmount(accNum, amountInWei);
+          const price = await contract.getBuyPriceAfterFee(tokenAddress, amountInTokens);
+          setPrice(ethers.formatEther(price));
+  
+          // Execute buy transaction
+          setModalMessage('Initiating purchase...');
+          const tx = await contract.buyShares(accNum, amountInTokens, { value: price });
+          
+          setModalMessage('Waiting for transaction confirmation...');
+          const receipt = await provider.waitForTransaction(tx.hash, 1); // Wait for 1 confirmation
+  
+          if (receipt?.status === 1) {
+            setModalMessage('Purchase completed successfully');
+            // Update any necessary state here (e.g., balances)
+            
+            // Keep the success message visible for a moment
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            setIsModalVisible(false);
+          } else {
+            setModalMessage('Purchase failed - Transaction reverted');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            setIsModalVisible(false);
+          }
+  
+        } catch (error) {
+          console.error('Error buying shares:', error);
+          // Provide more specific error messages based on the error type
+          let errorMessage = 'Purchase failed';
+          if (error === 'ACTION_REJECTED') {
+            errorMessage = 'Transaction was rejected by user';
+          } else if (error === 'INSUFFICIENT_FUNDS') {
+            errorMessage = 'Insufficient funds for purchase';
+          } else if (error) {
+            errorMessage = `Purchase failed: ${error}`;
+          }
+          
+          setModalMessage(errorMessage);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          setIsModalVisible(false);
+        }
       } catch (error: any) {
+        console.error('Error fetching profile:', error);
         if (error?.errorArgs === "Profile with this name does not exist.") {
-          alert('Account does not exist');
+          setModalMessage('Account does not exist');
         } else {
-          console.error('Error fetching profile:', error);
-          alert('Error fetching profile');
+          setModalMessage('Error fetching profile');
         }
-        return;
-      }
-
-      try {
-        setModalMessage('Buying tokens');
-        setIsModalVisible(true);
-
-        const amountInWei = ethers.parseEther(amount);
-        const amountInTokens = await contract.getNumberOfTokensForAmount(accNum, amountInWei)
-        const price = await contract.getBuyPriceAfterFee(tokenAddress, amountInTokens);
-        setPrice(ethers.formatEther(price));
-        const tx = await contract.buyShares(accNum, amountInTokens, { value: price });
-
-        if(tx) {
-          setModalMessage('Purchased successfully');
-          setIsModalVisible(false);
-        } else {
-          setModalMessage('Purchase failed');
-          setIsModalVisible(false);
-        }
-
-      } catch (error) {
-        console.error('Error buying shares:', error);
-        setModalMessage('Purchase failed');
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
+        await new Promise(resolve => setTimeout(resolve, 2000));
         setIsModalVisible(false);
       }
     } else {
@@ -399,52 +421,58 @@ useEffect(() => {
           alert('Account does not exist');
           return;
         }
-
+  
         // Create token contract instance for approval
         const tokenABI = ["function approve(address spender, uint256 amount) public returns (bool)"];
         const tokenContract = new ethers.Contract(tokenAddress, tokenABI, contract.runner);
-
+  
         try {
           setModalMessage('Approving token transfer');
           setIsModalVisible(true);
-
+  
           // Convert amount to Wei for approval
           const amountInWei = ethers.parseEther(amount);
           
           // Approve the token market contract to spend tokens
           const approveTx = await tokenContract.approve(tokenContractAddr, amountInWei);
-
-          if (approveTx) {
-            setModalMessage('Token transfer approved');
-          }
-  
-          setModalMessage('Selling tokens');
           
-          // Get sell price after approval
-          const price = await contract.getSellPriceAfterFee(tokenAddress, amountInWei);
-          setPrice(ethers.formatEther(price));
+          // Wait for the transaction to be mined and get the receipt
+          setModalMessage('Waiting for approval confirmation...');
+          const approvalReceipt = await provider.waitForTransaction(approveTx.hash, 1); // Wait for 1 confirmation
           
-          // Execute sell transaction
-          const sellTx = await contract.sellShares(accNum, amountInWei);
-
-          if (sellTx) {
-            setModalMessage('Sell order successful');
-            setIsModalVisible(false);
+          if (approvalReceipt?.status === 1) {  // 1 indicates success
+            setModalMessage('Approval confirmed. Initiating sale...');
+            
+            // Get sell price after approval
+            const price = await contract.getSellPriceAfterFee(tokenAddress, amountInWei);
+            setPrice(ethers.formatEther(price));
+            
+            // Execute sell transaction immediately after approval confirmation
+            const sellTx = await contract.sellShares(accNum, amountInWei);
+            
+            setModalMessage('Waiting for sale confirmation...');
+            const sellReceipt = await provider.waitForTransaction(sellTx.hash, 1); // Wait for 1 confirmation
+            
+            if (sellReceipt?.status === 1) {
+              setModalMessage('Sale completed successfully');
+            } else {
+              setModalMessage('Sale transaction failed');
+            }
           } else {
-
-            setModalMessage('Transaction failed');
-            setIsModalVisible(false);
+            setModalMessage('Approval transaction failed');
           }
-
+          
+          setTimeout(() => setIsModalVisible(false), 2000);
+  
         } catch (error) {
           console.error('Error during sell process:', error);
-          setModalMessage('Transaction failed');
-          setIsModalVisible(false);
+          setModalMessage(`Transaction failed: ${error}`);
+          setTimeout(() => setIsModalVisible(false), 2000);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
         setModalMessage('Transaction failed');
-        setIsModalVisible(false);
+        setTimeout(() => setIsModalVisible(false), 2000);
       }
     } else {
       alert('Contract not initialized');
