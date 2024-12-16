@@ -153,29 +153,12 @@ const TraderPageContent: React.FC = () => {
     }
   };
   
-  // Add debounce to prevent too frequent updates
-  //const debouncedUpdatePrices = useMemo(
-    //() => {
-      //let timeout: NodeJS.Timeout;
-      //return (amount: string) => {
-        //clearTimeout(timeout);
-       // timeout = setTimeout(() => {
-          //updatePrices();
-        //}, 500); // Wait 500ms after last input before updating
-      //};
-   // },
-    //[contract, profileContract, username]
-  //);
+useEffect(() => {
+  if (amount && !isNaN(Number(amount))) {
+    updatePrices();
+  }
+}, [amount]);
 
-  // Use effect for price updates with debounce
-  useEffect(() => {
-    if (amount && !isNaN(Number(amount))) {
-      //debouncedUpdatePrices(amount);
-      updatePrices();
-    }
-  }, [amount]); ///, debouncedUpdatePrices
-
-// Add loading states
 const [isPriceLoading, setIsPriceLoading] = useState(false);
 
 useEffect(() => {
@@ -355,16 +338,15 @@ useEffect(() => {
             console.error('Error fetching profile:', error);
           }
         } else {
-          setShowCreateWalletModal(true);
           alert('Account does not exist');
           return;
         }
       } catch (error: any) {
-        setShowCreateWalletModal(true);
-
         if (error?.errorArgs === "Profile with this name does not exist.") {
+          alert('Account does not exist');
         } else {
           console.error('Error fetching profile:', error);
+          alert('Error fetching profile');
         }
         return;
       }
@@ -374,13 +356,19 @@ useEffect(() => {
         setIsModalVisible(true);
 
         const amountInWei = ethers.parseEther(amount);
-        const price = await contract.getBuyPriceAfterFee(tokenAddress, amountInWei);
+        const amountInTokens = await contract.getNumberOfTokensForAmount(accNum, amountInWei)
+        const price = await contract.getBuyPriceAfterFee(tokenAddress, amountInTokens);
         setPrice(ethers.formatEther(price));
-        const tx = await contract.buyShares(accNum, amountInWei, { value: price });
-        //await tx.wait();
-        setModalMessage('Purchased successfully');
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setIsModalVisible(false);
+        const tx = await contract.buyShares(accNum, amountInTokens, { value: price });
+
+        if(tx) {
+          setModalMessage('Purchased successfully');
+          setIsModalVisible(false);
+        } else {
+          setModalMessage('Purchase failed');
+          setIsModalVisible(false);
+        }
+
       } catch (error) {
         console.error('Error buying shares:', error);
         setModalMessage('Purchase failed');
@@ -425,10 +413,11 @@ useEffect(() => {
           
           // Approve the token market contract to spend tokens
           const approveTx = await tokenContract.approve(tokenContractAddr, amountInWei);
-          //await approveTx.wait();
-          //setIsModalVisible(false);
 
-
+          if (approveTx) {
+            setModalMessage('Token transfer approved');
+          }
+  
           setModalMessage('Selling tokens');
           
           // Get sell price after approval
@@ -437,21 +426,24 @@ useEffect(() => {
           
           // Execute sell transaction
           const sellTx = await contract.sellShares(accNum, amountInWei);
-          await sellTx.wait();
-          
-          setModalMessage('Sell order successful');
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          setIsModalVisible(false);
+
+          if (sellTx) {
+            setModalMessage('Sell order successful');
+            setIsModalVisible(false);
+          } else {
+
+            setModalMessage('Transaction failed');
+            setIsModalVisible(false);
+          }
+
         } catch (error) {
           console.error('Error during sell process:', error);
           setModalMessage('Transaction failed');
-          await new Promise((resolve) => setTimeout(resolve, 500));
           setIsModalVisible(false);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
         setModalMessage('Transaction failed');
-        await new Promise((resolve) => setTimeout(resolve, 500));
         setIsModalVisible(false);
       }
     } else {
@@ -567,7 +559,7 @@ useEffect(() => {
   <div className="space-y-6">
     <h3 className="text-xl font-semibold text-gray-800">Buy ${params.username}</h3>
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Amount ETH</label>
       <input
         type="number"
         step="0.000000000000000001"
@@ -599,7 +591,7 @@ useEffect(() => {
   <div className="space-y-6">
     <h3 className="text-xl font-semibold text-gray-800">Sell ${params.username}</h3>
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+      <label className="block text-sm font-medium text-gray-700 mb-2">Amount {params.username}</label>
       <input
         type="number"
         step="0.000000000000000001"
