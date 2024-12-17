@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { useAccount } from '../context/AccountContext';
 import FeaturedTrader from '../componants/FeaturedTrader';
@@ -28,10 +30,10 @@ const StakePage: React.FC = () => {
       </div>
 
       {/* Main content with reduced top spacing */}
-      <div className="min-h-screen pt-12 px-6 pb-6"> {/* Reduced from pt-20 to pt-12 */}
-        <div className="max-w-7xl w-full mx-auto p-4"> {/* Reduced from p-6 to p-4 */}
+      <div className="min-h-screen pt-12 px-6 pb-6">
+        <div className="max-w-7xl w-full mx-auto p-4">
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl">
-            <div className="pt-2"> {/* Added small top padding for subtle spacing */}
+            <div className="pt-2">
               <FeaturedTrader />
               <TrendingTop />
               <Categories />

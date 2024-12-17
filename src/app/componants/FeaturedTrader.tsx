@@ -22,7 +22,7 @@ const ArrowIcon = () => (
 const NeonText = () => (
   <p className="relative text-l md:text-2xl font-bold text-center">
    
-    <span className="relative text-black bg-clip-text text-transparent">
+    <span className="relative text-black bg-clip-text">
       The #1 Buyback Game On Base
     </span>
   </p>
