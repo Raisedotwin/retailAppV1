@@ -1,23 +1,51 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
+import { EIP155_CHAINS } from '@/data/EIP155Data';
 
 const ChatPage: React.FC = () => {
   const [isEnabled, setIsEnabled] = useState(false);
   const [activeTab, setActiveTab] = useState('marketplace');
+  const [isProfileAssociated, setIsProfileAssociated] = useState(false);
   const { user, login } = usePrivy();
   const { wallets } = useWallets();
   const [balance, setBalance] = useState("0.00");
+
+  // Profile contract setup
+  let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
+  const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
+  const profileAddr = '0x4731d542b3137EA9469c7ba76cD16E4a563f0a16';
+  const profileABI = require("../abi/profile");
+  const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
+  
+  const wallet = getEmbeddedConnectedWallet(wallets);
+  const nativeAddress = user?.wallet?.address;
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
   };
 
-  // Check if user is authenticated with X
-  const isAuthenticated = user?.twitter?.username;
+  // Check if address is associated with a profile
+  useEffect(() => {
+    const checkProfileAssociation = async () => {
+      if (!nativeAddress || !profileContract) {
+        setIsProfileAssociated(false);
+        return;
+      }
+      try {
+        const isAssociated = await profileContract.isProfileAssociated(nativeAddress);
+        setIsProfileAssociated(isAssociated);
+      } catch (error) {
+        console.error('Error checking profile association:', error);
+        setIsProfileAssociated(false);
+      }
+    };
+
+    checkProfileAssociation();
+  }, [nativeAddress, profileContract]);
 
   return (
     <>
@@ -172,23 +200,44 @@ const ChatPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Authentication Modal */}
-      {!isAuthenticated && (
+      {/* Authentication Modals */}
+      {nativeAddress && !isProfileAssociated && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex justify-center items-center z-50">
           <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-purple-500/20 flex flex-col items-center max-w-md w-full mx-4">
             <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 p-4 rounded-full mb-6">
-              <Image src="/icons/logo.png" alt="X Logo" width={80} height={80} className="rounded-full" />
+              <Image src="/icons/logo.png" alt="Profile Required" width={80} height={80} className="rounded-full" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Welcome to NFT Marketplace</h3>
+            <h3 className="text-2xl font-bold text-white mb-4">Profile Required</h3>
             <p className="text-gray-300 text-center mb-6">
-              Connect with X to access NFT trading features and explore the marketplace.
+              Your address must be associated with a Raise profile to access the NFT marketplace.
+            </p>
+            <div className="w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mb-6"></div>
+            <button 
+              onClick={() => window.location.href = '/wallet'}
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-300 transform hover:scale-[1.02]"
+            >
+              Create Profile
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!nativeAddress && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex justify-center items-center z-50">
+          <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-purple-500/20 flex flex-col items-center max-w-md w-full mx-4">
+            <div className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 p-4 rounded-full mb-6">
+              <Image src="/icons/logo.png" alt="Connect Wallet" width={80} height={80} className="rounded-full" />
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-4">Connect Your Wallet</h3>
+            <p className="text-gray-300 text-center mb-6">
+              Connect your wallet to access the NFT marketplace.
             </p>
             <div className="w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full mb-6"></div>
             <button 
               onClick={() => login()}
               className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-300 transform hover:scale-[1.02]"
             >
-              Connect with X
+              Connect Wallet
             </button>
           </div>
         </div>

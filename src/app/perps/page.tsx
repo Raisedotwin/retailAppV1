@@ -1,20 +1,22 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import PerpsForm from "../componants/PerpsForm";
 import HowToTrade from "../componants/HowToTrade";
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
 import Image from 'next/image';
 
 const PerpsPage: React.FC = () => {
-  const { user } = usePrivy();
-  const [loggedIntoWallet, setLoggedIntoWallet] = useState(true);
-  const [loggedInToX, setLoggedInToX] = useState(true);
+  const { user, login } = usePrivy();
+  const { wallets } = useWallets();
+  const [isProfileAssociated, setIsProfileAssociated] = useState(false);
   const [ethBalance, setEthBalance] = useState('0');
   const [profile, setProfile] = useState<any>(null);
   const [balance, setBalance] = useState<number>(0);
+  const wallet = getEmbeddedConnectedWallet(wallets);
+  const nativeAddress = user?.wallet?.address;
 
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
@@ -25,49 +27,48 @@ const PerpsPage: React.FC = () => {
 
   const tokenPoolABI = require("../abi/traderPool");
 
-  const fetchProfile = useCallback(async () => {
-    try {
-      let username = user?.twitter?.username;
-      if (username) {
-        const profile = await profileContract.getProfileByName(username);
-        setProfile(profile);
-        return profile;
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
-  }, [profileContract, user?.twitter?.username]);
-
+  // Check if address is associated with a profile
   useEffect(() => {
-    const initContract = async () => {
+    const checkProfileAssociation = async () => {
+      if (!nativeAddress || !profileContract) {
+        console.log('No address or contract:', { nativeAddress, hasContract: !!profileContract });
+        setIsProfileAssociated(false);
+        return;
+      }
+
       try {
-        if (user?.twitter?.username) {
-          setLoggedInToX(true);
-          let profile = await fetchProfile();
+        const isAssociated = await profileContract.isProfileAssociated(nativeAddress);
+        console.log('Profile check results:', {
+          address: nativeAddress,
+          isAssociated: isAssociated
+        });
 
-          if (profile && profile.length > 5) {
-            setLoggedIntoWallet(true);
-            const traderPoolAddr = profile[5];
+        setIsProfileAssociated(isAssociated);
 
-            if (traderPoolAddr) {
-              const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
-              const balance = await traderPoolInstance.getTotal();
-              setEthBalance(ethers.formatEther(balance));
+        if (isAssociated) {
+          // Try getting profile details if profile is associated
+          if (user?.twitter?.username) {
+            const profile = await profileContract.getProfileByName(user.twitter.username);
+            setProfile(profile);
+
+            if (profile && profile.length > 5) {
+              const traderPoolAddr = profile[5];
+              if (traderPoolAddr && traderPoolAddr !== ethers.ZeroAddress) {
+                const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
+                const balance = await traderPoolInstance.getTotal();
+                setEthBalance(ethers.formatEther(balance));
+              }
             }
-          } else {
-            console.log('Profile does not contain sufficient data.');
-            setLoggedIntoWallet(false);
           }
-        } else {
-          setLoggedInToX(false);
         }
       } catch (error) {
-        console.error('Error initializing contract:', error);
+        console.error('Error checking profile association:', error);
+        setIsProfileAssociated(false);
       }
     };
 
-    initContract();
-  }, [fetchProfile, user?.twitter?.username, provider]);
+    checkProfileAssociation();
+  }, [nativeAddress, profileContract, provider, tokenPoolABI, user?.twitter?.username]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900">
@@ -78,7 +79,7 @@ const PerpsPage: React.FC = () => {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               Perpetuals Trading
             </h1>
-            {user?.twitter?.username && (
+            {isProfileAssociated && (
               <div className="flex items-center space-x-4">
                 <div className="px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
                   <span className="text-gray-300">Balance:</span>
@@ -92,7 +93,7 @@ const PerpsPage: React.FC = () => {
                     height={24} 
                     className="rounded-full"
                   />
-                  <span className="text-white">{user.twitter.username}</span>
+                  <span className="text-white">{nativeAddress?.slice(0, 6)}...{nativeAddress?.slice(-4)}</span>
                 </div>
               </div>
             )}
@@ -105,56 +106,110 @@ const PerpsPage: React.FC = () => {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Trading Form Section */}
           <div className="bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 p-6 shadow-xl">
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-white mb-2">Trade Perpetuals</h2>
-              <p className="text-gray-300">Execute your trades with advanced perpetuals trading features</p>
-            </div>
-            <PerpsForm />
-          </div>
+  <div className="mb-6">
+    <h2 className="text-2xl font-semibold text-white mb-2">Trade Perpetuals</h2>
+    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-4">
+      <div className="flex items-start space-x-3">
+        <div className="text-yellow-500 mt-1">⚠️</div>
+        <div>
+          <p className="text-yellow-200 font-medium">EOA Required for Perpetuals Trading</p>
+          <p className="text-yellow-200/80 text-sm mt-1">
+            You need to switch to a MetaMask address to trade perpetuals.{' '}
+            <a 
+              href="/wallet" 
+              className="text-blue-400 hover:text-blue-300 underline transition-colors duration-200"
+            >
+              Switch address here
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 
-          {/* How To Trade Section */}
-          <div className="bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 p-6 shadow-xl">
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold text-white mb-2">Trading Guide</h2>
-              <p className="text-gray-300">Learn how to trade effectively and manage your positions</p>
-            </div>
-            <HowToTrade />
-          </div>
+  <PerpsForm />
+  </div>
+
+        {/* How To Trade Section */}
+<div className="bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 p-6 shadow-xl">
+  <h2 className="text-2xl font-semibold text-white mb-4">Trading Guide</h2>
+  
+  {/* Added text container */}
+  <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 mb-6 border border-white/5">
+    <p className="text-gray-300 leading-relaxed">
+      Step by step walkthrough on trading perpetuals with Raise. All trades are powered by JOJO exchange and trades are made directly on the JOJO platform. To begin trading on JOJO simply click the initialize button to connect your Raise account.
+    </p>
+  </div>
+
+  {/* Video container with better centering */}
+  <div className="flex flex-col items-center bg-black/30 rounded-xl p-6 mb-6">
+    <div className="w-full max-w-2xl aspect-video bg-gray-800 rounded-lg overflow-hidden">
+      <video 
+        controls 
+        className="w-full h-full object-cover"
+        poster="/api/placeholder/400/320"
+      >
+        <source src="/path-to-your-guide-video.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  </div>
+
+  {/* JOJO button container */}
+  <div className="flex justify-center">
+    <a
+      href="#"
+      className="flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 transition-colors duration-200 rounded-lg text-white font-medium w-full max-w-md"
+    >
+      <span>Go to JOJO</span>
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      </svg>
+    </a>
+  </div>
+</div>
         </div>
       </div>
 
+
       {/* Authentication Modals */}
-      {!loggedInToX && (
+      {nativeAddress && !isProfileAssociated && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
           <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
             <div className="bg-white/10 p-4 rounded-full mb-6">
-              <Image src="/icons/logo.png" alt="X Logo" width={80} height={80} className="rounded-full" />
+              <Image src="/icons/logo.png" alt="Profile Required" width={80} height={80} className="rounded-full" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Authentication Required</h3>
+            <h3 className="text-2xl font-bold text-white mb-4">Profile Required</h3>
             <p className="text-gray-300 text-center mb-6">
-              Please authenticate with X to access your trading wallet and begin trading.
+              Your address must be associated with a Raise profile to access trading features.
             </p>
             <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-6"></div>
-            <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200">
-              Connect with X
+            <button 
+              onClick={() => window.location.href = '/wallet'}
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-300"
+            >
+              Create Profile
             </button>
           </div>
         </div>
       )}
 
-      {!loggedIntoWallet && (
+      {!nativeAddress && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
           <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
             <div className="bg-white/10 p-4 rounded-full mb-6">
-              <Image src="/icons/logo.png" alt="Wallet Logo" width={80} height={80} className="rounded-full" />
+              <Image src="/icons/logo.png" alt="Connect Wallet" width={80} height={80} className="rounded-full" />
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Wallet Setup Required</h3>
+            <h3 className="text-2xl font-bold text-white mb-4">Connect Your Wallet</h3>
             <p className="text-gray-300 text-center mb-6">
-              Please create a wallet with this address to start trading perpetuals.
+              Connect your wallet to access perpetuals trading features.
             </p>
             <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-6"></div>
-            <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-200">
-              Create Wallet
+            <button 
+              onClick={() => login()}
+              className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-300"
+            >
+              Connect Wallet
             </button>
           </div>
         </div>

@@ -1,4 +1,52 @@
 import React, { useState } from 'react';
+import Image from 'next/image';
+
+const AnimatedHeader = () => (
+  <div className="relative flex flex-col items-center justify-center mb-16">
+    <div className="flex items-center justify-center gap-8 mb-6">
+      <div className="transform hover:rotate-12 transition-transform duration-300">
+        <Image
+          src="/icons/logo.png"
+          alt="NFT Marketplace"
+          width={70}
+          height={70}
+          className="animate-pulse"
+        />
+      </div>
+      <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        Getting Started!
+      </h2>
+      <div className="transform hover:-rotate-12 transition-transform duration-300">
+        <Image
+          src="/icons/logo.png"
+          alt="NFT Marketplace"
+          width={70}
+          height={70}
+          className="animate-pulse"
+        />
+      </div>
+    </div>
+    <div className="relative group">
+      <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-10 group-hover:opacity-20 transition duration-1000 group-hover:duration-200"></div>
+      <div className="relative px-8 py-4 bg-white bg-opacity-90 backdrop-blur-sm rounded-lg shadow-xl">
+        <p className="text-xl font-medium bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+          <span className="font-bold">Raise.win</span> is a game.{' '}
+          Bet on traders you think will give the best pumps{' '}
+          <span className="animate-pulse inline-block">📈</span>
+        </p>
+      </div>
+    </div>
+  </div>
+);
+
+const FunIcon = ({ icon }: { icon: JSX.Element }) => (
+  <div className="relative">
+    <div className="absolute inset-0 bg-blue-400 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity"></div>
+    <div className="relative flex-shrink-0 w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center text-white transform group-hover:scale-110 transition-transform">
+      {icon}
+    </div>
+  </div>
+);
 
 const HowItWorks = () => {
   const [selectedFaq, setSelectedFaq] = useState<number | null>(null);
@@ -6,33 +54,39 @@ const HowItWorks = () => {
   const steps = [
     {
       number: '01',
-      title: 'Fundraise',
-      description: "Sign in with your X account to create a token. Alternatively, create a token for a friend by searching for their account. Your token will trade on a curve, and the fees will fund your Raise wallet.",
+      title: 'Create Tokens',
+      description: "Sign in with your X account to create a token. Alternatively, create a token for a friend by searching for their X account. Tokens trade on a curve & earn fees.",
       icon: (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+          <path d="M12 6v12" strokeDasharray="2 2"/>
         </svg>
       )
     },
     {
       number: '02',
-      title: 'Trading',
-      description: "As your wallet gathers funds, you can trade them on supported platforms (NFTs, swaps, and perps). You can take a percentage of the profits whenever you sell. All settlements are in WETH.",
+      title: 'Create Profit',
+      description: "With fees from token trading you purchase Perps, NFTs or Swap on partnered platforms. All trades are settled are in WETH.",
       icon: (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M3 3v18h18" />
-          <path d="m19 9-5 5-4-4-3 3" />
+        <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          <circle cx="12" cy="12" r="1"/>
+          <path d="M17 12c0 2.76-2.24 5-5 5s-5-2.24-5-5"/>
         </svg>
       )
     },
     {
       number: '03',
-      title: 'Auto Buybacks',
-      description: "Whenever a sale is made, 70% of the proceeds will go toward buying back the trader tokens. This will help increase the tokens' value and provide liquidity.",
+      title: 'Create Pumps',
+      description: "Whenever a token 'creator' sells a perp, nft or swap, 70% of the proceeds will go toward buying back the trader tokens. Find the token createors generating the best pumps.",
       icon: (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 6v6l4 2" />
+        <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M18 8c2 2.5 2 6.5 0 9M6 8c-2 2.5-2 6.5 0 9"/>
+          <path d="M12 8v8"/>
+          <path d="M12 3v3"/>
+          <path d="M12 18v3"/>
+          <path d="M15 5l-3-3-3 3"/>
         </svg>
       )
     }
@@ -55,36 +109,27 @@ const HowItWorks = () => {
 
   return (
     <section className="max-w-6xl mx-auto px-4 py-16">
-      {/* Header */}
-      <div className="text-center mb-16">
-        <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-          How It Works
-        </h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          A simple three-step process to participate in decentralized trading
-        </p>
-      </div>
-
+      <AnimatedHeader />
       {/* Steps */}
       <div className="grid gap-8 md:grid-cols-3 mb-16">
         {steps.map((step, index) => (
           <div 
             key={step.number}
-            className="relative p-6 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300"
+            className="group relative p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
           >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-                {step.icon}
-              </div>
+            <div className="flex flex-col items-center text-center gap-6 mb-4">
+              <FunIcon icon={step.icon} />
               <div>
-                <span className="text-sm text-blue-600 font-semibold">Step {step.number}</span>
+                <span className="inline-block px-4 py-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full text-sm font-semibold text-blue-600 mb-2">
+                  Step {step.number}
+                </span>
                 <h3 className="text-xl font-bold">{step.title}</h3>
               </div>
             </div>
-            <p className="text-gray-600">{step.description}</p>
+            <p className="text-gray-600 text-center">{step.description}</p>
             {index < steps.length - 1 && (
-              <div className="hidden md:block absolute -right-12 top-1/2 transform -translate-y-1/2 text-gray-300">
-                <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <div className="hidden md:block absolute -right-12 top-1/2 transform -translate-y-1/2 text-purple-300">
+                <svg className="w-8 h-8 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M5 12h14M15 5l7 7-7 7" />
                 </svg>
               </div>
