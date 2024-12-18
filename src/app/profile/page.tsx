@@ -149,7 +149,7 @@ const ProfilePage: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-                Wallet Dashboard
+                Profile Dashboard
               </h2>
               <p className="text-gray-400 mt-2">Manage your crypto assets</p>
             </div>

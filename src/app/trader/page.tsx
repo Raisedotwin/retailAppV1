@@ -43,7 +43,8 @@ const TraderPageContent: React.FC = () => {
   const profileABI = require("../abi/profile.json");
 
   const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('activity');
-  
+  const [traderProfileExists, setTraderProfileExists] = useState(false);
+
   // Setting default values or using the query parameters
   const [params] = useState({
     name: name ? name : 'Trader',
@@ -77,6 +78,7 @@ const TraderPageContent: React.FC = () => {
   const { user } = usePrivy();
   const { wallets } = useWallets(); // Use useWallets to get connected wallets
   const [isActive, setIsActive] = useState(true); // You can control this state as needed
+  const [profile, setProfile] = useState<any>(null);
 
   let wallet: any = wallets[0] // Get the first connected wallet privy wallet specifiy privy wallet
 
@@ -163,68 +165,81 @@ const [isPriceLoading, setIsPriceLoading] = useState(false);
 
 useEffect(() => {
   const initContract = async () => {
-      try {
-          //if logged into twitter set to embedded wallet
-          if(user?.twitter?.username) {
-              let embeddedWallet = getEmbeddedConnectedWallet(wallets);
-              let privyProvider = await embeddedWallet?.address;
-              wallet = wallets.find((wallet) => wallet.address === privyProvider);
-          }
-
-          getPrivyProvider("base");
-          const privyProvider = await wallet?.getEthersProvider();
-          const signer: any = privyProvider?.getSigner();
-
-          const marketContractInstance = new ethers.Contract(tokenContractAddr, tokenMarketABI, signer);
-          setContract(marketContractInstance);
-          const profileContractInstance = new ethers.Contract(profileAddr, profileABI, signer);
-          setProfileContract(profileContractInstance);
-          const createContractInstance = new ethers.Contract(createAccountAddr, createAccountABI, signer);
-          setCreateContract(createContractInstance);
-          const marketDataContractInstance = new ethers.Contract(marketDataAddr, marketDataABI, signer);
-          setMarketDataContract(marketDataContractInstance);
-
-          const address = await signer?.getAddress();
-          setWalletAddress(address);
-
-          if (name && marketDataContractInstance) {
-              try {
-                  const profile = await profileContractInstance.getProfileByName(username as string);
-                  const nativeAddr = profile[0];
-                  const traderAcc = profile[1];
-                  const traderPoolAddr = profile[5]; // Get the pool address
-
-                  // Create instance of pool contract
-                  if (traderPoolAddr) {
-                      const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, signer);
-                      const balance = await traderPoolInstance.getTotal();
-                      setBalance(ethers.formatEther(balance));
-                  }
-
-                  const tokenAddress = await marketContractInstance.getTokenAddressByAccount(traderAcc.toString());
-
-                  const MCAP = await marketContractInstance.getMarketCap(traderAcc.toString());
-                  setMarketCap(MCAP.toString());
-
-                  const lastBuyback = await marketDataContractInstance.getLastBuybackValue(username as string);
-                  setLastBuybackValue(lastBuyback.toString());
-
-                  const winRatio = await marketDataContractInstance.calculateWinRatio(username as string);
-                  setWinRatio(winRatio.toString());
-
-                  const freq = await marketDataContractInstance.getBuybackFrequency(username as string);
-                  setFrequency(freq.toString());
-
-              } catch (error) {
-                  console.error('Error fetching market data:', error);
-              }
-          }
-      } catch (error) {
-          console.error('Error initializing contracts:', error);
+    try {
+      // Wallet setup
+      if(user?.twitter?.username) {
+        let embeddedWallet = getEmbeddedConnectedWallet(wallets);
+        let privyProvider = await embeddedWallet?.address;
+        wallet = wallets.find((wallet) => wallet.address === privyProvider);
       }
+
+      // Provider and contract setup
+      await getPrivyProvider("base");
+      const privyProvider = await wallet?.getEthersProvider();
+      const signer: any = privyProvider?.getSigner();
+
+      // Initialize contracts
+      const marketContractInstance = new ethers.Contract(tokenContractAddr, tokenMarketABI, signer);
+      setContract(marketContractInstance);
+      const profileContractInstance = new ethers.Contract(profileAddr, profileABI, signer);
+      setProfileContract(profileContractInstance);
+      const createContractInstance = new ethers.Contract(createAccountAddr, createAccountABI, signer);
+      setCreateContract(createContractInstance);
+      const marketDataContractInstance = new ethers.Contract(marketDataAddr, marketDataABI, signer);
+      setMarketDataContract(marketDataContractInstance);
+
+      const address = await signer?.getAddress();
+      setWalletAddress(address);
+
+      if (username && profileContractInstance) {
+        try {
+          const profile = await profileContractInstance.getProfileByName(username as string);
+          const nativeAddr = profile[0];
+          const traderAcc = profile[1];
+          
+          // Check if trader profile exists
+          const profileExists = traderAcc !== "0" && traderAcc !== undefined;
+          console.log('Profile exists:', profileExists);
+          setTraderProfileExists(profileExists);
+
+          if (profileExists) {
+            setProfile(profile);
+            const traderPoolAddr = profile[5];
+
+            // Get pool balance if exists
+            if (traderPoolAddr) {
+              const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, signer);
+              const balance = await traderPoolInstance.getTotal();
+              setBalance(ethers.formatEther(balance));
+            }
+
+            // Get token details
+            const tokenAddress = await marketContractInstance.getTokenAddressByAccount(traderAcc.toString());
+
+            // Get market data
+            const MCAP = await marketContractInstance.getMarketCap(traderAcc.toString());
+            setMarketCap(MCAP.toString());
+
+            const lastBuyback = await marketDataContractInstance.getLastBuybackValue(username as string);
+            setLastBuybackValue(lastBuyback.toString());
+
+            const winRatio = await marketDataContractInstance.calculateWinRatio(username as string);
+            setWinRatio(winRatio.toString());
+
+            const freq = await marketDataContractInstance.getBuybackFrequency(username as string);
+            setFrequency(freq.toString());
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing contracts:', error);
+    }
   };
+
   initContract();
-}, [user, name, username, provider]);
+}, [user, username, wallets]);
 
   const getPrivyProvider = async (chainName: string) => {
     if (!wallet) {
@@ -269,57 +284,92 @@ useEffect(() => {
   };
 
   const handleCreateWallet = async () => {
-    if (createContract) {
-      setShowCreateWalletModal(false);
-      try {
-        setModalMessage('Creating a wallet');
-        setIsModalVisible(true);
-
-        const bio = name;
-        const avatarURL = logo;
-        const userAddress = "0x0000000000000000000000000000000000000000";
-        const tx = await createContract.createAccount(
-          username as string,
-          bio as string,
-          avatarURL as string,
-          0,
-          userAddress
-        );
-        await tx.wait();
-        setModalMessage('Minting first trader share');
-        await handleBuySharesDirectly();
-        setModalMessage('Wallet created successfully');
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setIsModalVisible(false);
-
-      } catch (error) {
-        console.error('Error creating account:', error);
-        setModalMessage('Wallet creation failed');
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setIsModalVisible(false);
-      }
-    } else {
-      alert('Profile contract not initialized');
+    if (!createContract || !contract) {
+      alert('Contracts not initialized');
+      return;
     }
-  };
-
-  const handleBuySharesDirectly = async () => {
-    if (contract) {
-      try {
+  
+    setShowCreateWalletModal(false);
+    try {
+      setModalMessage('Creating a wallet');
+      setIsModalVisible(true);
+  
+      // Create account transaction
+      const createTx = await createContract.createAccount(
+        username as string,
+        name as string,
+        logo as string,
+        0,
+        "0x0000000000000000000000000000000000000000"
+      );
+  
+      // Wait for the transaction to be mined
+      setModalMessage('Waiting for wallet creation confirmation...');
+      const createReceipt = await provider.waitForTransaction(createTx.hash, 1);
+  
+      if (createReceipt?.status === 1) {  // 1 indicates success
+        // Add a small delay to ensure the account is properly created
+        await new Promise(resolve => setTimeout(resolve, 2000));
+  
+        // Fetch the new account number
         const accountCounter = await fetchAccountCounter();
-        if (accountCounter !== null) {
-          const tx = await contract.buyShares(accountCounter, "1000000000000000000", {
-            value: ethers.parseEther("0")
-          });
-          await tx.wait();
-        } else {
-          alert('Failed to retrieve account counter');
+        if (!accountCounter) {
+          throw new Error('Failed to fetch account counter');
         }
-      } catch (error) {
-        console.error('Error buying shares:', error);
+  
+        setModalMessage('Minting first trader share');
+        
+        try {
+
+
+          // Get gas estimate
+          //const estimatedGas = await contract.buyShares.estimateGas(
+            //accountCounter,
+            //ethers.parseEther("1"),
+            //{ value: ethers.parseEther("0") }
+          //);
+
+          const amountInWei = ethers.parseEther('1');
+  
+          // Execute buy transaction
+          const tx = await contract.buyShares(accountCounter, amountInWei);
+  
+          // Convert to bigint and add 20% buffer
+          //const gasLimit = (estimatedGas * BigInt(120) / BigInt(100));
+  
+          // Execute buy shares transaction
+          //const buyTx = await contract.buyShares(
+            //accountCounter,
+            //ethers.parseEther("1"),
+            //{
+              //value: ethers.parseEther("0"),
+              //gasLimit
+            //}
+          //);
+  
+          setModalMessage('Waiting for share minting confirmation...');
+          const buyReceipt = await provider.waitForTransaction(tx.hash, 1);
+  
+          if (buyReceipt?.status === 1) {
+            setModalMessage('Wallet created and shares minted successfully');
+            setTimeout(() => setIsModalVisible(false), 2000);
+          } else {
+            setModalMessage('Share minting failed');
+            setTimeout(() => setIsModalVisible(false), 2000);
+          }
+        } catch (buyError) {
+          console.error('Error in buyShares:', buyError);
+          setModalMessage(`Failed to mint initial shares: ${buyError|| 'Unknown error'}`);
+          setTimeout(() => setIsModalVisible(false), 2000);
+        }
+      } else {
+        setModalMessage('Wallet creation failed');
+        setTimeout(() => setIsModalVisible(false), 2000);
       }
-    } else {
-      alert('Contract not initialized');
+    } catch (error) {
+      console.error('Error in wallet creation:', error);
+      setModalMessage(`Wallet creation error: ${error|| 'Unknown error'}`);
+      setTimeout(() => setIsModalVisible(false), 2000);
     }
   };
 
@@ -582,12 +632,15 @@ useEffect(() => {
           </button>
         </div>
 
-        {/* Trading Form */}
         {activeTab === 'buy' && (
   <div className="space-y-6">
-    <h3 className="text-xl font-semibold text-gray-800">Buy ${params.username}</h3>
+    <h3 className="text-xl font-semibold text-gray-800">
+      {traderProfileExists ? `Buy $${params.username}` : 'Create Token'}
+    </h3>
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Amount ETH</label>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {traderProfileExists ? 'Amount ETH' : 'Initial Token Creation'}
+      </label>
       <input
         type="number"
         step="0.000000000000000001"
@@ -598,56 +651,88 @@ useEffect(() => {
           setAmount(e.target.value);
           setIsPriceLoading(true);
         }}
+        disabled={!traderProfileExists}
       />
     </div>
     <div className="flex justify-between items-center py-4 px-6 bg-gray-50 rounded-lg">
-      <span className="text-gray-600">Total Cost</span>
+      <span className="text-gray-600">
+        {traderProfileExists ? 'Total Cost' : 'Initial Supply'}
+      </span>
       <span className="text-lg font-semibold">
-          {buyPrice || '0'} ${username}
+        {traderProfileExists ? `${buyPrice || '0'} $${username}` : '1.0 tokens'}
       </span>
     </div>
     <button 
-      className="w-full py-4 bg-green-500 text-white text-lg font-medium rounded-lg hover:bg-green-600 transition-colors duration-200 shadow-lg"
-      onClick={handleBuyShares}
+      className={`w-full py-4 text-white text-lg font-medium rounded-lg transition-colors duration-200 shadow-lg ${
+        traderProfileExists 
+          ? 'bg-green-500 hover:bg-green-600' 
+          : 'bg-blue-500 hover:bg-blue-600'
+      }`}
+      onClick={traderProfileExists ? handleBuyShares : handleCreateWallet}
     >
-      {'Buy Now'}
+      {traderProfileExists ? 'Buy Now' : 'Create Token'}
     </button>
   </div>
-    )}
+)}
 
 {activeTab === 'sell' && (
   <div className="space-y-6">
-    <h3 className="text-xl font-semibold text-gray-800">Sell ${params.username}</h3>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">Amount {params.username}</label>
-      <input
-        type="number"
-        step="0.000000000000000001"
-        min="0"
-        className="w-full p-3 text-lg border-2 border-red-500 rounded-lg focus:ring-2 focus:ring-red-300 outline-none transition-all"
-        value={amount}
-        onChange={(e) => {
-          setAmount(e.target.value);
-          setIsPriceLoading(true);
-        }}
-      />
-    </div>
-    <div className="flex justify-between items-center py-4 px-6 bg-gray-50 rounded-lg">
-      <span className="text-gray-600">You'll Receive</span>
-      <div className="flex items-center gap-2">
-        <span className="text-lg font-semibold">
-          {sellPrice || '0'} ETH
-        </span>
+    <h3 className="text-xl font-semibold text-gray-800">
+      {traderProfileExists ? `Sell $${params.username}` : 'Token Not Available'}
+    </h3>
+    
+    {traderProfileExists ? (
+      <>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Amount {params.username}
+          </label>
+          <input
+            type="number"
+            step="0.000000000000000001"
+            min="0"
+            className="w-full p-3 text-lg border-2 border-red-500 rounded-lg focus:ring-2 focus:ring-red-300 outline-none transition-all"
+            value={amount}
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setIsPriceLoading(true);
+            }}
+          />
+        </div>
+        <div className="flex justify-between items-center py-4 px-6 bg-gray-50 rounded-lg">
+          <span className="text-gray-600">You'll Receive</span>
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold">
+              {sellPrice || '0'} ETH
+            </span>
+          </div>
+        </div>
+        <button 
+          className="w-full py-4 bg-red-500 text-white text-lg font-medium rounded-lg hover:bg-red-600 transition-colors duration-200 shadow-lg"
+          onClick={handleSellShares}
+        >
+          Sell Now
+        </button>
+      </>
+    ) : (
+      <div className="text-center py-8 space-y-4">
+        <div className="bg-gray-50 rounded-lg p-6">
+          <div className="text-gray-400 mb-4">⚠️</div>
+          <p className="text-gray-600 mb-2">This token hasn't been created yet</p>
+          <p className="text-sm text-gray-500">
+            Switch to the buy tab to create this token
+          </p>
+        </div>
+        <button 
+          className="w-full py-4 bg-gray-300 text-gray-500 text-lg font-medium rounded-lg cursor-not-allowed"
+          disabled
+        >
+          Sell Now
+        </button>
       </div>
-    </div>
-    <button 
-      className="w-full py-4 bg-red-500 text-white text-lg font-medium rounded-lg hover:bg-red-600 transition-colors duration-200 shadow-lg"
-      onClick={handleSellShares}
-    >
-      {'Sell Now'}
-    </button>
-    </div>
     )}
+  </div>
+)}
 
               {/* Warning Box */}
               <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
