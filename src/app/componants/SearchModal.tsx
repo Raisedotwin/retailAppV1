@@ -35,12 +35,20 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
     { name: 'Swaps', icon: '🔄' }
   ];
 
+  const handleSearchTermChange = (value: string) => {
+    // If user enters @, we'll keep it in the input but strip it for the actual search term
+    setSearchTerm(value);
+  };
+
   const fetchProfile = async () => {
-    if (!searchTerm.trim()) return;
+    // Strip @ symbol and any leading/trailing whitespace from the search term
+    const cleanedSearchTerm = searchTerm.replace(/^@/, '').trim();
+    
+    if (!cleanedSearchTerm) return;
     
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/twitter/user/${searchTerm}`);
+      const response = await fetch(`/api/twitter/user/${cleanedSearchTerm}`);
       if (!response.ok) throw new Error(`Error: ${response.status}`);
       const user: { data: User } = await response.json();
       setResults([user.data]);
@@ -79,16 +87,16 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
             </div>
             <input
               type="text"
-              placeholder="Search Twitter profile..."
+              placeholder="Enter Twitter username (e.g., @username)"
               className="w-full pl-10 pr-4 py-3 bg-gray-100 border border-transparent rounded-xl focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 transition-all duration-200"
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => handleSearchTermChange(e.target.value)}
               onKeyPress={e => e.key === 'Enter' && fetchProfile()}
             />
           </div>
           <p className="text-sm text-gray-500 mt-2 px-1">
             <span className="inline-block mr-1">💡</span>
-            You can search by user address for created accounts
+            Enter a Twitter username with or without the @ symbol
           </p>
         </div>
 

@@ -50,7 +50,7 @@ const SwapsPage: React.FC = () => {
         try {
           // If we have a Twitter username, try getting profile that way too
           if (user?.twitter?.username) {
-            const profile = await profileContract.getProfileByName(user.twitter.username);
+            const profile = await profileContract.getProfile(user.twitter.username);
             setProfile(profile);
 
             if (profile && profile.length > 5) {

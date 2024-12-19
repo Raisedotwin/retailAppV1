@@ -1,18 +1,17 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useAccount } from '../context/AccountContext';
-import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth'; // Import usePrivy hook
+import { usePrivy, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
 import Image from 'next/image';
-import { EIP155_CHAINS, TEIP155Chain } from '@/data/EIP155Data';
-
+import { EIP155_CHAINS } from '@/data/EIP155Data';
 
 interface SwapFormProps {
   balance: string;
-  profile: any; // Adjust type based on the profile structure
+  profile: any;
 }
 
 const SwapForm: React.FC<SwapFormProps> = ({ balance, profile }) => {
-  const { account } = useAccount();
+  // State management
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [tradeAmount, setTradeAmount] = useState('');
@@ -22,318 +21,198 @@ const SwapForm: React.FC<SwapFormProps> = ({ balance, profile }) => {
   const [balanceTwo, setBalanceTwo] = useState('0');
   const [profit, setProfit] = useState('');
   const [buyback, setBuyback] = useState('');
-
   const [activeTab, setActiveTab] = useState('buy');
-
   const [tokenAddress, setTokenAddress] = useState('');
-
-  
-  
   const [isInputModalVisible, setIsInputModalVisible] = useState(true);
-  const [tokens, setTokens] = useState<any[]>([]);
   const [selectedToken, setSelectedToken] = useState<any | null>(null);
 
-  const handleSelectToken = (token: any) => {
-    setInputToken(`${token.name} (${token.address})`);
-    setIsInputModalVisible(true);
-  };
+  // Hooks and Context
+  const { account } = useAccount();
+  const { user } = usePrivy();
+  const { wallets } = useWallets();
+  let wallet = wallets[0];
 
-
-  const { user } = usePrivy(); // Use the usePrivy hook
-
+  // Contract constants
   const tokenPoolABI = require("../abi/traderPool");
   const profileAddr = '0x4731d542b3137EA9469c7ba76cD16E4a563f0a16';
   const profileABI = require("../abi/profile");
+  const wethAddress = "0x4200000000000000000000000000000000000006";
 
+  // Provider setup
+  const baseRpcURL = EIP155_CHAINS["eip155:8453"].rpc;
+  const provider = useMemo(() => new ethers.JsonRpcProvider(baseRpcURL), [baseRpcURL]);
 
-  const nativeAddress = user?.wallet?.address;
-  const { wallets } = useWallets(); // Use useWallets to get connected wallets
-  //const wallet = wallets[0]; // Use the first connected wallet
-  const wallet = getEmbeddedConnectedWallet(wallets);
+  // Contract instance
+  const profileContract = useMemo(() => {
+    return new ethers.Contract(profileAddr, profileABI, provider);
+  }, [profileAddr, profileABI, provider]);
 
-  const wethAddress = "0x4200000000000000000000000000000000000006"; // WETH address
-
-  const onSelectToken = (token: any) => {
-    setInputToken(`${token.name} (${token.address})`);
+  // Wallet handling functions
+  const getSigner = async () => {
+    if (user?.twitter?.username) {
+      let embeddedWallet = getEmbeddedConnectedWallet(wallets);
+      let privyProvider = await embeddedWallet?.address;
+      
+      const foundWallet = wallets.find((w) => w.address === privyProvider);
+      if (foundWallet) {
+        wallet = foundWallet;
+      }
+    }
+  
+    if (!wallet) {
+      throw new Error("No wallet available");
+    }
+  
+    const privyProvider = await getPrivyProvider("base");
+    return privyProvider?.getSigner();
   };
 
-   // Get the EIP-1193 provider from Privy
-   const getPrivyProvider = async (chainName: string) => {
+  const getPrivyProvider = async (chainName: string) => {
     if (!wallet) {
       console.error("Wallet not initialized");
       return null;
     }
 
     let chainId: number;
-
     switch (chainName.toLowerCase()) {
-      case "avax":
-        chainId = 43114;  // Example chain ID for Avalanche C-Chain
-        break;
       case "base":
-        chainId = 8453;  // Hypothetical chain ID for Base, adjust accordingly
+        chainId = 8453;
         break;
       default:
         console.error("Unsupported chain name");
         return null;
-      }
+    }
 
-      try {
-        await wallet.switchChain(chainId);
-        return await wallet.getEthersProvider();
-      } catch (error) {
-        console.error("Failed to switch chain or get provider:", error);
-        return null;
-      }
+    try {
+      await wallet.switchChain(chainId);
+      return await wallet.getEthersProvider();
+    } catch (error) {
+      console.error("Failed to switch chain or get provider:", error);
+      return null;
+    }
   };
 
-  //const privyProvider = await getPrivyProvider(); // Get Privy provider
-  //const signer = privyProvider?.getSigner(); // Get signer
+  // Helper functions
+  const handleSelectToken = (token: any) => {
+    setInputToken(`${token.name} (${token.address})`);
+    setIsInputModalVisible(true);
+  };
 
-  const baseRpcURL = EIP155_CHAINS["eip155:8453"].rpc;
-  const provider = useMemo(() => new ethers.JsonRpcProvider(baseRpcURL), [baseRpcURL]);
+  const onSelectToken = (token: any) => {
+    setInputToken(`${token.name} (${token.address})`);
+  };
 
-    // Memoizing the profileContract to avoid re-creation on every render
-  const profileContract = useMemo(() => {
-      return new ethers.Contract(profileAddr, profileABI, provider);
-  }, [profileAddr, profileABI, provider]);
-
+  // Balance fetching
   const fetchContractBalance = useCallback(async () => {
     try {
-      const profile = await profileContract.getProfile(nativeAddress);
-      console.log("profile", profile);
-  
+      const walletAddress = wallet?.address || user?.wallet?.address;
+      const profile = await profileContract.getProfile(walletAddress);
+      
       if (profile[5] !== "0x0000000000000000000000000000000000000000") {
         const addr = profile[5];
         const traderPoolInstance = new ethers.Contract(addr, tokenPoolABI, provider);
-        console.log("traderPoolInstance", traderPoolInstance);
-  
+        
         if (inputToken && inputToken !== wethAddress) {
           const tokenBalance = await traderPoolInstance.getTokenBalance(inputToken);
           const balanceOfTokenEther = ethers.formatEther(tokenBalance);
-          console.log("Token Balance", tokenBalance);
-          console.log("Token Balance in Ether", balanceOfTokenEther);
-  
-          if (tokenBalance.isZero()) {
-            setBalanceTwo('No balance');
-          } else {
-            setBalanceTwo(balanceOfTokenEther);
-          }
+          setBalanceTwo(balanceOfTokenEther);
         } else {
           let contractBalance = await traderPoolInstance.getTotal();
           let contractBalanceEther = ethers.formatEther(contractBalance);
-  
-          if (contractBalance.isZero()) {
-            setBalanceTwo('0');
-          } else {
-            setBalanceTwo(contractBalanceEther);
-          }
+          setBalanceTwo(contractBalanceEther);
         }
       }
     } catch (error) {
       console.error("Error fetching contract balance:", error);
       setBalanceTwo('Error fetching balance');
     }
-  }, [inputToken, nativeAddress, profileContract, provider, tokenPoolABI]);
+  }, [inputToken, profileContract, provider, tokenPoolABI, wallet, user]);
 
+  // Main swap function
   const handleSwap = async () => {
-    if (profileContract && wallet) {
-      setModalMessage('Swapping tokens');
-      setIsModalVisible(true);
-      try {
+    if (!profileContract) return;
 
-        getPrivyProvider("base"); // Switch The Chain Of The UseContext Setting base or Avax
-        //const privyProvider = await wallets[0].getEthersProvider(); // Working Implementation
-        const privyProvider = await wallet.getEthersProvider(); // Get Privy provider
-        const signer: any  = privyProvider?.getSigner(); // Get signer
+    setModalMessage('Swapping tokens');
+    setIsModalVisible(true);
 
-        const profileContractTwo = new ethers.Contract(profileAddr, profileABI, signer);
+    try {
+      const signer: any = await getSigner();
+      if (!signer) throw new Error("Failed to get signer");
 
-        const profile = await profileContractTwo.getProfile(nativeAddress);
-        console.log("profile", profile);
+      const walletAddress = wallet?.address || user?.wallet?.address;
+      const profileContractWithSigner = new ethers.Contract(profileAddr, profileABI, signer);
+      const profile = await profileContractWithSigner.getProfile(walletAddress);
 
-        if (profile[5] !== "0x0000000000000000000000000000000000000000") {
-          const addr = profile[5];
-          const traderPoolInstance = new ethers.Contract(addr, tokenPoolABI, signer);
-          console.log("traderPoolInstance", traderPoolInstance);
-          console.log("address", traderPoolInstance.address);
-          //const walletSigner = signer.connect(traderPoolInstance);
+      if (profile[5] === "0x0000000000000000000000000000000000000000") {
+        throw new Error("No trader pool found");
+      }
 
-          if (traderPoolInstance) {
-            if (!tradeAmount) {
-              setTradeAmount('0');
-            }
+      const addr = profile[5];
+      const traderPoolInstance = new ethers.Contract(addr, tokenPoolABI, signer);
 
-            const amountEther = ethers.parseEther(tradeAmount);
-            console.log("spendAmount in Wei:", amountEther);
+      const amountEther = ethers.parseEther(tradeAmount || '0');
 
-            if (inputToken === "0x4200000000000000000000000000000000000006") {
-              console.log("Token Used In This Swap", inputToken);
-              console.log("Bought position With WETH", outputToken);
+      if (inputToken === wethAddress) {
+        // Buy logic
+        const balance = await traderPoolInstance.getTotal();
+        if (balance >= amountEther && tradeAmount !== "0") {
+          const tx = await traderPoolInstance.poolTrade(inputToken, outputToken, amountEther);
+          await tx.wait();
+          alert('Traded specified amount');
+        } else {
+          const tx = await traderPoolInstance.poolTrade(inputToken, outputToken, balance);
+          await tx.wait();
+          alert('Traded all available balance');
+        }
+      } else {
+        // Sell logic
+        const tokenBalance = await traderPoolInstance.getTokenBalance(inputToken);
+        if (tokenBalance.isZero()) {
+          alert('Insufficient token balance in contract');
+          setModalMessage('Insufficient token balance in contract');
+          return;
+        }
 
-              let balance = await traderPoolInstance.getBalance(traderPoolInstance.address);
-              let balanceInEther = ethers.formatEther(balance);
-              console.log(`Balance of traderPoolInstance: ${balanceInEther} ETH`);
+        if (tokenBalance >= amountEther && tradeAmount !== "0") {
+          const tx = await traderPoolInstance.poolTrade(inputToken, outputToken, amountEther);
+          await tx.wait();
+          
+          const profit = await traderPoolInstance.recentProfit();
+          const profitInEther = ethers.formatEther(profit);
+          
+          if (parseFloat(profitInEther) > 0) {
+            setProfit(profitInEther);
+          }
 
-              if (balance.isZero()) {
-                const tokenBalance = await traderPoolInstance.getTokenBalance(inputToken);
-                const balanceOfTokenEther = ethers.formatEther(tokenBalance);
-                console.log("WETH Balance", tokenBalance);
-                console.log("WETH Balance in Ether", balanceOfTokenEther);
+          const lastBuyback = await traderPoolInstance.lastSharePurchase();
+          if (lastBuyback > 0) {
+            setBuyback(lastBuyback.toString());
+          }
+        } else {
+          const tx = await traderPoolInstance.poolTrade(inputToken, outputToken, tokenBalance);
+          await tx.wait();
 
-                if (tokenBalance.isZero()) { 
-                  setModalMessage('Insufficient balance in contract');
-                  await new Promise((resolve) => setTimeout(resolve, 500));
-                  setIsModalVisible(false);
-                  return;
+          const profit = await traderPoolInstance.recentProfit();
+          const profitInEther = ethers.formatEther(profit);
+          
+          if (parseFloat(profitInEther) > 0) {
+            setProfit(profitInEther);
+          }
 
-                } else {
-                   balance = tokenBalance;
-                   balanceInEther = balanceOfTokenEther;
-                   console .log(`Balance of traderPoolInstance: ${balanceInEther} ETH`);  
-                   console.log("Balance of traderPoolInstance in Wei", balance);
-                }
-              }
-
-              if (balance >= amountEther && tradeAmount !== "0") {
-                //const estimatedGas = await traderPoolInstance.estimateGas.poolTrade(inputToken, outputToken, amountEther);
-                //const gasPrice = await provider.getGasPrice();
-                const depositTx = await traderPoolInstance.poolTrade(inputToken, outputToken, amountEther, { 
-                  //gasLimit: estimatedGas,
-                  //gasPrice: gasPrice 
-                });
-                await depositTx.wait();
-                alert('Traded specified amount');
-                setModalMessage('Swap Successful');
-                await new Promise((resolve) => setTimeout(resolve, 500));
-                setIsModalVisible(false);
-                fetchContractBalance();
-              } else {
-                //const estimatedGas = await traderPoolInstance.estimateGas.poolTrade(inputToken, outputToken, balance);
-                //const gasPrice = await provider.getGasPrice();
-                const depositTx = await traderPoolInstance.poolTrade(inputToken, outputToken, balance, 
-                  { 
-                    //gasLimit: estimatedGas, 
-                   //gasPrice: gasPrice 
-                  });
-                await depositTx.wait();
-                alert('Traded all available balance');
-                 
-                setModalMessage('Swap Successful');
-                await new Promise((resolve) => setTimeout(resolve, 500));
-                setIsModalVisible(false);
-
-                fetchContractBalance();
-
-              }
-
-            } else {
-              console.log("Token Used In This Swap", inputToken);
-              console.log("Sold position for Weth", outputToken);
-
-              const tokenBalance = await traderPoolInstance.getTokenBalance(inputToken);
-              const balanceOfTokenEther = ethers.formatEther(tokenBalance);
-              console.log("Token Balance", tokenBalance);
-              console.log("Token Balance in Ether", balanceOfTokenEther);
-
-              if (tokenBalance.isZero()) {
-                alert('Insufficient token balance in contract');
-                setModalMessage('Insufficient token balance in contract');
-                await new Promise((resolve) => setTimeout(resolve, 500));
-                setIsModalVisible(false);
-                return;
-              }
-
-              if (tokenBalance >= amountEther && tradeAmount !== "0") {
-                //const estimatedGas = await traderPoolInstance.estimateGas.poolTrade(inputToken, outputToken, amountEther);
-                //const gasPrice = await provider.getGasPrice();
-                const depositTx = await traderPoolInstance.poolTrade(inputToken, outputToken, amountEther, { 
-                  //gasLimit: estimatedGas, 
-                  //gasPrice: gasPrice 
-                });
-                await depositTx.wait();
-                alert('Traded specified amount');
-
-                const profit = await traderPoolInstance.recentProfit();
-                console.log("Profit", profit);
-
-                const profitInEther = ethers.formatEther(profit);
-                console.log("Profit in Ether", profitInEther);
-
-                const profitInUSD = parseFloat(profitInEther);
-                console.log("Profit in USD", profitInUSD);
-
-                if (profitInUSD > 0) {
-                  setProfit(profitInEther.toString());
-                  console.log("Profit in USD", profitInUSD);
-                }
-
-                const lastBuyback = await traderPoolInstance.lastSharePurchase();
-                console.log("Last Buyback", lastBuyback);
-
-                if (lastBuyback > 0) {
-                  setBuyback(lastBuyback.toString());
-                }
-
-                setModalMessage('Swap Successful'); //set the buyback number 
-                await new Promise((resolve) => setTimeout(resolve, 500));
-                setIsModalVisible(false);
-                fetchContractBalance();
-              } else {
-                //const estimatedGas = await traderPoolInstance.estimateGas.poolTrade(inputToken, outputToken, tokenBalance);
-                //const gasPrice = await provider.getGasPrice();
-                const depositTx = await traderPoolInstance.poolTrade(inputToken, outputToken, tokenBalance, { 
-                  //gasLimit: estimatedGas, 
-                  //gasPrice: gasPrice 
-                });
-                await depositTx.wait();
-
-                const profit = await traderPoolInstance.recentProfit();
-                console.log("Profit", profit);
-
-                const profitInEther = ethers.formatEther(profit);
-                console.log("Profit in Ether", profitInEther);
-
-                const profitInUSD = parseFloat(profitInEther)
-                console.log("Profit in USD", profitInUSD);
-
-                if (profitInUSD > 0) {
-                  setProfit(profitInEther.toString());
-                  console.log("Profit in USD", profitInUSD);
-                }
-
-                const lastBuyback = await traderPoolInstance.lastSharePurchase();
-                console.log("Last Buyback", lastBuyback);
-
-                if (lastBuyback > 0) {
-                  setBuyback(lastBuyback.toString());
-                } 
-
-                setModalMessage('Swap Successful'); //set the buyback number 
-                await new Promise((resolve) => setTimeout(resolve, 500));
-                setIsModalVisible(false);
-                fetchContractBalance();
-              }
-            }
-          } else {
-            alert('Trader Pool instance not available');
-            setModalMessage('Trader Pool instance not available'); //set the buyback number 
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            setIsModalVisible(false);
-            return;
+          const lastBuyback = await traderPoolInstance.lastSharePurchase();
+          if (lastBuyback > 0) {
+            setBuyback(lastBuyback.toString());
           }
         }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        alert('Authentication Failed');
-        setModalMessage('Authentication Failed'); //set the buyback number 
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setIsModalVisible(false);
-        return;
       }
-    } else {
-      alert('Raise wallet was not initialized');
-      return;
+
+      setModalMessage('Swap Successful');
+      await fetchContractBalance();
+    } catch (error) {
+      console.error('Error during swap:', error);
+      setModalMessage('Swap Failed');
+    } finally {
+      setTimeout(() => setIsModalVisible(false), 500);
     }
   };
 

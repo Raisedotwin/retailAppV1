@@ -70,7 +70,7 @@ const Modal: React.FC<ModalProps> = ({ show, title, message, color = "blue", amo
 };
 
 const PerpsForm: React.FC = () => {
-  // State management
+  // Existing state management...
   const [wethBalance, setWethBalance] = useState<string>("0.00");
   const [depositAmount, setDepositAmount] = useState<string>("");
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
@@ -87,13 +87,34 @@ const PerpsForm: React.FC = () => {
   
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  const wallet = getEmbeddedConnectedWallet(wallets);
+  let wallet = wallets[0]; // Default to first wallet
 
   const profileAddr = '0x4731d542b3137EA9469c7ba76cD16E4a563f0a16';
   const profileABI = require("../abi/profile");
   const tokenPoolABI = require("../abi/traderPool");
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
+
+  // New function to get the appropriate signer based on wallet type
+  const getSigner = async () => {
+    if (user?.twitter?.username) {
+      let embeddedWallet = getEmbeddedConnectedWallet(wallets);
+      let privyProvider = await embeddedWallet?.address;
+      
+      // Fix the type declaration and assignment
+      const foundWallet = wallets.find((w) => w.address === privyProvider);
+      if (foundWallet) {
+        wallet = foundWallet;
+      }
+    }
+  
+    if (!wallet) {
+      throw new Error("No wallet available");
+    }
+  
+    const privyProvider = await getPrivyProvider("base");
+    return privyProvider?.getSigner();
+  };
 
   const getPrivyProvider = async (chainName: string) => {
     if (!wallet) {
@@ -122,145 +143,170 @@ const PerpsForm: React.FC = () => {
 
   const fetchProfile = useCallback(async () => {
     try {
-      let username = user?.twitter?.username;
+      let username = user?.wallet?.address;
       if (username) {
-        const profile = await profileContract.getProfileByName(username);
+        const profile = await profileContract.getProfile(username);
         if (profile && profile.length > 5) {
           const traderPoolAddr = profile[5];
           setTraderPoolAddress(traderPoolAddr);
-          console.log("Trader Pool Address:", traderPoolAddr);
           
           if (traderPoolAddr !== "0x0000000000000000000000000000000000000000") {
             const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
             const balance = await traderPoolInstance.getTotal();
             setWethBalance(ethers.formatEther(balance));
+            console.log(traderPoolAddr);
           }
         }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
     }
-  }, [profileContract, user?.twitter?.username, provider, tokenPoolABI]);
+  }, [profileContract, user?.wallet?.address, provider, tokenPoolABI]);
 
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
 
-  const handleDeposit = async () => {
-    if (!traderPoolAddress || !wallet) return;
-  
-    try {
-      setShowDepositModal(true);
-      const privyProvider = await getPrivyProvider("base");
-      if (!privyProvider) throw new Error("Failed to get provider");
-      
-      const signer = privyProvider.getSigner();
-      const traderPoolInstance = new ethers.Contract(
-        traderPoolAddress, 
-        tokenPoolABI, 
-        signer as unknown as ethers.ContractRunner
-      );
-      
-      // Convert the amount to Wei (18 decimals)
-      const amountToWei = ethers.parseEther(depositAmount);
-      
-      // Call depositCollateralEth instead of deposit
-      const tx = await traderPoolInstance.depositCollateralEth(amountToWei, {
-        value: amountToWei // Send ETH along with the transaction
-      });
-      await tx.wait();
-      
-      await fetchProfile(); // Refresh balance
-      setDepositAmount("");
-    } catch (error) {
-      console.error('Error depositing funds:', error);
-    } finally {
-      setShowDepositModal(false);
-    }
-  };
-
-  const handleWithdraw = async () => {
-    if (!traderPoolAddress || !wallet) return;
-  
-    try {
-      setShowWithdrawModal(true);
-      const privyProvider = await getPrivyProvider("base");
-      if (!privyProvider) throw new Error("Failed to get provider");
-      
-      const signer = privyProvider.getSigner();
-      const traderPoolInstance = new ethers.Contract(
-        traderPoolAddress, 
-        tokenPoolABI, 
-        signer as unknown as ethers.ContractRunner
-      );
-      
-      // Convert the amount to Wei
-      const amountToWei = ethers.parseEther(withdrawAmount);
-      
-      // First call JOJOGetProfitFast
-      const tx = await traderPoolInstance.JOJOGetProfitFast(amountToWei);
-      await tx.wait();
-      
-      await fetchProfile(); // Refresh balance
-      setWithdrawAmount("");
-    } catch (error) {
-      console.error('Error withdrawing funds:', error);
-    } finally {
-      setShowWithdrawModal(false);
-    }
-  };
-
   const handleInitialize = async () => {
-    if (!traderPoolAddress || !wallet) return;
+    if (!traderPoolAddress) return;
     
     setShowInitModal(true);
     try {
-      const privyProvider = await getPrivyProvider("base");
-      if (!privyProvider) throw new Error("Failed to get provider");
-      
-      const signer = privyProvider.getSigner();
+      const signer: any = await getSigner();
+      if (!signer) throw new Error("Failed to get signer");
+
       const traderPoolInstance = new ethers.Contract(
         traderPoolAddress, 
         tokenPoolABI, 
-        signer as unknown as ethers.ContractRunner
+        signer
       );
       
-      // Call the interactWithJOJO function
       const tx = await traderPoolInstance.interactWithJOJO();
-      await tx.wait();
+      // Wait for transaction confirmation
+      await provider.waitForTransaction(tx.hash, 1);
       
       await fetchProfile();
+      // Show success state briefly before closing modal
+      setShowInitModal(false);
     } catch (error) {
       console.error('Error initializing JOJO:', error);
-    } finally {
-      setTimeout(() => setShowInitModal(false), 2000);
+      setShowInitModal(false);
     }
   };
   
   const handleDisconnect = async () => {
-    if (!traderPoolAddress || !wallet) return;
+    if (!traderPoolAddress) return;
+
+    console.log("Disconnecting from JOJO", traderPoolAddress);
   
     setShowDisconnectModal(true);
     try {
-      const privyProvider = await getPrivyProvider("base");
-      if (!privyProvider) throw new Error("Failed to get provider");
+      const signer: any = await getSigner();
+      if (!signer) throw new Error("Failed to get signer");
       
-      const signer = privyProvider.getSigner();
       const traderPoolInstance = new ethers.Contract(
         traderPoolAddress, 
         tokenPoolABI, 
-        signer as unknown as ethers.ContractRunner
+        signer
       );
       
-      // Call the disconnectJOJO function
       const tx = await traderPoolInstance.disconnectJOJO();
-      await tx.wait();
+      // Wait for transaction confirmation
+      await provider.waitForTransaction(tx.hash, 1);
+      
+      await fetchProfile();
+      setShowDisconnectModal(false);
     } catch (error) {
       console.error('Error disconnecting from JOJO:', error);
-    } finally {
-      setTimeout(() => setShowDisconnectModal(false), 2000);
+      setShowDisconnectModal(false);
     }
   };
+
+  const handleDeposit = async () => {
+    if (!traderPoolAddress) return;
+    
+    // Add input validation
+    if (!depositAmount || depositAmount === "" || parseFloat(depositAmount) <= 0) {
+      console.error('Invalid deposit amount');
+      return;
+    }
+  
+    try {
+      setShowDepositModal(true);
+      const signer: any = await getSigner();
+      if (!signer) throw new Error("Failed to get signer");
+      
+      const traderPoolInstance = new ethers.Contract(
+        traderPoolAddress, 
+        tokenPoolABI, 
+        signer
+      );
+      
+      // Ensure the amount is properly formatted
+      const formattedAmount = parseFloat(depositAmount).toFixed(18); // Set precision to 18 decimals
+      const amountToWei = ethers.parseEther(formattedAmount);
+      
+      // Add gas estimation with a buffer
+      const gasEstimate = await traderPoolInstance.depositCollateralEth.estimateGas(
+        amountToWei,
+        { value: amountToWei }
+      );
+      const gasLimit = gasEstimate * BigInt(120) / BigInt(100); // Add 20% buffer
+
+      
+      const tx = await traderPoolInstance.depositCollateralEth(amountToWei, {
+        value: amountToWei,
+        gasLimit: gasLimit
+      });
+      
+      // Wait for transaction confirmation
+      await provider.waitForTransaction(tx.hash, 1);
+      
+      await fetchProfile();
+      setDepositAmount("");
+      setShowDepositModal(false);
+    } catch (error) {
+      console.error('Error depositing funds:', error);
+      setShowDepositModal(false);
+      // Add user-friendly error handling
+      if (error === 'INVALID_ARGUMENT') {
+        alert('Please enter a valid deposit amount');
+      } else if (error === 'UNPREDICTABLE_GAS_LIMIT') {
+        alert('Transaction failed. Please check your balance and try again.');
+      } else {
+        alert('An error occurred while processing your deposit');
+      }
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!traderPoolAddress) return;
+  
+    try {
+      setShowWithdrawModal(true);
+      const signer: any = await getSigner();
+      if (!signer) throw new Error("Failed to get signer");
+      
+      const traderPoolInstance = new ethers.Contract(
+        traderPoolAddress, 
+        tokenPoolABI, 
+        signer
+      );
+      
+      const amountToWei = ethers.parseEther(withdrawAmount);
+      const tx = await traderPoolInstance.JOJOGetProfitFast(amountToWei);
+      // Wait for transaction confirmation
+      await provider.waitForTransaction(tx.hash, 1);
+      
+      await fetchProfile();
+      setWithdrawAmount("");
+      setShowWithdrawModal(false);
+    } catch (error) {
+      console.error('Error withdrawing funds:', error);
+      setShowWithdrawModal(false);
+    }
+  };
+
 
   // Rest of the JSX remains largely the same, just update the balance display
   return (

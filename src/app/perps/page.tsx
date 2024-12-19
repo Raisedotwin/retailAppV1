@@ -48,7 +48,7 @@ const PerpsPage: React.FC = () => {
         if (isAssociated) {
           // Try getting profile details if profile is associated
           if (user?.twitter?.username) {
-            const profile = await profileContract.getProfileByName(user.twitter.username);
+            const profile = await profileContract.getProfile(nativeAddress);
             setProfile(profile);
 
             if (profile && profile.length > 5) {
