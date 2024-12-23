@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { use } from 'react';
 import Link from 'next/link';
 import { useAccount } from '../context/AccountContext';
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -16,6 +16,7 @@ const WalletPage: React.FC = () => {
   const [modalMessage, setModalMessage] = useState('');
   const [loggedInToX, setLoggedIntoX] = useState(false);
   const [isProfileAssociated, setIsProfileAssociated] = useState(false);
+  const [profileAddress, setProfileAddress] = useState('');
 
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
 
@@ -128,23 +129,55 @@ const WalletPage: React.FC = () => {
     }
   };
 
-  const fetchProfile = useCallback(async () => {
+  // New function to fetch profile by username
+  const fetchProfileByUsername = useCallback(async (username: string) => {
     try {
-      let username = user?.twitter?.username;
       if (username) {
         const profile = await profileContract.getProfileByName(username);
         if (profile) {
           setProfileExists(true);
           return profile;
-        } else {
-          setProfileExists(false);
         }
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
       setProfileExists(false);
+      return null;
+    } catch (error) {
+      console.error('Error fetching profile by username:', error);
+      setProfileExists(false);
+      return null;
     }
-  }, [profileContract, user?.twitter?.username]);
+  }, [profileContract]);
+
+  // New function to fetch profile by address
+  const fetchProfileByAddress = useCallback(async (address: string) => {
+    try {
+      if (address && ethers.isAddress(address)) {
+        const profile = await profileContract.getProfile(address);
+        if (profile) {
+          setProfileExists(true);
+          return profile;
+        }
+      }
+      setProfileExists(false);
+      return null;
+    } catch (error) {
+      console.error('Error fetching profile by address:', error);
+      setProfileExists(false);
+      return null;
+    }
+  }, [profileContract]);
+
+  const fetchBalanceFromProfile = async (profile: any) => {
+    if (profile && profile.length > 5) {
+      const traderPoolAddr = profile[5];
+      setProfileAddress(traderPoolAddr);
+      if (traderPoolAddr) {
+        const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
+        const balance = await traderPoolInstance.getTotal();
+        setEthBalance(ethers.formatEther(balance));
+      }
+    }
+  };
 
   const loginWithPrivy = async () => {
     try {
@@ -159,17 +192,20 @@ const WalletPage: React.FC = () => {
     const initContract = async () => {
       try {
         const isAssociated = await checkProfileAssociation();
-        let profile = await fetchProfile();
+        
+        // Try fetching by username first if available
+        let profile = null;
+        if (user?.twitter?.username) {
+          profile = await fetchProfileByUsername(user.twitter.username);
+        }
+        
+        // If no profile found by username and we have an address, try fetching by address
+        if (!profile && nativeAddress) {
+          profile = await fetchProfileByAddress(nativeAddress);
+        }
 
-        if (isAssociated) {
-          if (profile && profile.length > 5) {
-            const traderPoolAddr = profile[5];
-            if (traderPoolAddr) {
-              const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
-              const balance = await traderPoolInstance.getTotal();
-              setEthBalance(ethers.formatEther(balance));
-            }
-          }
+        if (isAssociated && profile) {
+          await fetchBalanceFromProfile(profile);
         }
       } catch (error) {
         console.error('Error initializing contract:', error);
@@ -177,7 +213,7 @@ const WalletPage: React.FC = () => {
     };
 
     initContract();
-  }, [user, fetchProfile, tokenPoolABI, checkProfileAssociation]);
+  }, [user, nativeAddress, fetchProfileByUsername, fetchProfileByAddress, checkProfileAssociation]);
 
   const handleSwitchAddress = async () => {
     if (!ethers.isAddress(newAddress)) {
@@ -214,7 +250,6 @@ const WalletPage: React.FC = () => {
     }
     setIsSwitching(false);
   };
-
   return (
     <div className="min-h-screen bg-black flex flex-col p-6">
       {!isProfileAssociated && !user?.twitter?.username ? (
@@ -278,8 +313,16 @@ const WalletPage: React.FC = () => {
                     {isProfileAssociated ? 'Linked to Raise' : 'Not Linked to Raise'}
                   </span>
                 )}
+                
               </div>
+              
               <p className="text-gray-400 break-words">{nativeAddress || 'No Address Connected'}</p>
+              <div className="mt-4">
+                <h3 className="text-lg font-semibold text-white mb-2">Raise Wallet:</h3>
+                <p className="text-gray-400 break-words">
+                  {profileAddress || 'No Raise Wallet Connected'}
+                </p>
+              </div>
             </div>
           </div>
 

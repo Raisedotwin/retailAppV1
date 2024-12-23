@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAccount } from '../context/AccountContext';
 import { usePrivy, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
@@ -10,228 +10,152 @@ interface SwapFormProps {
   profile: any;
 }
 
-const SwapForm: React.FC<SwapFormProps> = ({ balance, profile }) => {
-  // State management
+const SwapForm: React.FC<SwapFormProps>= () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
-  const [tradeAmount, setTradeAmount] = useState('');
-  const [inputToken, setInputToken] = useState('');
-  const [outputToken, setOutputToken] = useState('');
   const [amount, setAmount] = useState('');
-  const [balanceTwo, setBalanceTwo] = useState('0');
-  const [profit, setProfit] = useState('');
-  const [buyback, setBuyback] = useState('');
-  const [activeTab, setActiveTab] = useState('buy');
   const [tokenAddress, setTokenAddress] = useState('');
-  const [isInputModalVisible, setIsInputModalVisible] = useState(true);
-  const [selectedToken, setSelectedToken] = useState<any | null>(null);
+  const [balanceWETH, setBalanceWETH] = useState('0');
+  const [tokenBalance, setTokenBalance] = useState('0');
+  const [activeTab, setActiveTab] = useState('buy');
 
-  // Hooks and Context
   const { account } = useAccount();
   const { user } = usePrivy();
   const { wallets } = useWallets();
   let wallet = wallets[0];
 
-  // Contract constants
   const tokenPoolABI = require("../abi/traderPool");
   const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
   const profileABI = require("../abi/profile");
-  const wethAddress = "0x4200000000000000000000000000000000000006";
+  const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
 
-  // Provider setup
-  const baseRpcURL = EIP155_CHAINS["eip155:8453"].rpc;
-  const provider = useMemo(() => new ethers.JsonRpcProvider(baseRpcURL), [baseRpcURL]);
+  const provider = useMemo(() => 
+    new ethers.JsonRpcProvider(EIP155_CHAINS["eip155:8453"].rpc),
+    []
+  );
 
-  // Contract instance
-  const profileContract = useMemo(() => {
-    return new ethers.Contract(profileAddr, profileABI, provider);
-  }, [profileAddr, profileABI, provider]);
+  const profileContract = useMemo(() => 
+    new ethers.Contract(profileAddr, profileABI, provider),
+    [provider]
+  );
 
-  // Wallet handling functions
-  const getSigner = async () => {
+  const getWallet = useCallback(async () => {
     if (user?.twitter?.username) {
-      let embeddedWallet = getEmbeddedConnectedWallet(wallets);
-      let privyProvider = await embeddedWallet?.address;
-      
-      const foundWallet = wallets.find((w) => w.address === privyProvider);
-      if (foundWallet) {
-        wallet = foundWallet;
-      }
+      const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+      const privyProvider = await embeddedWallet?.address;
+      return wallets.find(w => w.address === privyProvider) || wallet;
     }
-  
-    if (!wallet) {
-      throw new Error("No wallet available");
-    }
-  
-    const privyProvider = await getPrivyProvider("base");
-    return privyProvider?.getSigner();
-  };
+    return wallet;
+  }, [user, wallets, wallet]);
 
-  const getPrivyProvider = async (chainName: string) => {
-    if (!wallet) {
-      console.error("Wallet not initialized");
-      return null;
-    }
-
-    let chainId: number;
-    switch (chainName.toLowerCase()) {
-      case "base":
-        chainId = 8453;
-        break;
-      default:
-        console.error("Unsupported chain name");
-        return null;
-    }
-
+  const getSigner = async () => {
+    const currentWallet = await getWallet();
+    if (!currentWallet) throw new Error("No wallet available");
+    
     try {
-      await wallet.switchChain(chainId);
-      return await wallet.getEthersProvider();
+      await currentWallet.switchChain(8453);
+      const provider = await currentWallet.getEthersProvider();
+      return provider.getSigner();
     } catch (error) {
-      console.error("Failed to switch chain or get provider:", error);
-      return null;
+      console.error("Failed to get signer:", error);
+      throw error;
     }
   };
 
-  // Helper functions
-  const handleSelectToken = (token: any) => {
-    setInputToken(`${token.name} (${token.address})`);
-    setIsInputModalVisible(true);
-  };
-
-  const onSelectToken = (token: any) => {
-    setInputToken(`${token.name} (${token.address})`);
-  };
-
-  // Balance fetching
-  const fetchContractBalance = useCallback(async () => {
+  const fetchBalances = useCallback(async () => {
     try {
-      const walletAddress = wallet?.address || user?.wallet?.address;
+      const currentWallet = await getWallet();
+      const walletAddress = currentWallet?.address || user?.wallet?.address;
       const profile = await profileContract.getProfile(walletAddress);
       
-      if (profile[5] !== "0x0000000000000000000000000000000000000000") {
-        const addr = profile[5];
-        const traderPoolInstance = new ethers.Contract(addr, tokenPoolABI, provider);
-        
-        if (inputToken && inputToken !== wethAddress) {
-          const tokenBalance = await traderPoolInstance.getTokenBalance(inputToken);
-          const balanceOfTokenEther = ethers.formatEther(tokenBalance);
-          setBalanceTwo(balanceOfTokenEther);
-        } else {
-          let contractBalance = await traderPoolInstance.getTotal();
-          let contractBalanceEther = ethers.formatEther(contractBalance);
-          setBalanceTwo(contractBalanceEther);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching contract balance:", error);
-      setBalanceTwo('Error fetching balance');
-    }
-  }, [inputToken, profileContract, provider, tokenPoolABI, wallet, user]);
-
-  // Main swap function
-  const handleSwap = async () => {
-    if (!profileContract) return;
-
-    setModalMessage('Swapping tokens');
-    setIsModalVisible(true);
-
-    try {
-      const signer: any = await getSigner();
-      if (!signer) throw new Error("Failed to get signer");
-
-      const walletAddress = wallet?.address || user?.wallet?.address;
-      const profileContractWithSigner = new ethers.Contract(profileAddr, profileABI, signer);
-      const profile = await profileContractWithSigner.getProfile(walletAddress);
-
       if (profile[5] === "0x0000000000000000000000000000000000000000") {
         throw new Error("No trader pool found");
       }
 
-      const addr = profile[5];
-      const traderPoolInstance = new ethers.Contract(addr, tokenPoolABI, signer);
+      const poolContract = new ethers.Contract(profile[5], tokenPoolABI, provider);
+      
+      // Fetch WETH balance
+      const wethBalance = await poolContract.getTotal();
+      setBalanceWETH(ethers.formatEther(wethBalance));
 
-      const amountEther = ethers.parseEther(tradeAmount || '0');
+      // Fetch token balance if in sell mode and address is set
+      if (activeTab === 'sell' && tokenAddress) {
+        const balance = await poolContract.getTokenBalance(tokenAddress);
+        setTokenBalance(ethers.formatEther(balance));
+      }
+    } catch (error) {
+      console.error("Error fetching balances:", error);
+      setBalanceWETH('Error');
+      setTokenBalance('Error');
+    }
+  }, [getWallet, user, profileContract, provider, tokenPoolABI, activeTab, tokenAddress]);
 
-      if (inputToken === wethAddress) {
-        // Buy logic
-        const balance = await traderPoolInstance.getTotal();
-        if (balance >= amountEther && tradeAmount !== "0") {
-          const tx = await traderPoolInstance.poolTrade(inputToken, outputToken, amountEther);
-          await tx.wait();
-          alert('Traded specified amount');
-        } else {
-          const tx = await traderPoolInstance.poolTrade(inputToken, outputToken, balance);
-          await tx.wait();
-          alert('Traded all available balance');
-        }
-      } else {
-        // Sell logic
-        const tokenBalance = await traderPoolInstance.getTokenBalance(inputToken);
-        if (tokenBalance.isZero()) {
-          alert('Insufficient token balance in contract');
-          setModalMessage('Insufficient token balance in contract');
-          return;
-        }
+  const handleSwap = async () => {
+    if (!amount || !tokenAddress) {
+      alert('Please enter both amount and token address');
+      return;
+    }
 
-        if (tokenBalance >= amountEther && tradeAmount !== "0") {
-          const tx = await traderPoolInstance.poolTrade(inputToken, outputToken, amountEther);
-          await tx.wait();
-          
-          const profit = await traderPoolInstance.recentProfit();
-          const profitInEther = ethers.formatEther(profit);
-          
-          if (parseFloat(profitInEther) > 0) {
-            setProfit(profitInEther);
-          }
+    setModalMessage('Processing swap...');
+    setIsModalVisible(true);
 
-          const lastBuyback = await traderPoolInstance.lastSharePurchase();
-          if (lastBuyback > 0) {
-            setBuyback(lastBuyback.toString());
-          }
-        } else {
-          const tx = await traderPoolInstance.poolTrade(inputToken, outputToken, tokenBalance);
-          await tx.wait();
-
-          const profit = await traderPoolInstance.recentProfit();
-          const profitInEther = ethers.formatEther(profit);
-          
-          if (parseFloat(profitInEther) > 0) {
-            setProfit(profitInEther);
-          }
-
-          const lastBuyback = await traderPoolInstance.lastSharePurchase();
-          if (lastBuyback > 0) {
-            setBuyback(lastBuyback.toString());
-          }
-        }
+    try {
+      const signer: any = await getSigner();
+      const walletAddress = (await getWallet())?.address || user?.wallet?.address;
+      const profile = await profileContract.getProfile(walletAddress);
+      
+      if (profile[5] === "0x0000000000000000000000000000000000000000") {
+        throw new Error("No trader pool found");
       }
 
-      setModalMessage('Swap Successful');
-      await fetchContractBalance();
+      const poolContract = new ethers.Contract(profile[5], tokenPoolABI, signer);
+      const amountWei = ethers.parseEther(amount);
+
+      const tx = await poolContract.poolTrade(
+        activeTab === 'buy' ? WETH_ADDRESS : tokenAddress,
+        activeTab === 'buy' ? tokenAddress : WETH_ADDRESS,
+        amountWei
+      );
+
+      setModalMessage('Confirming transaction...');
+      await tx.wait();
+      
+      setModalMessage('Swap successful!');
+      setIsModalVisible(false);
+      await fetchBalances();
+      setAmount('');
+      
     } catch (error) {
-      console.error('Error during swap:', error);
-      setModalMessage('Swap Failed');
+      console.error('Swap failed:', error);
+      setModalMessage('Swap failed. Please try again.');
     } finally {
-      setTimeout(() => setIsModalVisible(false), 500);
+      setTimeout(() => {
+        setIsModalVisible(false);
+        setModalMessage('');
+      }, 2000);
     }
   };
+
+  useEffect(() => {
+    fetchBalances();
+  }, [fetchBalances]);
 
   return (
     <div className="bg-[#1c1f2a] rounded-2xl border border-gray-800 p-6">
       <div className="max-w-lg mx-auto">
         <div className="bg-black rounded-2xl shadow-xl p-6">
-          {/* Header with Balance */}
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 text-center mb-2">
               Swap Tokens
             </h2>
             <div className="bg-gray-800 rounded-xl p-4 text-center">
               <p className="text-gray-400 text-sm mb-1">Available Balance</p>
-              <p className="text-2xl font-bold text-white">{balance} WETH</p>
+              <p className="text-2xl font-bold text-white">
+                {activeTab === 'buy' ? `${balanceWETH} WETH` : `${tokenBalance} Token`}
+              </p>
             </div>
           </div>
 
-          {/* Tab Navigation */}
           <div className="grid grid-cols-2 gap-2 bg-gray-800/30 p-1 rounded-lg mb-6">
             <button
               onClick={() => setActiveTab('buy')}
@@ -255,99 +179,56 @@ const SwapForm: React.FC<SwapFormProps> = ({ balance, profile }) => {
             </button>
           </div>
 
-          {/* Buy Form */}
-          {activeTab === 'buy' && (
-            <div className="space-y-6">
-              <div className="bg-gray-800/50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-white">From</span>
-                  <div className="flex items-center space-x-2">
-                    <Image src="/icons/ethereum.png" alt="WETH" width={20} height={20} />
-                    <span className="text-white font-medium">WETH</span>
-                  </div>
-                </div>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Enter WETH amount"
-                  className="w-full bg-gray-700 text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
+          <div className="space-y-6">
+            <div className="bg-gray-800/50 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-white">Token Address</span>
               </div>
-
-              <div className="bg-gray-800/50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-white">To</span>
-                  <span className="text-gray-400 text-sm">Any token</span>
-                </div>
-                <input
-                  type="text"
-                  value={tokenAddress}
-                  onChange={(e) => setTokenAddress(e.target.value)}
-                  placeholder="Enter token address"
-                  className="w-full bg-gray-700 text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-              </div>
-
-              <button
-                onClick={handleSwap}
-                className="w-full py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-200"
-              >
-                Buy Tokens
-              </button>
-
-              <p className="text-gray-400 text-sm text-center">
-                You can only buy tokens using WETH
-              </p>
+              <input
+                type="text"
+                value={tokenAddress}
+                onChange={(e) => setTokenAddress(e.target.value)}
+                placeholder="Enter token address"
+                className="w-full bg-gray-700 text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              />
             </div>
-          )}
 
-          {/* Sell Form */}
-          {activeTab === 'sell' && (
-            <div className="space-y-6">
-              <div className="bg-gray-800/50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-white">From</span>
-                  <span className="text-gray-400 text-sm">Any token</span>
+            <div className="bg-gray-800/50 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-white">Amount</span>
+                <div className="flex items-center space-x-2">
+                  <Image src="/icons/ethereum.png" alt="WETH" width={20} height={20} />
+                  <span className="text-white font-medium">
+                    {activeTab === 'buy' ? 'WETH' : 'Token'}
+                  </span>
                 </div>
-                <input
-                  type="text"
-                  value={tokenAddress}
-                  onChange={(e) => setTokenAddress(e.target.value)}
-                  placeholder="Enter token address"
-                  className="w-full bg-gray-700 text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                />
               </div>
-
-              <div className="bg-gray-800/50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-white">To</span>
-                  <div className="flex items-center space-x-2">
-                    <Image src="/icons/ethereum.png" alt="WETH" width={20} height={20} />
-                    <span className="text-white font-medium">WETH</span>
-                  </div>
-                </div>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="Enter amount to sell"
-                  className="w-full bg-gray-700 text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                />
-              </div>
-
-              <button
-                onClick={handleSwap}
-                className="w-full py-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-medium transition-all duration-200"
-              >
-                Sell for WETH
-              </button>
-
-              <p className="text-gray-400 text-sm text-center">
-                All tokens will be sold for WETH
-              </p>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder={`Enter ${activeTab === 'buy' ? 'WETH' : 'token'} amount`}
+                className="w-full bg-gray-700 text-white p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              />
             </div>
-          )}
+
+            <button
+              onClick={handleSwap}
+              className={`w-full py-4 ${
+                activeTab === 'buy'
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+                  : 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
+              } text-white rounded-xl font-medium transition-all duration-200`}
+            >
+              {activeTab === 'buy' ? 'Buy Tokens' : 'Sell Tokens'}
+            </button>
+
+            <p className="text-gray-400 text-sm text-center">
+              {activeTab === 'buy' 
+                ? 'You can only buy tokens using WETH'
+                : 'All tokens will be sold for WETH'}
+            </p>
+          </div>
         </div>
       </div>
 
