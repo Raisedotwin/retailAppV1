@@ -5,7 +5,7 @@ interface HoldingsEntry {
   token: number;
   name: string;
   username: string;
-  balance: string;
+  balance: string; // ETH value as a string
   link: string;
 }
 
@@ -44,14 +44,12 @@ const Holdings: React.FC<HoldingsProps> = ({ data }) => (
             >
               <td className="px-6 py-4">
                 <div className="flex items-center">
-                  <span className={`
-                    w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold
-                    ${index === 0 ? 'bg-yellow-100 text-yellow-700 ring-2 ring-yellow-200' :
-                      index === 1 ? 'bg-gray-200 text-gray-700 ring-2 ring-gray-300' :
-                      index === 2 ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-200' :
-                      'bg-gray-200 text-gray-700'}
-                    transform transition-transform hover:scale-110
-                  `}>
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                    index === 0 ? 'bg-yellow-100 text-yellow-700 ring-2 ring-yellow-200' :
+                    index === 1 ? 'bg-gray-200 text-gray-700 ring-2 ring-gray-300' :
+                    index === 2 ? 'bg-amber-100 text-amber-700 ring-2 ring-amber-200' :
+                    'bg-gray-200 text-gray-700'
+                  } transform transition-transform hover:scale-110`}>
                     {entry.token}
                   </span>
                 </div>
@@ -68,12 +66,10 @@ const Holdings: React.FC<HoldingsProps> = ({ data }) => (
               </td>
               <td className="px-6 py-4">
                 <div className="font-medium text-gray-900">
-                  {new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(Number(entry.balance))}
+                  {Number(entry.balance).toLocaleString('en-US', {
+                    minimumFractionDigits: 4,
+                    maximumFractionDigits: 4,
+                  })} ETH
                 </div>
               </td>
               <td className="px-6 py-4">

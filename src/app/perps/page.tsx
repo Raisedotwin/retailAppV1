@@ -21,7 +21,7 @@ const PerpsPage: React.FC = () => {
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const profileAddr = '0x4731d542b3137EA9469c7ba76cD16E4a563f0a16';
+  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
   const profileABI = require("../abi/profile");
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
 
@@ -161,7 +161,10 @@ const PerpsPage: React.FC = () => {
       href="#"
       className="flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 transition-colors duration-200 rounded-lg text-white font-medium w-full max-w-md"
     >
-      <span>Go to JOJO</span>
+      <span
+                onClick={() => window.open('https://jojo.exchange','blank')}
+
+      >Go to JOJO</span>
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
       </svg>

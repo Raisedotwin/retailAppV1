@@ -30,16 +30,16 @@ const TraderPageContent: React.FC = () => {
 
   const tokenPoolABI = require("../abi/traderPool");
 
-  const tokenContractAddr = '0xc3369746eeC430A3D79EfA908698E1323333BB1d';
+  const tokenContractAddr = '0x23762539685db622E5D841Dd224C7EA1eF3Deafd';
   const tokenMarketABI = require('../abi/tokenMarket.json');
 
-  const marketDataAddr = '0x668B3e8EeD0564fAc8Af39D48e02aaC17E89cf0E';
+  const marketDataAddr = '0x81D889c29BED75352aF82CA93d0352c909723CeD';
   const marketDataABI = require("../abi/marketdata.json");
 
-  const createAccountAddr = '0x65fe166D99CD92B0e19B4bAF47300A7866B9D249';
+  const createAccountAddr = '0x1fAf3809a4C6CE515038EC6Dc561036Ba1eEfe5e';
   const createAccountABI = require("../abi/createAccount.json");
 
-  const profileAddr = '0x4731d542b3137EA9469c7ba76cD16E4a563f0a16';
+  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
   const profileABI = require("../abi/profile.json");
 
   const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('activity');
@@ -111,7 +111,7 @@ const TraderPageContent: React.FC = () => {
             // Only proceed with price calculation if we have a valid amount
             if (parseFloat(amount) > 0) {
               // Convert amount to Wei before sending to contract
-              const amountInWei = ethers.parseEther(amount);
+              const amountInWei = ethers.parseEther(amount); //the issue is we dont convert this to wei on selling
               
               try {
                 // Get buy price with retry mechanism
@@ -120,13 +120,13 @@ const TraderPageContent: React.FC = () => {
                   //setBuyPrice(ethers.formatEther(buyPriceWei));
                 //}
 
-                const buyPriceWei = await contract.getNumberOfTokensForAmount(userAcc, amountInWei)
+                let buyPriceWei = await contract.getNumberOfTokensForAmount(userAcc, amountInWei)
                 if (buyPriceWei.toString() !== "0") {
                   setBuyPrice(ethers.formatEther(buyPriceWei));
                 }
                 
                 // Get sell price with retry mechanism
-                const sellPriceWei = await contract.getSellPriceAfterFee(tokenAddress, amountInWei);;
+                let sellPriceWei = await contract.getSellPriceAfterFee(tokenAddress, amountInWei)
                 if (sellPriceWei.toString() !== "0") {
                   setSellPrice(ethers.formatEther(sellPriceWei));
 
@@ -218,7 +218,8 @@ useEffect(() => {
 
             // Get market data
             const MCAP = await marketContractInstance.getMarketCap(traderAcc.toString());
-            setMarketCap(MCAP.toString());
+            setMarketCap(ethers.formatEther(MCAP));
+            //setMarketCap(MCAP.toString());
 
             const lastBuyback = await marketDataContractInstance.getLastBuybackValue(username as string);
             setLastBuybackValue(lastBuyback.toString());
@@ -299,7 +300,6 @@ useEffect(() => {
         username as string,
         name as string,
         logo as string,
-        0,
         "0x0000000000000000000000000000000000000000"
       );
   
@@ -578,29 +578,34 @@ useEffect(() => {
     </div>
 
     {/* Stats Section */}
-    <div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-5 gap-4">
-      <div className="text-center px-4">
-        <p className="text-lg font-bold text-gray-800">{frequency}</p>
-        <p className="text-xs text-gray-500">Buyback%</p>
-      </div>
-      <div className="text-center px-4">
-        <p className="text-lg font-bold text-gray-800">{lastBuybackValue}</p>
-        <p className="text-xs text-gray-500">Last Buyback</p>
-      </div>
-      <div className="text-center px-4">
-        <p className="text-lg font-bold text-gray-800">{marketCap}</p>
-        <p className="text-xs text-gray-500">Marketcap</p>
-      </div>
-      <div className="text-center px-4">
-      <p className="text-lg font-bold text-gray-800">{balance} ETH</p>
-      <p className="text-xs text-gray-500">AUM</p>
-    </div>
-      <div className="text-center px-4">
-        <p className="text-lg font-bold text-gray-800">{winRatio}</p>
-        <p className="text-xs text-gray-500">Win Rate</p>
-      </div>
-    </div>
+    {/* Stats Section */}
+<div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-5 gap-4">
+  <div className="text-center px-4">
+    <p className="text-lg font-bold text-gray-800">{frequency}</p>
+    <p className="text-xs text-gray-500">Buyback%</p>
   </div>
+  <div className="text-center px-4">
+    <p className="text-lg font-bold text-gray-800">{lastBuybackValue}</p>
+    <p className="text-xs text-gray-500">Last Buyback</p>
+  </div>
+  <div className="text-center px-4">
+    <p className="text-lg font-bold text-gray-800">
+      {Number(marketCap).toFixed(4)} ETH
+    </p>
+    <p className="text-xs text-gray-500">Marketcap</p>
+  </div>
+  <div className="text-center px-4">
+    <p className="text-lg font-bold text-gray-800">
+      {Number(balance).toFixed(4)} ETH
+    </p>
+    <p className="text-xs text-gray-500">AUM</p>
+  </div>
+  <div className="text-center px-4">
+    <p className="text-lg font-bold text-gray-800">{winRatio}</p>
+    <p className="text-xs text-gray-500">Win Rate</p>
+  </div>
+</div>
+</div>
 </div>
 
 {/* Main Content Grid */}
@@ -659,7 +664,7 @@ useEffect(() => {
         {traderProfileExists ? 'Total Cost' : 'Initial Supply'}
       </span>
       <span className="text-lg font-semibold">
-        {traderProfileExists ? `${buyPrice || '0'} $${username}` : '1.0 tokens'}
+        {traderProfileExists ? `${Number(buyPrice).toFixed(4)} $${username}` : '1.0 tokens'}
       </span>
     </div>
     <button 
@@ -703,7 +708,7 @@ useEffect(() => {
           <span className="text-gray-600">You'll Receive</span>
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold">
-              {sellPrice || '0'} ETH
+              {Number(sellPrice).toFixed(4)} ETH
             </span>
           </div>
         </div>
@@ -733,6 +738,7 @@ useEffect(() => {
     )}
   </div>
 )}
+
 
               {/* Warning Box */}
               <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">

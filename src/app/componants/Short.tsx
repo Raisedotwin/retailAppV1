@@ -105,7 +105,7 @@ const PositionsTable = ({ positions, onOpenShort }: {
   </div>
 );
 
-const Shorts: React.FC<ShortsProps> = ({ isEnabled = false }) => {
+const Shorts: React.FC<ShortsProps> = ({ isEnabled = true }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showAddSharesModal, setShowAddSharesModal] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<string>('');

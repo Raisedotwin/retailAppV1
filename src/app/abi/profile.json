@@ -458,9 +458,9 @@
 				"type": "address"
 			},
 			{
-				"internalType": "uint256",
-				"name": "_preSetWalletPurchase",
-				"type": "uint256"
+				"internalType": "address",
+				"name": "_positionsAddress",
+				"type": "address"
 			}
 		],
 		"name": "createProfile",
@@ -566,6 +566,25 @@
 	{
 		"inputs": [
 			{
+				"internalType": "uint256",
+				"name": "_accNum",
+				"type": "uint256"
+			}
+		],
+		"name": "getPositionsByAccount",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "address",
 				"name": "user",
 				"type": "address"
@@ -614,9 +633,9 @@
 				"type": "uint256"
 			},
 			{
-				"internalType": "uint256",
+				"internalType": "address",
 				"name": "",
-				"type": "uint256"
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -673,9 +692,9 @@
 				"type": "uint256"
 			},
 			{
-				"internalType": "uint256",
+				"internalType": "address",
 				"name": "",
-				"type": "uint256"
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -881,11 +900,6 @@
 				"internalType": "string",
 				"name": "avatarUrl",
 				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_preSetWalletPurchase",
-				"type": "uint256"
 			}
 		],
 		"name": "updateProfile",

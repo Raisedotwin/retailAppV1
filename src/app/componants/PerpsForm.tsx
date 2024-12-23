@@ -89,7 +89,7 @@ const PerpsForm: React.FC = () => {
   const { wallets } = useWallets();
   let wallet = wallets[0]; // Default to first wallet
 
-  const profileAddr = '0x4731d542b3137EA9469c7ba76cD16E4a563f0a16';
+  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
   const profileABI = require("../abi/profile");
   const tokenPoolABI = require("../abi/traderPool");
 
@@ -243,21 +243,23 @@ const PerpsForm: React.FC = () => {
       );
       
       // Ensure the amount is properly formatted
-      const formattedAmount = parseFloat(depositAmount).toFixed(18); // Set precision to 18 decimals
-      const amountToWei = ethers.parseEther(formattedAmount);
+      //const formattedAmount = parseFloat(depositAmount); // Set precision to 18 decimals
+      const amountToWei = ethers.parseEther(depositAmount);
       
       // Add gas estimation with a buffer
-      const gasEstimate = await traderPoolInstance.depositCollateralEth.estimateGas(
-        amountToWei,
-        { value: amountToWei }
-      );
-      const gasLimit = gasEstimate * BigInt(120) / BigInt(100); // Add 20% buffer
+      //const gasEstimate = await traderPoolInstance.depositCollateralEth.estimateGas(
+        //amountToWei,
+        //{ value: amountToWei }
+      //);
+      //const gasLimit = gasEstimate * BigInt(120) / BigInt(100); // Add 20% buffer
 
       
-      const tx = await traderPoolInstance.depositCollateralEth(amountToWei, {
-        value: amountToWei,
-        gasLimit: gasLimit
-      });
+      //const tx = await traderPoolInstance.depositCollateralEth(amountToWei, {
+        //value: amountToWei,
+        //gasLimit: gasLimit
+      //});
+
+      const tx = await traderPoolInstance.depositCollateralEth(amountToWei);
       
       // Wait for transaction confirmation
       await provider.waitForTransaction(tx.hash, 1);
