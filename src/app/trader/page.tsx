@@ -587,30 +587,29 @@ useEffect(() => {
     </div>
 
     {/* Stats Section */}
-    {/* Stats Section */}
 <div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-5 gap-4">
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-gray-800">{frequency}</p>
-    <p className="text-xs text-gray-500">Last BB</p>
+    <p className="text-lg font-bold text-orange-500">{frequency}</p>
+    <p className="text-xs text-gray-500">Last Buyback</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-gray-800">{Number(lastBuybackValue).toFixed(4)} ETH</p>
-    <p className="text-xs text-gray-500">BB Value</p>
+    <p className="text-lg font-bold text-green-500">{Number(lastBuybackValue).toFixed(4)} ETH</p>
+    <p className="text-xs text-gray-500">Buybacks</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-gray-800">
+    <p className="text-lg font-bold text-green-500">
       {Number(marketCap).toFixed(4)} ETH
     </p>
     <p className="text-xs text-gray-500">Marketcap</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-gray-800">
+    <p className="text-lg font-bold text-green-500">
       {Number(balance).toFixed(4)} ETH
     </p>
     <p className="text-xs text-gray-500">AUM</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-gray-800">{Number(winRatio).toFixed(5)}%</p>
+    <p className="text-lg font-bold text-green-500">{Number(winRatio).toFixed(5)}%</p>
     <p className="text-xs text-gray-500">Win Rate</p>
   </div>
 </div>
