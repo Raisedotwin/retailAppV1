@@ -12,6 +12,8 @@ import TradingActivity from '../componants/TradingActivity';
 import TopHolders from '../componants/TopHolders';
 import BarChart from '../componants/BarChart';
 import Short from '../componants/Short';
+import AddressDisplay from '../componants/AddressDisplay';
+import { formatBlockTimestamp } from '../utils/timestamp';
 
 const TraderPageContent: React.FC = () => {
   const searchParams = useSearchParams(); // Access the query parameters
@@ -72,9 +74,9 @@ const TraderPageContent: React.FC = () => {
   const [balance, setBalance] = useState('0');
   const [frequency, setFrequency] = useState('0');
   const [marketCap, setMarketCap] = useState('0');
-  const [globalBuyPrice, setGlobalBuyPrice] = useState('0');
-  const [globalSellPrice, setGlobalSellPrice] = useState('0');
-  const [holdingsNow, setHoldings] = useState('0');
+  const [raiseWalletAddress, setRaiseWalletAddress] = useState('');
+  const [tokenAddress, setTokenAddress] = useState('');
+  const [traderAddress, setTraderAddress] = useState('');
   const { user } = usePrivy();
   const { wallets } = useWallets(); // Use useWallets to get connected wallets
   const [isActive, setIsActive] = useState(true); // You can control this state as needed
@@ -196,6 +198,10 @@ useEffect(() => {
           const profile = await profileContractInstance.getProfileByName(username as string);
           const nativeAddr = profile[0];
           const traderAcc = profile[1];
+          const tokenAddr = profile[8];
+          setTraderAddress(nativeAddr);
+          setTokenAddress(tokenAddr);
+          
           
           // Check if trader profile exists
           const profileExists = traderAcc !== "0" && traderAcc !== undefined;
@@ -205,6 +211,7 @@ useEffect(() => {
           if (profileExists) {
             setProfile(profile);
             const traderPoolAddr = profile[5];
+            setRaiseWalletAddress(traderPoolAddr);
 
             // Get pool balance if exists
             if (traderPoolAddr) {
@@ -221,14 +228,16 @@ useEffect(() => {
             setMarketCap(ethers.formatEther(MCAP));
             //setMarketCap(MCAP.toString());
 
-            const lastBuyback = await marketDataContractInstance.getLastBuybackValue(username as string);
-            setLastBuybackValue(lastBuyback.toString());
+            const lastBuyback = await marketDataContractInstance.getCumulativeBuybackValue(username as string);
+            let convertedValue = ethers.formatEther(lastBuyback);
+            setLastBuybackValue(convertedValue.toString());
 
             const winRatio = await marketDataContractInstance.calculateWinRatio(username as string);
-            setWinRatio(winRatio.toString());
+            let convertedWinRatio = ethers.formatEther(winRatio);
+            setWinRatio(convertedWinRatio.toString());
 
-            const freq = await marketDataContractInstance.getBuybackFrequency(username as string);
-            setFrequency(freq.toString());
+            const freq = await marketDataContractInstance.getLastBuybackTimestamp(username as string);
+            setFrequency(formatBlockTimestamp(freq.toString()));
           }
         } catch (error) {
           console.error('Error fetching profile:', error);
@@ -582,11 +591,11 @@ useEffect(() => {
 <div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-5 gap-4">
   <div className="text-center px-4">
     <p className="text-lg font-bold text-gray-800">{frequency}</p>
-    <p className="text-xs text-gray-500">Buyback%</p>
+    <p className="text-xs text-gray-500">Last BB</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-gray-800">{lastBuybackValue}</p>
-    <p className="text-xs text-gray-500">Last Buyback</p>
+    <p className="text-lg font-bold text-gray-800">{Number(lastBuybackValue).toFixed(4)} ETH</p>
+    <p className="text-xs text-gray-500">BB Value</p>
   </div>
   <div className="text-center px-4">
     <p className="text-lg font-bold text-gray-800">
@@ -601,7 +610,7 @@ useEffect(() => {
     <p className="text-xs text-gray-500">AUM</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-gray-800">{winRatio}</p>
+    <p className="text-lg font-bold text-gray-800">{Number(winRatio).toFixed(5)}%</p>
     <p className="text-xs text-gray-500">Win Rate</p>
   </div>
 </div>
@@ -763,7 +772,7 @@ useEffect(() => {
 
           {/* Chart Panel */}
           <div className="bg-white rounded-2xl shadow-lg p-6">
-            <BarChart />
+            <AddressDisplay raiseWalletAddress={raiseWalletAddress} traderAddress={traderAddress} tokenAddress={tokenAddress} />
           </div>
         </div>
 

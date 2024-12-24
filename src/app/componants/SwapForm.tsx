@@ -118,7 +118,7 @@ const SwapForm: React.FC<SwapFormProps>= () => {
       );
 
       setModalMessage('Confirming transaction...');
-      await tx.wait();
+      //await tx.wait();
       
       setModalMessage('Swap successful!');
       setIsModalVisible(false);
