@@ -12,9 +12,9 @@ const PerpsPage: React.FC = () => {
   const { user, login } = usePrivy();
   const { wallets } = useWallets();
   const [isProfileAssociated, setIsProfileAssociated] = useState(false);
-  const [ethBalance, setEthBalance] = useState('0');
+  const [netValueUSDC, setNetValueUSDC] = useState('0');
+  const [isProfit, setIsProfit] = useState(false);
   const [profile, setProfile] = useState<any>(null);
-  const [balance, setBalance] = useState<number>(0);
   const wallet = getEmbeddedConnectedWallet(wallets);
   const nativeAddress = user?.wallet?.address;
 
@@ -46,8 +46,6 @@ const PerpsPage: React.FC = () => {
         setIsProfileAssociated(isAssociated);
 
         if (isAssociated) {
-          // Try getting profile details if profile is associated
-          if (user?.twitter?.username) {
             const profile = await profileContract.getProfile(nativeAddress);
             setProfile(profile);
 
@@ -55,11 +53,14 @@ const PerpsPage: React.FC = () => {
               const traderPoolAddr = profile[5];
               if (traderPoolAddr && traderPoolAddr !== ethers.ZeroAddress) {
                 const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
-                const balance = await traderPoolInstance.getTotal();
-                setEthBalance(ethers.formatEther(balance));
+                const stats = await traderPoolInstance.getAccountStats();
+                // Net value is returned in USDC (6 decimals)
+                const formattedValue = ethers.formatUnits(stats[0], 6);
+                setNetValueUSDC(formattedValue);
+                setIsProfit(stats[4]); // Fourth boolean value indicates profit status
               }
             }
-          }
+          
         }
       } catch (error) {
         console.error('Error checking profile association:', error);
@@ -81,9 +82,12 @@ const PerpsPage: React.FC = () => {
             </h1>
             {isProfileAssociated && (
               <div className="flex items-center space-x-4">
-                <div className="px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
-                  <span className="text-gray-300">Balance:</span>
-                  <span className="ml-2 text-white font-semibold">{ethBalance} ETH</span>
+                <div className="flex items-center px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <span className="text-gray-300">Net Value:</span>
+                  <span className="ml-2 text-white font-semibold">${parseFloat(netValueUSDC).toFixed(2)}</span>
+                  <div className={`ml-2 px-2 py-1 rounded ${isProfit ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                    {isProfit ? '▲ Profit' : '▼ Loss'}
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2 px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
                   <Image 
@@ -106,74 +110,71 @@ const PerpsPage: React.FC = () => {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Trading Form Section */}
           <div className="bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 p-6 shadow-xl">
-  <div className="mb-6">
-    <h2 className="text-2xl font-semibold text-white mb-2">Trade Perpetuals</h2>
-    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-4">
-      <div className="flex items-start space-x-3">
-        <div className="text-yellow-500 mt-1">⚠️</div>
-        <div>
-          <p className="text-yellow-200 font-medium">EOA Required for Perpetuals Trading</p>
-          <p className="text-yellow-200/80 text-sm mt-1">
-            You need to switch to a MetaMask address to trade perpetuals.{' '}
-            <a 
-              href="/wallet" 
-              className="text-blue-400 hover:text-blue-300 underline transition-colors duration-200"
-            >
-              Switch address here
-            </a>
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-semibold text-white mb-2">Trade Perpetuals</h2>
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-4">
+                <div className="flex items-start space-x-3">
+                  <div className="text-yellow-500 mt-1">⚠️</div>
+                  <div>
+                    <p className="text-yellow-200 font-medium">EOA Required for Perpetuals Trading</p>
+                    <p className="text-yellow-200/80 text-sm mt-1">
+                      You need to switch to a MetaMask address to trade perpetuals.{' '}
+                      <a 
+                        href="/wallet" 
+                        className="text-blue-400 hover:text-blue-300 underline transition-colors duration-200"
+                      >
+                        Switch address here
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-  <PerpsForm />
-  </div>
+            <PerpsForm />
+          </div>
 
-        {/* How To Trade Section */}
-<div className="bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 p-6 shadow-xl">
-  <h2 className="text-2xl font-semibold text-white mb-4">Trading Guide</h2>
-  
-  {/* Added text container */}
-  <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 mb-6 border border-white/5">
-    <p className="text-gray-300 leading-relaxed">
-      Step by step walkthrough on trading perpetuals with Raise. All trades are powered by JOJO exchange and trades are made directly on the JOJO platform. To begin trading on JOJO simply click the initialize button to connect your Raise account.
-    </p>
-  </div>
+          {/* How To Trade Section */}
+          <div className="bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 p-6 shadow-xl">
+            <h2 className="text-2xl font-semibold text-white mb-4">Trading Guide</h2>
+            
+            {/* Added text container */}
+            <div className="bg-black/20 backdrop-blur-sm rounded-lg p-4 mb-6 border border-white/5">
+              <p className="text-gray-300 leading-relaxed">
+                Step by step walkthrough on trading perpetuals with Raise. All trades are powered by JOJO exchange and trades are made directly on the JOJO platform. To begin trading on JOJO simply click the initialize button to connect your Raise account.
+              </p>
+            </div>
 
-  {/* Video container with better centering */}
-  <div className="flex flex-col items-center bg-black/30 rounded-xl p-6 mb-6">
-    <div className="w-full max-w-2xl aspect-video bg-gray-800 rounded-lg overflow-hidden">
-      <video 
-        controls 
-        className="w-full h-full object-cover"
-        poster="/api/placeholder/400/320"
-      >
-        <source src="/path-to-your-guide-video.mp4" type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
-    </div>
-  </div>
+            {/* Video container with better centering */}
+            <div className="flex flex-col items-center bg-black/30 rounded-xl p-6 mb-6">
+              <div className="w-full max-w-2xl aspect-video bg-gray-800 rounded-lg overflow-hidden">
+                <video 
+                  controls 
+                  className="w-full h-full object-cover"
+                  poster="/api/placeholder/400/320"
+                >
+                  <source src="/path-to-your-guide-video.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </div>
 
-  {/* JOJO button container */}
-  <div className="flex justify-center">
-    <a
-      href="#"
-      className="flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 transition-colors duration-200 rounded-lg text-white font-medium w-full max-w-md"
-    >
-      <span
+            {/* JOJO button container */}
+            <div className="flex justify-center">
+              <a
+                href="#"
+                className="flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 transition-colors duration-200 rounded-lg text-white font-medium w-full max-w-md"
                 onClick={() => window.open('https://jojo.exchange','blank')}
-
-      >Go to JOJO</span>
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-      </svg>
-    </a>
-  </div>
-</div>
+              >
+                <span>Go to JOJO</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            </div>
+          </div>
         </div>
       </div>
-
 
       {/* Authentication Modals */}
       {nativeAddress && !isProfileAssociated && (

@@ -122,19 +122,28 @@ const TraderPageContent: React.FC = () => {
                   //setBuyPrice(ethers.formatEther(buyPriceWei));
                 //}
 
-                let buyPriceWei = await contract.getNumberOfTokensForAmount(userAcc, amountInWei)
-                if (buyPriceWei.toString() !== "0") {
-                  setBuyPrice(ethers.formatEther(buyPriceWei));
-                }
-                
-                // Get sell price with retry mechanism
-                let sellPriceWei = await contract.getSellPriceAfterFee(tokenAddress, amountInWei)
-                if (sellPriceWei.toString() !== "0") {
-                  setSellPrice(ethers.formatEther(sellPriceWei));
+                if(activeTab === 'buy') {
 
-                }
+                  let buyPriceWei = await contract.getNumberOfTokensForAmount(userAcc, amountInWei)
+                  if (buyPriceWei.toString() !== "0") {
+                    setBuyPrice(ethers.formatEther(buyPriceWei));
+                  }
 
-                 // const sellPriceWei = await contract.getNumberOfTokensForAmount(userAcc, amountInWei);
+                 } 
+                 
+                 if (activeTab === 'sell') {
+
+                  // Get sell price with retry mechanism
+                  let sellPriceWei = await contract.getBuyPriceAfterFee(tokenAddress, amountInWei)
+                  if (sellPriceWei.toString() !== "0") {
+                    setSellPrice(ethers.formatEther(sellPriceWei));
+                    console.log(sellPriceWei.toString())
+                  }
+
+                 }
+
+           
+                // const sellPriceWei = await contract.getNumberOfTokensForAmount(userAcc, amountInWei);
                 //if (sellPriceWei.toString() !== "0") {
                 //setSellPrice(ethers.formatEther(sellPriceWei));
 
@@ -484,7 +493,7 @@ useEffect(() => {
         // Create token contract instance for approval
         const tokenABI = ["function approve(address spender, uint256 amount) public returns (bool)"];
         const tokenContract = new ethers.Contract(tokenAddress, tokenABI, contract.runner);
-  
+   
         try {
           setModalMessage('Approving token transfer');
           setIsModalVisible(true);

@@ -17,6 +17,8 @@ const WalletPage: React.FC = () => {
   const [loggedInToX, setLoggedIntoX] = useState(false);
   const [isProfileAssociated, setIsProfileAssociated] = useState(false);
   const [profileAddress, setProfileAddress] = useState('');
+  const [claimableBalance, setClaimableBalance] = useState('0.00');
+
 
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
 
@@ -70,6 +72,13 @@ const WalletPage: React.FC = () => {
       return null;
     }
   };
+
+  // Add helper function for number formatting
+const formatEthValue = (value: string) => {
+  const num = parseFloat(value);
+  if (num === 0) return "0.00";
+  return num.toFixed(6);
+};
 
   const checkProfileAssociation = useCallback(async () => {
     if (!nativeAddress || !profileContract) return false;
@@ -128,6 +137,26 @@ const WalletPage: React.FC = () => {
       }
     }
   };
+
+  // Add new function to fetch claimable balance
+const fetchClaimableBalance = useCallback(async (username: string) => {
+  if (!username || !profileContract) return;
+  
+  try {
+    const profile = await profileContract.getProfileByName(username);
+    const payoutsAddress = profile[6];
+    
+    if (payoutsAddress && payoutsAddress !== "0x0000000000000000000000000000000000000000") {
+      const balance = await provider.getBalance(payoutsAddress);
+      setClaimableBalance(ethers.formatEther(balance));
+    } else {
+      setClaimableBalance('0.00');
+    }
+  } catch (error) {
+    console.error('Error fetching claimable balance:', error);
+    setClaimableBalance('0.00');
+  }
+}, [profileContract, provider]);
 
   // New function to fetch profile by username
   const fetchProfileByUsername = useCallback(async (username: string) => {
@@ -197,6 +226,7 @@ const WalletPage: React.FC = () => {
         let profile = null;
         if (user?.twitter?.username) {
           profile = await fetchProfileByUsername(user.twitter.username);
+          await fetchClaimableBalance(user.twitter.username);
         }
         
         // If no profile found by username and we have an address, try fetching by address
@@ -204,7 +234,7 @@ const WalletPage: React.FC = () => {
           profile = await fetchProfileByAddress(nativeAddress);
         }
 
-        if (isAssociated && profile) {
+        if (profile) {
           await fetchBalanceFromProfile(profile);
         }
       } catch (error) {
@@ -213,7 +243,7 @@ const WalletPage: React.FC = () => {
     };
 
     initContract();
-  }, [user, nativeAddress, fetchProfileByUsername, fetchProfileByAddress, checkProfileAssociation]);
+  }, [user, nativeAddress, fetchProfileByUsername, fetchProfileByAddress, checkProfileAssociation, fetchClaimableBalance]);
 
   const handleSwitchAddress = async () => {
     if (!ethers.isAddress(newAddress)) {
@@ -278,28 +308,39 @@ const WalletPage: React.FC = () => {
       ) : (
         <div className="max-w-3xl w-full mx-auto p-8 bg-gray-900 rounded-lg shadow-lg flex flex-col">
           <div>
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-              <div className="flex items-center space-x-4">
-                <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Raise Wallet:</h2>
-                {profileExists && (
-                  <button
-                    type="button"
-                    onClick={handleWalletClaim}
-                    className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg hover:from-green-500 hover:to-blue-600 transition duration-300"
-                  >
-                    Claim
-                  </button>
-                )}
-              </div>
-              <div>
-                <button
-                  onClick={() => setShowSwitchAddressModal(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300"
-                >
-                  Switch Address
-                </button>
-              </div>
-            </div>
+          // Update the JSX for the header section
+<div className="flex flex-col md:flex-row justify-between items-center mb-8">
+  <div className="flex items-center space-x-4">
+    <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Raise Wallet:</h2>
+    {profileExists && (
+      <div className="flex items-center space-x-4">
+        <button
+          type="button"
+          onClick={handleWalletClaim}
+          className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg hover:from-green-500 hover:to-blue-600 transition duration-300"
+        >
+          Claim
+        </button>
+        <div className="flex flex-col items-end">
+          <span className="text-sm font-medium text-blue-400">Claimable</span>
+          <div className="bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">
+            <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
+              {formatEthValue(claimableBalance)} ETH
+            </span>
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+  <div>
+    <button
+      onClick={() => setShowSwitchAddressModal(true)}
+      className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300"
+    >
+      Switch Address
+    </button>
+  </div>
+</div>
 
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-2">
