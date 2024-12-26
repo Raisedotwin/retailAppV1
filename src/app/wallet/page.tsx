@@ -18,6 +18,7 @@ const WalletPage: React.FC = () => {
   const [isProfileAssociated, setIsProfileAssociated] = useState(false);
   const [profileAddress, setProfileAddress] = useState('');
   const [claimableBalance, setClaimableBalance] = useState('0.00');
+  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(true); // New state for whitelist toggle
 
 
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
@@ -32,17 +33,41 @@ const WalletPage: React.FC = () => {
 
   const nativeAddress = user?.wallet?.address;
 
+  
+
   const tokenPoolABI = require("../abi/traderPool");
   const traderPayoutsABI = require("../abi/traderPayouts");
 
   const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
   const profileABI = require("../abi/profile");
 
+  const whitelist = require("../abi/BETAWhitelist.json");
+  const whitelistAddr = '0x36dc0FE2E558E0d7a5505CE717bc01470D52C353';
+
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
+  const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
 
   const [showSwitchAddressModal, setShowSwitchAddressModal] = useState(false);
   const [newAddress, setNewAddress] = useState('');
   const [isSwitching, setIsSwitching] = useState(false);
+
+    // Create a wallet instance from the private key
+  const adminWallet = useMemo(() => {
+      if (typeof process !== 'undefined' && process.env.PRIVATE_KEY) {
+        return new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+      }
+      return null;
+  }, [provider]);
+
+  const checkWhitelistStatus = async (address: string | undefined): Promise<boolean> => {
+    try {
+      const isWhitelisted = await whitelistContract.isWhitelisted(address);
+      return isWhitelisted;
+    } catch (error) {
+      console.error('Error checking whitelist status:', error);
+      return false;
+    }
+  };
 
   const getPrivyProvider = async (chainName: string) => {
     if (!wallet) {
@@ -95,6 +120,16 @@ const formatEthValue = (value: string) => {
 
   const handleWalletClaim = async () => {
     if (profileAddr && wallet) {
+      if (isWhitelistEnabled) {
+        const isWhitelisted = await checkWhitelistStatus(nativeAddress);
+        if (!isWhitelisted) {
+          setIsModalVisible(true);
+          setModalMessage('Address not whitelisted. Please contact support.');
+          setTimeout(() => setIsModalVisible(false), 2000);
+          return;
+        }
+      }
+
       setModalMessage('Claiming wallet...');
       setIsModalVisible(true);
       try {
@@ -181,7 +216,7 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
   const fetchProfileByAddress = useCallback(async (address: string) => {
     try {
       if (address && ethers.isAddress(address)) {
-        const profile = await profileContract.getProfile(address);
+        const profile = await profileContract.getProfile(address); 
         if (profile) {
           setProfileExists(true);
           return profile;
@@ -214,6 +249,22 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
       console.log('Logged in with Privy:', user);
     } catch (error) {
       console.error('Error logging in with Privy:', error);
+    }
+  };
+
+  const executeAdminFunction = async () => {
+    if (!adminWallet) {
+      console.error("Admin wallet not initialized");
+      return;
+    }
+
+    try {
+      // Example transaction
+      const tx = await profileContract.someAdminFunction();
+      await tx.wait();
+      console.log("Transaction successful");
+    } catch (error) {
+      console.error("Transaction failed:", error);
     }
   };
 
@@ -280,6 +331,12 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
     }
     setIsSwitching(false);
   };
+
+  // Add whitelist toggle to the admin section (if needed)
+  const toggleWhitelist = () => {
+      setIsWhitelistEnabled(!isWhitelistEnabled);
+  };
+  
   return (
     <div className="min-h-screen bg-black flex flex-col p-6">
       {!isProfileAssociated && !user?.twitter?.username ? (
@@ -308,7 +365,6 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
       ) : (
         <div className="max-w-3xl w-full mx-auto p-8 bg-gray-900 rounded-lg shadow-lg flex flex-col">
           <div>
-          // Update the JSX for the header section
 <div className="flex flex-col md:flex-row justify-between items-center mb-8">
   <div className="flex items-center space-x-4">
     <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Raise Wallet:</h2>
