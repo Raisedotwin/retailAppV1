@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 interface ShortPosition {
   user: string;
   tokens: number;
-  price: number;
+  expiryTime: string;  // Changed from price to expiryTime
 }
 
 interface ModalProps {
@@ -16,7 +16,7 @@ interface ShortsProps {
   isEnabled?: boolean;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
   if (!isOpen) return null;
   
   return (
@@ -64,7 +64,7 @@ const TableHeader = () => (
 
 const PositionsTable = ({ positions, onOpenShort }: { 
   positions: ShortPosition[], 
-  onOpenShort: (user: string, tokens: number, price: number) => void 
+  onOpenShort: (user: string, tokens: number, expiryTime: string) => void 
 }) => (
   <div className="bg-gray-800/50 rounded-xl overflow-hidden backdrop-blur-sm border border-gray-700">
     <table className="w-full text-left">
@@ -72,7 +72,7 @@ const PositionsTable = ({ positions, onOpenShort }: {
         <tr className="border-b border-gray-700">
           <th className="p-4 text-gray-400">Degen Address</th>
           <th className="p-4 text-gray-400">Available 🪙</th>
-          <th className="p-4 text-gray-400">Price per 🪙</th>
+          <th className="p-4 text-gray-400">Expiry Time ⏰</th>
           <th className="p-4 text-gray-400">YOLO</th>
         </tr>
       </thead>
@@ -86,13 +86,13 @@ const PositionsTable = ({ positions, onOpenShort }: {
               </span>
             </td>
             <td className="p-4">
-              <span className="bg-blue-400/10 text-blue-400 px-3 py-1 rounded-full">
-                ${position.price.toFixed(2)}
+              <span className="bg-purple-400/10 text-purple-400 px-3 py-1 rounded-full">
+                {position.expiryTime}
               </span>
             </td>
             <td className="p-4">
               <button
-                onClick={() => onOpenShort(position.user, position.tokens, position.price)}
+                onClick={() => onOpenShort(position.user, position.tokens, position.expiryTime)}
                 className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-red-600 hover:to-pink-600 transition-all transform hover:scale-105 shadow-lg"
               >
                 🎯 Short It
@@ -110,20 +110,20 @@ const Shorts: React.FC<ShortsProps> = ({ isEnabled = true }) => {
   const [showAddSharesModal, setShowAddSharesModal] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [availableShares, setAvailableShares] = useState<number>(0);
-  const [pricePerShare, setPricePerShare] = useState<number>(0);
+  const [expiryTime, setExpiryTime] = useState<string>('');
   const [userShares, setUserShares] = useState<number>(0);
   const [shortAmount, setShortAmount] = useState<number>(0);
 
   const positions: ShortPosition[] = [
-    { user: '0x42b9 ... 3B148', tokens: 100, price: 1.70 },
-    { user: '0x82a9 ... 4C229', tokens: 50, price: 1.50 },
-    { user: '0x13a2 ... 5D310', tokens: 200, price: 1.80 }
+    { user: '0x42b9 ... 3B148', tokens: 100, expiryTime: '24h' },
+    { user: '0x82a9 ... 4C229', tokens: 50, expiryTime: '12h' },
+    { user: '0x13a2 ... 5D310', tokens: 200, expiryTime: '48h' }
   ];
 
-  const handleOpenShort = (user: string, tokens: number, price: number): void => {
+  const handleOpenShort = (user: string, tokens: number, expiryTime: string): void => {
     setSelectedUser(user);
     setAvailableShares(tokens);
-    setPricePerShare(price);
+    setExpiryTime(expiryTime);
     setShowModal(true);
   };
 
@@ -159,7 +159,7 @@ const Shorts: React.FC<ShortsProps> = ({ isEnabled = true }) => {
           <div className="space-y-4">
             <p className="text-gray-300">Degen: <span className="font-mono text-gray-100">{selectedUser}</span></p>
             <p className="text-gray-300">Available 🪙: <span className="text-green-400">{availableShares}</span></p>
-            <p className="text-gray-300">Price per 🪙: <span className="text-blue-400">${pricePerShare.toFixed(2)}</span></p>
+            <p className="text-gray-300">Expiry Time: <span className="text-purple-400">{expiryTime}</span></p>
             
             <div>
               <label className="block text-gray-300 text-sm mb-2">
@@ -207,7 +207,27 @@ const Shorts: React.FC<ShortsProps> = ({ isEnabled = true }) => {
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 text-gray-100"
               />
             </div>
-            <p className="text-gray-300">Current Price per Token: <span className="text-blue-400">$1.80</span></p>
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+                Expiry Time
+              </label>
+              <select
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 text-gray-100"
+              >
+                <option value="5">5 min</option>
+                <option value="10">10 min</option>
+                <option value="30">30 min</option>
+                <option value="1h">1 hour</option>
+                <option value="2h">2 hours</option>
+                <option value="3h">3 hours</option>
+                <option value="4h">4 hours</option>
+                <option value="8h">8 hours</option>
+                <option value="12h">12 hours</option>
+                <option value="24h">24 hours</option>
+                <option value="48h">48 hours</option>
+                <option value="72h">72 hours</option>
+              </select>
+            </div>
 
             <div className="flex justify-between gap-4 mt-6">
               <button

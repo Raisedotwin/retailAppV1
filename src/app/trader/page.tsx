@@ -14,6 +14,7 @@ import BarChart from '../componants/BarChart';
 import Short from '../componants/Short';
 import AddressDisplay from '../componants/AddressDisplay';
 import { formatBlockTimestamp } from '../utils/timestamp';
+import MyShorts from '../componants/MyShorts';
 
 const TraderPageContent: React.FC = () => {
   const searchParams = useSearchParams(); // Access the query parameters
@@ -788,12 +789,6 @@ useEffect(() => {
         <div className="bg-white rounded-2xl shadow-lg mt-8 p-6">
           <div className="flex space-x-8 mb-6 border-b">
             <TabButton 
-              active={activeModalTab === 'activity'} 
-              onClick={() => setActiveModalTab('activity')}
-            >
-              Token Activity
-            </TabButton>
-            <TabButton 
               active={activeModalTab === 'tradingActivity'} 
               onClick={() => setActiveModalTab('tradingActivity')}
             >
@@ -805,13 +800,19 @@ useEffect(() => {
             >
               Short
             </TabButton>
+            <TabButton 
+              active={activeModalTab === 'activity'} 
+              onClick={() => setActiveModalTab('activity')}
+            >
+              My Shorts
+            </TabButton>
           </div>
 
           <div className="mt-6">
-            {activeModalTab === 'activity' && <TokenActivity />}
             {activeModalTab === 'topHolders' && <TopHolders />}
             {activeModalTab === 'tradingActivity' && <TradingActivity />}
             {activeModalTab === 'shorts' && <Short />}
+            {activeModalTab === 'activity' && <MyShorts />}
           </div>
         </div>
       </div>
