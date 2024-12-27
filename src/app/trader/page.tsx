@@ -82,6 +82,8 @@ const TraderPageContent: React.FC = () => {
   const { wallets } = useWallets(); // Use useWallets to get connected wallets
   const [isActive, setIsActive] = useState(true); // You can control this state as needed
   const [profile, setProfile] = useState<any>(null);
+  const [needsInitialization, setNeedsInitialization] = useState(false);
+
 
   let wallet: any = wallets[0] // Get the first connected wallet privy wallet specifiy privy wallet
 
@@ -93,6 +95,51 @@ const TraderPageContent: React.FC = () => {
     price: "368",
     winRate: "75%"
   };
+
+  // Add this new initialization function
+const handleInitialize = async () => {
+  if (!contract || !profileContract) {
+    alert('Contracts not initialized');
+    return;
+  }
+
+  try {
+    setModalMessage('Initializing token...');
+    setIsModalVisible(true);
+
+    // Get the account number from the profile
+    const profile = await profileContract.getProfileByName(username as string);
+    if (!profile || !profile[1]) {
+      throw new Error('Profile not found');
+    }
+    const accNum = profile[1];
+
+    // Buy 1 token to initialize
+    const amountInWei = ethers.parseEther('1');
+    const tx = await contract.buyShares(accNum, amountInWei);
+
+    setModalMessage('Waiting for initialization confirmation...');
+    const receipt = await provider.waitForTransaction(tx.hash, 1);
+
+    if (receipt?.status === 1) {
+      // Check if token address is now available
+      const tokenAddr = await contract.getTokenAddressByAccount(accNum.toString());
+      if (tokenAddr && tokenAddr !== "0x0000000000000000000000000000000000000000") {
+        setTokenAddress(tokenAddr);
+        setNeedsInitialization(false);
+        setModalMessage('Token initialized successfully');
+      }
+    } else {
+      setModalMessage('Initialization failed');
+    }
+
+    setTimeout(() => setIsModalVisible(false), 2000);
+  } catch (error) {
+    console.error('Error in initialization:', error);
+    setModalMessage(`Initialization error: ${error || 'Unknown error'}`);
+    setTimeout(() => setIsModalVisible(false), 2000);
+  }
+};
 
   const updatePrices = async () => {
     if (contract && profileContract && amount && !isNaN(Number(amount))) {
@@ -208,10 +255,7 @@ useEffect(() => {
           const profile = await profileContractInstance.getProfileByName(username as string);
           const nativeAddr = profile[0];
           const traderAcc = profile[1];
-          const tokenAddr = profile[8];
-          setTraderAddress(nativeAddr);
-          setTokenAddress(tokenAddr);
-          
+          setTraderAddress(nativeAddr);          
           
           // Check if trader profile exists
           const profileExists = traderAcc !== "0" && traderAcc !== undefined;
@@ -232,6 +276,7 @@ useEffect(() => {
 
             // Get token details
             const tokenAddress = await marketContractInstance.getTokenAddressByAccount(traderAcc.toString());
+            setTokenAddress(tokenAddress);
 
             // Get market data
             const MCAP = await marketContractInstance.getMarketCap(traderAcc.toString());
@@ -303,94 +348,74 @@ useEffect(() => {
     return null;
   };
 
-  const handleCreateWallet = async () => {
-    if (!createContract || !contract) {
-      alert('Contracts not initialized');
-      return;
-    }
-  
-    setShowCreateWalletModal(false);
-    try {
-      setModalMessage('Creating a wallet');
-      setIsModalVisible(true);
-  
-      // Create account transaction
-      const createTx = await createContract.createAccount(
-        username as string,
-        name as string,
-        logo as string,
-        "0x0000000000000000000000000000000000000000"
-      );
-  
-      // Wait for the transaction to be mined
-      setModalMessage('Waiting for wallet creation confirmation...');
-      const createReceipt = await provider.waitForTransaction(createTx.hash, 1);
-  
-      if (createReceipt?.status === 1) {  // 1 indicates success
-        // Add a small delay to ensure the account is properly created
-        await new Promise(resolve => setTimeout(resolve, 2000));
-  
-        // Fetch the new account number
-        const accountCounter = await fetchAccountCounter();
-        if (!accountCounter) {
-          throw new Error('Failed to fetch account counter');
-        }
-  
-        setModalMessage('Minting first trader share');
-        
-        try {
+  // Update the handleCreateWallet function to set needsInitialization if the token creation fails
+const handleCreateWallet = async () => {
+  if (!createContract || !contract) {
+    alert('Contracts not initialized');
+    return;
+  }
 
+  setShowCreateWalletModal(false);
+  try {
+    setModalMessage('Creating a wallet');
+    setIsModalVisible(true);
 
-          // Get gas estimate
-          //const estimatedGas = await contract.buyShares.estimateGas(
-            //accountCounter,
-            //ethers.parseEther("1"),
-            //{ value: ethers.parseEther("0") }
-          //);
+    const createTx = await createContract.createAccount(
+      username as string,
+      name as string,
+      logo as string,
+      "0x0000000000000000000000000000000000000000"
+    );
 
-          const amountInWei = ethers.parseEther('1');
-  
-          // Execute buy transaction
-          const tx = await contract.buyShares(accountCounter, amountInWei);
-  
-          // Convert to bigint and add 20% buffer
-          //const gasLimit = (estimatedGas * BigInt(120) / BigInt(100));
-  
-          // Execute buy shares transaction
-          //const buyTx = await contract.buyShares(
-            //accountCounter,
-            //ethers.parseEther("1"),
-            //{
-              //value: ethers.parseEther("0"),
-              //gasLimit
-            //}
-          //);
-  
-          setModalMessage('Waiting for share minting confirmation...');
-          const buyReceipt = await provider.waitForTransaction(tx.hash, 1);
-  
-          if (buyReceipt?.status === 1) {
-            setModalMessage('Wallet created and shares minted successfully');
-            setTimeout(() => setIsModalVisible(false), 2000);
-          } else {
-            setModalMessage('Share minting failed');
-            setTimeout(() => setIsModalVisible(false), 2000);
-          }
-        } catch (buyError) {
-          console.error('Error in buyShares:', buyError);
-          setModalMessage(`Failed to mint initial shares: ${buyError|| 'Unknown error'}`);
-          setTimeout(() => setIsModalVisible(false), 2000);
-        }
-      } else {
-        setModalMessage('Wallet creation failed');
-        setTimeout(() => setIsModalVisible(false), 2000);
+    setModalMessage('Waiting for wallet creation confirmation...');
+    const createReceipt = await provider.waitForTransaction(createTx.hash, 1);
+
+    if (createReceipt?.status === 1) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const accountCounter = await fetchAccountCounter();
+      
+      if (!accountCounter) {
+        throw new Error('Failed to fetch account counter');
       }
-    } catch (error) {
-      console.error('Error in wallet creation:', error);
-      setModalMessage(`Wallet creation error: ${error|| 'Unknown error'}`);
-      setTimeout(() => setIsModalVisible(false), 2000);
+
+      try {
+        setModalMessage('Minting first trader share');
+        const amountInWei = ethers.parseEther('1');
+        const tx = await contract.buyShares(accountCounter, amountInWei);
+
+        setModalMessage('Waiting for share minting confirmation...');
+        const buyReceipt = await provider.waitForTransaction(tx.hash, 1);
+
+        if (buyReceipt?.status === 1) {
+          // Check if token address is available
+          const tokenAddr = await contract.getTokenAddressByAccount(accountCounter.toString());
+          if (!tokenAddr || tokenAddr === "0x0000000000000000000000000000000000000000") {
+            setNeedsInitialization(true);
+            setModalMessage('Wallet created but needs initialization');
+          } else {
+            setModalMessage('Wallet created and shares minted successfully');
+          }
+        } else {
+          setNeedsInitialization(true);
+          setModalMessage('Share minting failed - initialization needed');
+        }
+      } catch (buyError) {
+        console.error('Error in buyShares:', buyError);
+        setNeedsInitialization(true);
+        setModalMessage('Failed to mint initial shares - initialization needed');
+      }
+    } else {
+      setModalMessage('Wallet creation failed');
     }
-  };
+
+    setTimeout(() => setIsModalVisible(false), 2000);
+  } catch (error) {
+    console.error('Error in wallet creation:', error);
+    setModalMessage(`Wallet creation error: ${error || 'Unknown error'}`);
+    setTimeout(() => setIsModalVisible(false), 2000);
+  }
+};
+
 
   const handleBuyShares = async () => {
     if (contract && profileContract) {
@@ -655,7 +680,7 @@ useEffect(() => {
           </button>
         </div>
 
-        {activeTab === 'buy' && (
+{activeTab === 'buy' && (
   <div className="space-y-6">
     <h3 className="text-xl font-semibold text-gray-800">
       {traderProfileExists ? `Buy $${params.username}` : 'Create Token'}
@@ -674,7 +699,7 @@ useEffect(() => {
           setAmount(e.target.value);
           setIsPriceLoading(true);
         }}
-        disabled={!traderProfileExists}
+        disabled={!traderProfileExists || needsInitialization}
       />
     </div>
     <div className="flex justify-between items-center py-4 px-6 bg-gray-50 rounded-lg">
@@ -685,16 +710,25 @@ useEffect(() => {
         {traderProfileExists ? `${Number(buyPrice).toFixed(4)} $${username}` : '1.0 tokens'}
       </span>
     </div>
-    <button 
-      className={`w-full py-4 text-white text-lg font-medium rounded-lg transition-colors duration-200 shadow-lg ${
-        traderProfileExists 
-          ? 'bg-green-500 hover:bg-green-600' 
-          : 'bg-blue-500 hover:bg-blue-600'
-      }`}
-      onClick={traderProfileExists ? handleBuyShares : handleCreateWallet}
-    >
-      {traderProfileExists ? 'Buy Now' : 'Create Token'}
-    </button>
+    {needsInitialization ? (
+      <button 
+        className="w-full py-4 bg-yellow-500 hover:bg-yellow-600 text-white text-lg font-medium rounded-lg transition-colors duration-200 shadow-lg"
+        onClick={handleInitialize}
+      >
+        Initialize Token
+      </button>
+    ) : (
+      <button 
+        className={`w-full py-4 text-white text-lg font-medium rounded-lg transition-colors duration-200 shadow-lg ${
+          traderProfileExists 
+            ? 'bg-green-500 hover:bg-green-600' 
+            : 'bg-blue-500 hover:bg-blue-600'
+        }`}
+        onClick={traderProfileExists ? handleBuyShares : handleCreateWallet}
+      >
+        {traderProfileExists ? 'Buy Now' : 'Create Token'}
+      </button>
+    )}
   </div>
 )}
 
