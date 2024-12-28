@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import TraderCard from './TraderCard';
 import Image from 'next/image';
+import { ethers } from 'ethers';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 
 interface User {
   id: string;
@@ -26,6 +28,14 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { wallets } = useWallets();
+  const { user } = usePrivy();
+
+  // Contract initialization
+  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
+  const profileABI = [
+    "function getProfileByName(string memory name) external view returns (address, uint256, string memory, string memory, string memory, address, address, uint256, address)"
+  ];
 
   const categories = [
     { name: 'Trending', icon: '🔥' },
@@ -36,22 +46,47 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
   ];
 
   const handleSearchTermChange = (value: string) => {
-    // If user enters @, we'll keep it in the input but strip it for the actual search term
     setSearchTerm(value);
   };
 
   const fetchProfile = async () => {
-    // Strip @ symbol and any leading/trailing whitespace from the search term
     const cleanedSearchTerm = searchTerm.replace(/^@/, '').trim();
-    
     if (!cleanedSearchTerm) return;
     
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/twitter/user/${cleanedSearchTerm}`);
-      if (!response.ok) throw new Error(`Error: ${response.status}`);
-      const user: { data: User } = await response.json();
-      setResults([user.data]);
+      // Get the first wallet (privy wallet)
+      const wallet = wallets[0];
+      if (!wallet) throw new Error('No wallet connected');
+
+      // Initialize provider and contract
+      const provider = await wallet.getEthersProvider();
+      const signer: any = await provider.getSigner();
+      const profileContract = new ethers.Contract(profileAddr, profileABI, signer);
+
+      try {
+        // First try to fetch from smart contract
+        const profile = await profileContract.getProfileByName(cleanedSearchTerm);
+        
+        // If we get here, the profile exists in the contract
+        const [userAddress, accountNumber, name, bio, avatarUrl, pool, payouts, createdAt, positions] = profile;
+        
+        // Format the data to match our User interface
+        setResults([{
+          id: userAddress,
+          name: bio, // bio field contains the display name
+          username: name, // name field contains the username
+          profile_image_url: avatarUrl,
+          description: `Account #${accountNumber.toString()}`
+        }]);
+      } catch (contractError) {
+        // If profile doesn't exist in contract, fallback to Twitter API
+        console.log('Profile not found in contract, trying Twitter API');
+        const response = await fetch(`/api/twitter/user/${cleanedSearchTerm}`);
+        if (!response.ok) throw new Error(`Error: ${response.status}`);
+        const user: { data: User } = await response.json();
+        setResults([user.data]);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       setResults([]);
@@ -87,7 +122,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
             </div>
             <input
               type="text"
-              placeholder="Enter Twitter username (e.g., @username)"
+              placeholder="Search by username (e.g., @username)"
               className="w-full pl-10 pr-4 py-3 bg-gray-100 border border-transparent rounded-xl focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 transition-all duration-200"
               value={searchTerm}
               onChange={e => handleSearchTermChange(e.target.value)}
@@ -96,10 +131,15 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
           </div>
           <p className="text-sm text-gray-500 mt-2 px-1">
             <span className="inline-block mr-1">💡</span>
-            Enter a Twitter username with or without the @ symbol
+            Enter a username to search both on-chain profiles and Twitter
+          </p>
+          <p className="text-sm text-gray-500 mt-2 px-1">
+            <span className="inline-block mr-1">⚠️</span>
+            Searches may be rate limited by  Twitter API
           </p>
         </div>
 
+        {/* Results Area */}
         <div className="max-h-[70vh] overflow-y-auto">
           {isLoading && (
             <div className="flex justify-center items-center py-8">
@@ -116,11 +156,11 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
                     key={index}
                     name={result.name}
                     username={result.username}
-                    logo={`https://unavatar.io/twitter/${result.username}`}
+                    logo={result.profile_image_url || `https://unavatar.io/twitter/${result.username}`}
                     url={`https://twitter.com/${result.username}`}
                   />
                 ) : (
-                  <div className="text-red-500 p-4 text-center bg-red-50 rounded-lg">
+                  <div key={index} className="text-red-500 p-4 text-center bg-red-50 rounded-lg">
                     User data is incomplete
                   </div>
                 )

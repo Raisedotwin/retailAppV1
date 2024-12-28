@@ -68,7 +68,7 @@ const NavBar: React.FC = () => {
               className="mr-2"
             />
             raise.win
-            <span className="ml-2 text-xs font-medium text-blue-700 bg-blue-200 px-2 py-0.5 rounded-full">Beta</span>
+            <span className="ml-2 text-xs font-medium text-yellow-200 bg-gray-800 px-2 py-0.5 rounded-full">Beta</span>
           </div>
         </Link>
 
