@@ -57,17 +57,18 @@ const NavBar: React.FC = () => {
   return (
     <nav className="flex items-center justify-between p-4 bg-white shadow-md w-full">
       <div className="flex items-center space-x-8">
-        {/* Logo */}
-        <Link href="/">
+                {/* Logo with Beta tag */}
+          <Link href="/">
           <div className="text-xl font-bold text-gray-800 cursor-pointer flex items-center">
             <Image
-              src="/icons/logo.png"  // Path to the logo in the public/icons/ directory
+              src="/icons/logo.png"
               alt="Logo"
               width={32}
               height={32}
               className="mr-2"
             />
             raise.win
+            <span className="ml-2 text-xs font-medium text-blue-700 bg-blue-200 px-2 py-0.5 rounded-full">Beta</span>
           </div>
         </Link>
 
