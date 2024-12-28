@@ -30,16 +30,17 @@ const ArrowUpIcon = () => (
   </svg>
 );
 
-// Modal component remains the same
+// First, let's update the Modal interface
 interface ModalProps {
   show: boolean;
   title: string;
   message: string;
   color?: "blue" | "red" | "purple";
   amount?: string;
+  currency?: string;  // Add new currency prop
 }
 
-const Modal: React.FC<ModalProps> = ({ show, title, message, color = "blue", amount }) => {
+const Modal: React.FC<ModalProps> = ({ show, title, message, color = "blue", amount, currency = "WETH" }) => {
   if (!show) return null;
   
   return (
@@ -60,7 +61,7 @@ const Modal: React.FC<ModalProps> = ({ show, title, message, color = "blue", amo
           </p>
           {amount && (
             <p className="text-lg font-semibold text-white">
-              Amount: {amount} WETH
+              Amount: {amount} {currency}
             </p>
           )}
         </div>
@@ -282,7 +283,7 @@ const PerpsForm: React.FC = () => {
   };
 
   const handleWithdraw = async () => {
-    if (!traderPoolAddress) return;
+    if (!traderPoolAddress || !withdrawAmount) return;
   
     try {
       setShowWithdrawModal(true);
@@ -295,8 +296,13 @@ const PerpsForm: React.FC = () => {
         signer
       );
       
-      const amountToWei = ethers.parseEther(withdrawAmount);
-      const tx = await traderPoolInstance.JOJOGetProfitFast(amountToWei);
+      // Convert USDC amount to Wei (USDC has 6 decimals)
+      // We multiply by 10^6 instead of using parseEther (which uses 18 decimals)
+      const amountInUSDC = ethers.parseUnits(withdrawAmount, 6);
+      
+      // Call the contract function with USDC amount
+      const tx = await traderPoolInstance.JOJOGetProfitFast(amountInUSDC);
+      
       // Wait for transaction confirmation
       await provider.waitForTransaction(tx.hash, 1);
       
@@ -306,8 +312,17 @@ const PerpsForm: React.FC = () => {
     } catch (error) {
       console.error('Error withdrawing funds:', error);
       setShowWithdrawModal(false);
+      // Add user-friendly error handling
+      if (error === 'INVALID_ARGUMENT') {
+        alert('Please enter a valid withdrawal amount');
+      } else if (error === 'UNPREDICTABLE_GAS_LIMIT') {
+        alert('Transaction failed. Please check your balance and try again.');
+      } else {
+        alert('An error occurred while processing your withdrawal');
+      }
     }
   };
+
 
 
   // Rest of the JSX remains largely the same, just update the balance display
@@ -403,7 +418,7 @@ const PerpsForm: React.FC = () => {
                   placeholder="Enter amount to withdraw"
                   className="w-full bg-gray-800/50 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all duration-200"
                 />
-                <span className="absolute right-4 top-3 text-gray-400">WETH</span>
+                <span className="absolute right-4 top-3 text-gray-400">USDC</span>
               </div>
               <button
                 onClick={handleWithdraw}
@@ -438,13 +453,14 @@ const PerpsForm: React.FC = () => {
           amount={depositAmount}
         />
         
-        <Modal 
-          show={showWithdrawModal}
-          title="Processing Withdrawal"
-          message="Please wait while we process your withdrawal..."
-          color="purple"
-          amount={withdrawAmount}
-        />
+      <Modal 
+        show={showWithdrawModal}
+        title="Processing Withdrawal"
+        message="Please wait while we process your withdrawal..."
+        color="purple"
+        amount={withdrawAmount}
+        currency="USDC"
+      />
       </div>
     </div>
   );
