@@ -162,7 +162,7 @@ const handleInitialize = async () => {
             if (parseFloat(amount) > 0) {
               // Convert amount to Wei before sending to contract
               const amountInWei = ethers.parseEther(amount); //the issue is we dont convert this to wei on selling
-              
+   
               try {
                 // Get buy price with retry mechanism
                 //const buyPriceWei = await contract.getBuyPriceAfterFee(tokenAddress, amountInWei);
@@ -172,9 +172,12 @@ const handleInitialize = async () => {
 
                 if(activeTab === 'buy') {
 
+
+
                   let buyPriceWei = await contract.getNumberOfTokensForAmount(userAcc, amountInWei)
                   if (buyPriceWei.toString() !== "0") {
                     setBuyPrice(ethers.formatEther(buyPriceWei));
+                    console.log(buyPriceWei.toString())
                   }
 
                  } 
@@ -182,7 +185,7 @@ const handleInitialize = async () => {
                  if (activeTab === 'sell') {
 
                   // Get sell price with retry mechanism
-                  let sellPriceWei = await contract.getBuyPriceAfterFee(tokenAddress, amountInWei)
+                  let sellPriceWei = await contract.getSellPriceAfterFee(tokenAddress, amountInWei)
                   if (sellPriceWei.toString() !== "0") {
                     setSellPrice(ethers.formatEther(sellPriceWei));
                     console.log(sellPriceWei.toString())
