@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
+import { usePrivy, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 
 interface ShortPosition {
   user: string;
   tokens: number;
-  expiryTime: string;  // Changed from price to expiryTime
+  expiryTime: string;
+  tokenAddress: string;
 }
 
 interface ModalProps {
@@ -14,6 +17,7 @@ interface ModalProps {
 
 interface ShortsProps {
   isEnabled?: boolean;
+  tokenAddress?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
@@ -27,22 +31,6 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
     </div>
   );
 };
-
-const ComingSoonOverlay = () => (
-  <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm z-10 rounded-2xl flex flex-col items-center justify-center gap-4">
-    <div className="text-4xl font-bold bg-gradient-to-r from-yellow-400 via-red-400 to-pink-400 bg-clip-text text-transparent animate-pulse">
-      Shorts Coming Soon
-    </div>
-    <div className="text-gray-400 text-lg">
-      Get ready to join the shorting arena! 🚀
-    </div>
-    <div className="flex gap-2 mt-2">
-      <span className="animate-bounce delay-0">🎯</span>
-      <span className="animate-bounce delay-100">💎</span>
-      <span className="animate-bounce delay-200">🌊</span>
-    </div>
-  </div>
-);
 
 const TableHeader = () => (
   <div className="mb-6">
@@ -64,7 +52,7 @@ const TableHeader = () => (
 
 const PositionsTable = ({ positions, onOpenShort }: { 
   positions: ShortPosition[], 
-  onOpenShort: (user: string, tokens: number, expiryTime: string) => void 
+  onOpenShort: (user: string, tokens: number, expiryTime: string, tokenAddress: string) => void 
 }) => (
   <div className="bg-gray-800/50 rounded-xl overflow-hidden backdrop-blur-sm border border-gray-700">
     <table className="w-full text-left">
@@ -92,7 +80,7 @@ const PositionsTable = ({ positions, onOpenShort }: {
             </td>
             <td className="p-4">
               <button
-                onClick={() => onOpenShort(position.user, position.tokens, position.expiryTime)}
+                onClick={() => onOpenShort(position.user, position.tokens, position.expiryTime, position.tokenAddress)}
                 className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-red-600 hover:to-pink-600 transition-all transform hover:scale-105 shadow-lg"
               >
                 🎯 Short It
@@ -105,7 +93,7 @@ const PositionsTable = ({ positions, onOpenShort }: {
   </div>
 );
 
-const Shorts: React.FC<ShortsProps> = ({ isEnabled = true }) => {
+const Shorts: React.FC<ShortsProps> = ({ isEnabled = true, tokenAddress }) => {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showAddSharesModal, setShowAddSharesModal] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<string>('');
@@ -113,29 +101,145 @@ const Shorts: React.FC<ShortsProps> = ({ isEnabled = true }) => {
   const [expiryTime, setExpiryTime] = useState<string>('');
   const [userShares, setUserShares] = useState<number>(0);
   const [shortAmount, setShortAmount] = useState<number>(0);
+  const [shortsContract, setShortsContract] = useState<any>(null);
+  const [openShorts, setOpenShorts] = useState<ShortPosition[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const positions: ShortPosition[] = [
-    { user: '0x42b9 ... 3B148', tokens: 100, expiryTime: '24h' },
-    { user: '0x82a9 ... 4C229', tokens: 50, expiryTime: '12h' },
-    { user: '0x13a2 ... 5D310', tokens: 200, expiryTime: '48h' }
-  ];
+  const { user } = usePrivy();
+  const { wallets } = useWallets();
+  const shortsContractAddr = '0xE71246b86c63a0ef84e905778106Fd17215F4e60';
+  const shortsABI = require('../abi/shorts.json');
 
-  const handleOpenShort = (user: string, tokens: number, expiryTime: string): void => {
-    setSelectedUser(user);
-    setAvailableShares(tokens);
-    setExpiryTime(expiryTime);
-    setShowModal(true);
+  useEffect(() => {
+    const initContract = async () => {
+      try {
+        if (user?.twitter?.username) {
+          let embeddedWallet = getEmbeddedConnectedWallet(wallets);
+          let privyProvider = await embeddedWallet?.address;
+          const wallet = wallets.find((w) => w.address === privyProvider);
+          
+          if (wallet) {
+            const provider = await wallet.getEthersProvider();
+            const signer: any = provider.getSigner();
+            const contract = new ethers.Contract(shortsContractAddr, shortsABI, signer);
+            setShortsContract(contract);
+
+            // Fetch open shorts if we have a token address
+            if (tokenAddress) {
+              const openShortsResult = await contract.getOpenShortsByToken(tokenAddress);
+              const formattedShorts = openShortsResult.map((short: any) => ({
+                user: short.user,
+                tokens: ethers.formatEther(short.shareAmount),
+                expiryTime: new Date(short.expiryTime.toNumber() * 1000).toLocaleString(),
+                tokenAddress: short.tokenAddress
+              }));
+              setOpenShorts(formattedShorts);
+            }
+          }
+        }
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error initializing contract:', error);
+        setIsLoading(false);
+      }
+    };
+
+    initContract();
+  }, [user, wallets, tokenAddress]);
+
+  const handleOpenShort = async (user: string, tokens: number, expiryTime: string, tokenAddr: string) => {
+    if (!shortsContract || !tokenAddr) return;
+
+    try {
+      setShowModal(true);
+      setSelectedUser(user);
+      setAvailableShares(tokens);
+      setExpiryTime(expiryTime);
+    } catch (error) {
+      console.error('Error preparing short:', error);
+    }
   };
+
+  const handleConfirmShort = async () => {
+    if (!shortsContract || !tokenAddress) return;
+
+    try {
+      const expiryTimeInSeconds = Math.floor(Date.now() / 1000) + (parseInt(expiryTime) * 3600); // Convert hours to seconds
+      const amountInWei = ethers.parseEther(shortAmount.toString());
+
+      const tx = await shortsContract.openShort(
+        amountInWei,
+        expiryTimeInSeconds,
+        selectedUser
+      );
+
+      await tx.wait();
+      setShowModal(false);
+
+      // Refresh open shorts
+      const openShortsResult = await shortsContract.getOpenShortsByToken(tokenAddress);
+      const formattedShorts = openShortsResult.map((short: any) => ({
+        user: short.user,
+        tokens: ethers.formatEther(short.shareAmount),
+        expiryTime: new Date(short.expiryTime.toNumber() * 1000).toLocaleString(),
+        tokenAddress: short.tokenAddress
+      }));
+      setOpenShorts(formattedShorts);
+    } catch (error) {
+      console.error('Error opening short:', error);
+    }
+  };
+
+  const handleAddToPool = async () => {
+    if (!shortsContract || !tokenAddress) return;
+
+    try {
+      const expiryTimeInSeconds = Math.floor(Date.now() / 1000) + (parseInt(expiryTime) * 3600);
+      const amountInWei = ethers.parseEther(userShares.toString());
+
+      // First approve the shorts contract to spend tokens
+      const tokenContract = new ethers.Contract(tokenAddress, [
+        "function approve(address spender, uint256 amount) public returns (bool)"
+      ], shortsContract.signer);
+
+      const approveTx = await tokenContract.approve(shortsContractAddr, amountInWei);
+      await approveTx.wait();
+
+      // Then add to the pool
+      const tx = await shortsContract.openShort(
+        amountInWei,
+        expiryTimeInSeconds,
+        tokenAddress
+      );
+
+      await tx.wait();
+      setShowAddSharesModal(false);
+
+      // Refresh open shorts
+      const openShortsResult = await shortsContract.getOpenShortsByToken(tokenAddress);
+      const formattedShorts = openShortsResult.map((short: any) => ({
+        user: short.user,
+        tokens: ethers.formatEther(short.shareAmount),
+        expiryTime: new Date(short.expiryTime.toNumber() * 1000).toLocaleString(),
+        tokenAddress: short.tokenAddress
+      }));
+      setOpenShorts(formattedShorts);
+    } catch (error) {
+      console.error('Error adding to pool:', error);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-center py-8">Loading shorts data...</div>;
+  }
 
   return (
     <div className="relative">
-      {!isEnabled && <ComingSoonOverlay />}
-
       <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-8 rounded-2xl shadow-xl">
         <TableHeader />
         
         <PositionsTable 
-          positions={positions} 
+          positions={openShorts} 
           onOpenShort={handleOpenShort}
         />
 
@@ -182,7 +286,10 @@ const Shorts: React.FC<ShortsProps> = ({ isEnabled = true }) => {
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105">
+              <button 
+                onClick={handleConfirmShort}
+                className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105"
+              >
                 🎯 Confirm Short
               </button>
             </div>
@@ -213,7 +320,10 @@ const Shorts: React.FC<ShortsProps> = ({ isEnabled = true }) => {
               </label>
               <select
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 text-gray-100"
+                value={expiryTime}
+                onChange={(e) => setExpiryTime(e.target.value)}
               >
+                <option value="">Select Expiry Time</option>
                 <option value="5">5 min</option>
                 <option value="10">10 min</option>
                 <option value="30">30 min</option>
@@ -236,7 +346,9 @@ const Shorts: React.FC<ShortsProps> = ({ isEnabled = true }) => {
               >
                 Cancel
               </button>
-              <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all transform hover:scale-105">
+              <button 
+                onClick={handleAddToPool}
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all transform hover:scale-105">
                 🌊 Add to Pool
               </button>
             </div>

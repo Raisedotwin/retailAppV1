@@ -18,7 +18,7 @@ const WalletPage: React.FC = () => {
   const [isProfileAssociated, setIsProfileAssociated] = useState(false);
   const [profileAddress, setProfileAddress] = useState('');
   const [claimableBalance, setClaimableBalance] = useState('0.00');
-  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(true); // New state for whitelist toggle
+  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(false); // New state for whitelist toggle
 
 
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
