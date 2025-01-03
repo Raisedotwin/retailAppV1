@@ -11,7 +11,7 @@ import TokenActivity from '../componants/TokenActivity';
 import TradingActivity from '../componants/TradingActivity';
 import TopHolders from '../componants/TopHolders';
 import BarChart from '../componants/BarChart';
-import Short from '../componants/Short';
+import Options from '../componants/Options';
 import AddressDisplay from '../componants/AddressDisplay';
 import { formatBlockTimestamp } from '../utils/timestamp';
 import MyShorts from '../componants/MyShorts';
@@ -45,8 +45,11 @@ const TraderPageContent: React.FC = () => {
   const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
   const profileABI = require("../abi/profile.json");
 
-  const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('activity');
+  const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('tradingActivity');
   const [traderProfileExists, setTraderProfileExists] = useState(false);
+
+  const optionsContractAddr = '0x38725e0692153681772dD81906b8AB783019F4d3'; // Update with your contract address
+  const optionsABI = require("../abi/shorts");
 
   // Setting default values or using the query parameters
   const [params] = useState({
@@ -83,6 +86,8 @@ const TraderPageContent: React.FC = () => {
   const [isActive, setIsActive] = useState(true); // You can control this state as needed
   const [profile, setProfile] = useState<any>(null);
   const [needsInitialization, setNeedsInitialization] = useState(false);
+  const [optionsContract, setOptionsContract] = useState<any>(null);
+  const [signer, setSigner] = useState<any>(null);
 
 
   let wallet: any = wallets[0] // Get the first connected wallet privy wallet specifiy privy wallet
@@ -239,6 +244,7 @@ useEffect(() => {
       await getPrivyProvider("base");
       const privyProvider = await wallet?.getEthersProvider();
       const signer: any = privyProvider?.getSigner();
+      setSigner(signer);
 
       // Initialize contracts
       const marketContractInstance = new ethers.Contract(tokenContractAddr, tokenMarketABI, signer);
@@ -249,6 +255,8 @@ useEffect(() => {
       setCreateContract(createContractInstance);
       const marketDataContractInstance = new ethers.Contract(marketDataAddr, marketDataABI, signer);
       setMarketDataContract(marketDataContractInstance);
+      const optionsContractInstance = new ethers.Contract(optionsContractAddr, optionsABI, signer);
+      setOptionsContract(optionsContractInstance);
 
       const address = await signer?.getAddress();
       setWalletAddress(address);
@@ -284,6 +292,7 @@ useEffect(() => {
             // Get market data
             const MCAP = await marketContractInstance.getMarketCap(traderAcc.toString());
             setMarketCap(ethers.formatEther(MCAP));
+            //setMarketCap(ethers.formatUnits(MCAP, 6));
             //setMarketCap(MCAP.toString());
 
             const lastBuyback = await marketDataContractInstance.getCumulativeBuybackValue(username as string);
@@ -631,23 +640,23 @@ const handleCreateWallet = async () => {
     <p className="text-xs text-gray-500">Last Buyback</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">{Number(lastBuybackValue).toFixed(4)} ETH</p>
-    <p className="text-xs text-gray-500">Buybacks</p>
+    <p className="text-lg font-bold text-green-500">{Number(lastBuybackValue).toFixed(3)}</p>
+    <p className="text-xs text-gray-500">Coin Buybacks</p>
   </div>
   <div className="text-center px-4">
     <p className="text-lg font-bold text-green-500">
-      {Number(marketCap).toFixed(4)} ETH
+      {Number(marketCap).toFixed(3)} ETH
     </p>
     <p className="text-xs text-gray-500">Marketcap</p>
   </div>
   <div className="text-center px-4">
     <p className="text-lg font-bold text-green-500">
-      {Number(balance).toFixed(4)} ETH
+      {Number(balance).toFixed(3)} ETH
     </p>
     <p className="text-xs text-gray-500">AUM</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">{Number(winRatio).toFixed(5)}%</p>
+    <p className="text-lg font-bold text-green-500">{Number(winRatio).toFixed(2)}%</p>
     <p className="text-xs text-gray-500">Win Rate</p>
   </div>
 </div>
@@ -835,20 +844,31 @@ const handleCreateWallet = async () => {
               active={activeModalTab === 'shorts'} 
               onClick={() => setActiveModalTab('shorts')}
             >
-              Short
+              Options
             </TabButton>
             <TabButton 
               active={activeModalTab === 'activity'} 
               onClick={() => setActiveModalTab('activity')}
             >
-              My Shorts
+              My Contracts
             </TabButton>
           </div>
 
           <div className="mt-6">
             {activeModalTab === 'topHolders' && <TopHolders />}
             {activeModalTab === 'tradingActivity' && <TradingActivity />}
-            {activeModalTab === 'shorts' && <Short />}
+            {activeModalTab === 'shorts' && tokenAddress ? (
+              <Options 
+                isEnabled={true}
+                tokenAddress={tokenAddress}
+                optionsContract={optionsContract}
+                signer={signer}
+                traderAddress={traderAddress}
+                marketContract={contract}
+              />
+              ) : (
+                <div>Loading options data...</div>
+              )}
             {activeModalTab === 'activity' && <MyShorts />}
           </div>
         </div>

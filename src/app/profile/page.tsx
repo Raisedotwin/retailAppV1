@@ -92,24 +92,56 @@ const ProfilePage: React.FC = () => {
   };
 
   async function getBalance() {
-    if (user?.twitter?.username) {
+    try {
+      if (!user?.twitter?.username) {
+        console.log('No user or twitter username found');
+        return;
+      }
+  
       let embeddedWallet = getEmbeddedConnectedWallet(wallets);
-      let privyProvider = await embeddedWallet?.address;
+      if (!embeddedWallet?.address) {
+        console.log('No embedded wallet found');
+        return;
+      }
+  
+      let privyProvider = embeddedWallet.address;
       wallet = wallets.find((wallet) => wallet.address === privyProvider);
+      
+      if (!wallet) {
+        console.log('No matching wallet found');
+        return;
+      }
+  
+      await getPrivyProvider("base");
+      const provider = await wallet.getEthersProvider();
+      
+      if (!provider) {
+        console.log('No provider available');
+        return;
+      }
+  
+      const signer = provider.getSigner();
+      if (!signer) {
+        console.log('No signer available');
+        return;
+      }
+  
+      const address = await signer.getAddress();
+      console.log('Address:', address);
+  
+      const rawBalance = await provider.getBalance(address);
+      if (!rawBalance) {
+        console.log('Unable to fetch balance');
+        return;
+      }
+  
+      const balance = ethers.formatEther(rawBalance.toString());
+      console.log('Balance:', balance);
+      setBalance(balance);
+    } catch (error) {
+      console.error('Error in getBalance:', error);
+      setBalance(null);
     }
-
-    getPrivyProvider("base");
-    const privyProvider = await wallet?.getEthersProvider();
-    const signer: any = privyProvider?.getSigner();
-
-    const address = await signer?.getAddress();
-    console.log(address);
-
-    const balance = ethers.formatEther(
-      (await privyProvider?.getBalance(address))?.toString()
-    );
-    console.log(balance);
-    setBalance(balance);
   }
 
   const handleSendMoney = async () => {

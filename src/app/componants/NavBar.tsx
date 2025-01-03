@@ -145,7 +145,7 @@ const NavBar: React.FC = () => {
             </Link>
 
             {/* Settings Icon with Dropdown */}
-            <div className="relative">
+            {/* <div className="relative">
               <Image
                 src="/icons/accounts-icon.svg"  // Path to the settings icon
                 alt="Settings Icon"
@@ -168,7 +168,7 @@ const NavBar: React.FC = () => {
                   </Link>
                 </div>
               )}
-            </div>
+            </div>*/}
           </>
         )}
 

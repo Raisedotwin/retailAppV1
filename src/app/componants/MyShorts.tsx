@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal} from './Short';  // Reusing the Modal component
+import { Modal} from './Options';  // Reusing the Modal component
 
 interface ShortPosition {
   id: string;

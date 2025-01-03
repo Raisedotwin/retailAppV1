@@ -48,17 +48,62 @@
 		"type": "error"
 	},
 	{
-		"inputs": [],
-		"name": "cancelOpenShort",
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "strikePrice",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "duration",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "premium",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_traderAddr",
+				"type": "address"
+			}
+		],
+		"name": "adminwriteCoveredCall",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "closeShort",
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "optionId",
+				"type": "uint256"
+			}
+		],
+		"name": "buyOption",
 		"outputs": [],
 		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "optionId",
+				"type": "uint256"
+			}
+		],
+		"name": "claimExpiredCallOption",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -81,29 +126,6 @@
 		"inputs": [],
 		"name": "FailedCall",
 		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_liquidationTime",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "admin",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "upgrader",
-				"type": "address"
-			}
-		],
-		"name": "initialize",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -136,8 +158,14 @@
 		"inputs": [
 			{
 				"indexed": true,
+				"internalType": "uint256",
+				"name": "optionId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
 				"internalType": "address",
-				"name": "user",
+				"name": "writer",
 				"type": "address"
 			},
 			{
@@ -149,44 +177,57 @@
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "expiryTime",
+				"name": "strikePrice",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "premium",
 				"type": "uint256"
 			}
 		],
-		"name": "CollateralDeposited",
+		"name": "CallWritten",
+		"type": "event"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "optionId",
+				"type": "uint256"
+			}
+		],
+		"name": "exerciseCall",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "newCollector",
+				"type": "address"
+			}
+		],
+		"name": "FeeCollectorUpdated",
 		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "amount",
+				"name": "newRate",
 				"type": "uint256"
 			}
 		],
-		"name": "CollateralWithdrawn",
+		"name": "FeeRateUpdated",
 		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "holderAddress",
-				"type": "address"
-			}
-		],
-		"name": "depositCollateral",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
 	},
 	{
 		"inputs": [
@@ -207,6 +248,19 @@
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "upgrader",
+				"type": "address"
+			}
+		],
+		"name": "initialize",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -220,58 +274,66 @@
 		"type": "event"
 	},
 	{
+		"anonymous": false,
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "_buyer",
-				"type": "address"
-			}
-		],
-		"name": "liquidatePosition",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
+				"indexed": true,
 				"internalType": "uint256",
-				"name": "_amount",
+				"name": "optionId",
 				"type": "uint256"
 			},
 			{
-				"internalType": "uint256",
-				"name": "_expiryTime",
-				"type": "uint256"
+				"indexed": false,
+				"internalType": "address",
+				"name": "buyer",
+				"type": "address"
 			},
 			{
-				"internalType": "address",
-				"name": "_traderAddr",
-				"type": "address"
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "premium",
+				"type": "uint256"
 			}
 		],
-		"name": "openShort",
-		"outputs": [],
-		"stateMutability": "payable",
-		"type": "function"
+		"name": "OptionBought",
+		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
 			{
 				"indexed": true,
+				"internalType": "uint256",
+				"name": "optionId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
 				"internalType": "address",
-				"name": "user",
+				"name": "buyer",
 				"type": "address"
 			},
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "collateralAmount",
+				"name": "amount",
 				"type": "uint256"
 			}
 		],
-		"name": "PositionLiquidated",
+		"name": "OptionExercised",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "optionId",
+				"type": "uint256"
+			}
+		],
+		"name": "OptionExpired",
 		"type": "event"
 	},
 	{
@@ -386,48 +448,30 @@
 		"type": "event"
 	},
 	{
-		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
 				"internalType": "address",
-				"name": "user",
+				"name": "newCollector",
 				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "expiryTime",
-				"type": "uint256"
 			}
 		],
-		"name": "ShortCreated",
-		"type": "event"
+		"name": "setFeeCollector",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	},
 	{
-		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"indexed": false,
 				"internalType": "uint256",
-				"name": "amount",
+				"name": "newRate",
 				"type": "uint256"
 			}
 		],
-		"name": "ShortPositionCancelled",
-		"type": "event"
+		"name": "setFeeRate",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	},
 	{
 		"anonymous": false,
@@ -461,57 +505,51 @@
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "strikePrice",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "duration",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "premium",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_traderAddr",
+				"type": "address"
+			}
+		],
+		"name": "writeCoveredCall",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"stateMutability": "payable",
 		"type": "receive"
 	},
 	{
 		"inputs": [
 			{
-				"internalType": "address",
+				"internalType": "uint256",
 				"name": "",
-				"type": "address"
+				"type": "uint256"
 			}
 		],
-		"name": "currentOpenShorts",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "shareAmount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "expiryTime",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "account",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "active",
-				"type": "bool"
-			},
-			{
-				"internalType": "address",
-				"name": "tokenAddress",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "currentPendingShorts",
+		"name": "callOptions",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -520,22 +558,22 @@
 			},
 			{
 				"internalType": "uint256",
-				"name": "shareAmount",
+				"name": "amount",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "collateralAmount",
+				"name": "strikePrice",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "premium",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
 				"name": "expiryTime",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "storedTime",
 				"type": "uint256"
 			},
 			{
@@ -550,13 +588,13 @@
 			},
 			{
 				"internalType": "address",
-				"name": "originalOwner",
+				"name": "writer",
 				"type": "address"
 			},
 			{
-				"internalType": "uint256",
-				"name": "priceShorted",
-				"type": "uint256"
+				"internalType": "address",
+				"name": "buyer",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -576,112 +614,13 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_tokenAddress",
-				"type": "address"
-			}
-		],
-		"name": "getOpenShortsByToken",
+		"inputs": [],
+		"name": "feeCollector",
 		"outputs": [
 			{
-				"components": [
-					{
-						"internalType": "uint256",
-						"name": "shareAmount",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "expiryTime",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "account",
-						"type": "uint256"
-					},
-					{
-						"internalType": "bool",
-						"name": "active",
-						"type": "bool"
-					},
-					{
-						"internalType": "address",
-						"name": "tokenAddress",
-						"type": "address"
-					}
-				],
-				"internalType": "struct Shorts.OpenShorts[]",
-				"name": "",
-				"type": "tuple[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
 				"internalType": "address",
-				"name": "_user",
-				"type": "address"
-			}
-		],
-		"name": "getPendingShortsByAddress",
-		"outputs": [
-			{
-				"components": [
-					{
-						"internalType": "uint256",
-						"name": "account",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "shareAmount",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "collateralAmount",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "expiryTime",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "storedTime",
-						"type": "uint256"
-					},
-					{
-						"internalType": "bool",
-						"name": "active",
-						"type": "bool"
-					},
-					{
-						"internalType": "address",
-						"name": "tokenAddress",
-						"type": "address"
-					},
-					{
-						"internalType": "address",
-						"name": "originalOwner",
-						"type": "address"
-					},
-					{
-						"internalType": "uint256",
-						"name": "priceShorted",
-						"type": "uint256"
-					}
-				],
-				"internalType": "struct Shorts.PendingShorts[]",
 				"name": "",
-				"type": "tuple[]"
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -695,7 +634,7 @@
 				"type": "address"
 			}
 		],
-		"name": "getPendingShortsByToken",
+		"name": "getActiveCallsByToken",
 		"outputs": [
 			{
 				"components": [
@@ -706,22 +645,22 @@
 					},
 					{
 						"internalType": "uint256",
-						"name": "shareAmount",
+						"name": "amount",
 						"type": "uint256"
 					},
 					{
 						"internalType": "uint256",
-						"name": "collateralAmount",
+						"name": "strikePrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "premium",
 						"type": "uint256"
 					},
 					{
 						"internalType": "uint256",
 						"name": "expiryTime",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "storedTime",
 						"type": "uint256"
 					},
 					{
@@ -736,16 +675,148 @@
 					},
 					{
 						"internalType": "address",
-						"name": "originalOwner",
+						"name": "writer",
 						"type": "address"
 					},
 					{
-						"internalType": "uint256",
-						"name": "priceShorted",
-						"type": "uint256"
+						"internalType": "address",
+						"name": "buyer",
+						"type": "address"
 					}
 				],
-				"internalType": "struct Shorts.PendingShorts[]",
+				"internalType": "struct Options.CallOption[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_buyer",
+				"type": "address"
+			}
+		],
+		"name": "getCallsByBuyer",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "account",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "strikePrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "premium",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "expiryTime",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "active",
+						"type": "bool"
+					},
+					{
+						"internalType": "address",
+						"name": "tokenAddress",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "writer",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "buyer",
+						"type": "address"
+					}
+				],
+				"internalType": "struct Options.CallOption[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_writer",
+				"type": "address"
+			}
+		],
+		"name": "getCallsByWriter",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "uint256",
+						"name": "account",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "strikePrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "premium",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "expiryTime",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "active",
+						"type": "bool"
+					},
+					{
+						"internalType": "address",
+						"name": "tokenAddress",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "writer",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "buyer",
+						"type": "address"
+					}
+				],
+				"internalType": "struct Options.CallOption[]",
 				"name": "",
 				"type": "tuple[]"
 			}
@@ -780,7 +851,7 @@
 				"type": "address"
 			}
 		],
-		"name": "getTokenShortCount",
+		"name": "getTokenOptionCount",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -817,33 +888,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "liquidationTime",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "LIQUIDATOR_ROLE",
-		"outputs": [
-			{
-				"internalType": "bytes32",
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "openShortCounter",
+		"name": "optionCounter",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -882,6 +927,19 @@
 	},
 	{
 		"inputs": [],
+		"name": "protocolFeeRate",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "proxiableUUID",
 		"outputs": [
 			{
@@ -907,6 +965,30 @@
 				"internalType": "bool",
 				"name": "",
 				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "tokenActiveCalls",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -944,33 +1026,9 @@
 				"internalType": "address",
 				"name": "",
 				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
 			}
 		],
-		"name": "tokenOpenShorts",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"name": "tokenShortCounter",
+		"name": "tokenOptionCounter",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -1020,12 +1078,36 @@
 				"type": "uint256"
 			}
 		],
-		"name": "userPendingShorts",
+		"name": "userBoughtCalls",
 		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
 			{
 				"internalType": "address",
 				"name": "",
 				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "userWrittenCalls",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
