@@ -237,7 +237,9 @@ const checkProfileAssociation = useCallback(async () => {
       } else {
         // Handle non-Twitter users or invalid profiles
         setModalMessage('Unable to claim profile. Please check requirements.');
-        setTimeout(() => setIsModalVisible(false), 2000);
+        setTimeout(() => 
+          setIsModalVisible(false),
+        2000);
         return;
       }
 
@@ -245,14 +247,25 @@ const checkProfileAssociation = useCallback(async () => {
       if (payouts !== "0x0000000000000000000000000000000000000000") {
         const traderPayoutsInstance = new ethers.Contract(payouts, traderPayoutsABI, signer);
         const ethBalance = await provider.getBalance(payouts);
-        const amountMsg = ethBalance.toString();
+        const formattedBalance = ethers.formatEther(ethBalance);
+        const amountMsg = formattedBalance.toString();
 
         const tx = await traderPayoutsInstance.withdraw();
         //await tx.wait();
 
         setModalMessage('Congratulations! You have successfully earned ' + amountMsg);
+        setTimeout(() => {
+          setIsModalVisible(false),
+          window.location.reload();
+        },
+        2000);
+        return;
       } else {
         setModalMessage('Wallet claimed successfully!');
+        setTimeout(() => {
+          setIsModalVisible(false),
+          window.location.reload();
+        }, 2000);
       }
       
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -261,7 +274,9 @@ const checkProfileAssociation = useCallback(async () => {
     } catch (error) {
       console.error('Error in wallet claim process:', error);
       //setModalMessage('Error processing claim. Please try again.');
-      setTimeout(() => setIsModalVisible(false), 2000);
+      setTimeout(() => 
+        setIsModalVisible(false),
+        2000);
     }
   };
 
@@ -399,6 +414,7 @@ const checkProfileAssociation = useCallback(async () => {
         setIsModalVisible(false);
         setShowSwitchAddressModal(false);
         setNewAddress('');
+        window.location.reload();
       }, 2000);
     } catch (error) {
       console.error('Error switching address:', error);

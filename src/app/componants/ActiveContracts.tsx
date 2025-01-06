@@ -81,7 +81,7 @@ const ActiveContracts: React.FC<ActiveContractsProps> = ({
           price: Number(ethers.formatEther(call.strikePrice)),
           expiryTime: Number(call.expiryTime),
           isWriter: true,
-          premium: Number(ethers.formatEther(call.premium)),
+          premium: Number(ethers.formatEther(call.premium)).toFixed(12),
           counterpartyAddress: call.buyer,
           tokenAddress: call.tokenAddress
         }));
@@ -92,7 +92,7 @@ const ActiveContracts: React.FC<ActiveContractsProps> = ({
           price: Number(ethers.formatEther(call.strikePrice)),
           expiryTime: Number(call.expiryTime),
           isWriter: false,
-          premium: Number(ethers.formatEther(call.premium)),
+          premium: Number(ethers.formatEther(call.premium)).toFixed(12),
           counterpartyAddress: call.writer,
           tokenAddress: call.tokenAddress
         }));
@@ -117,17 +117,17 @@ const ActiveContracts: React.FC<ActiveContractsProps> = ({
   const executeClosePosition = async () => {
     console.log('Closing position:', selectedPosition);
     if (!selectedPosition || !optionsContract) return;
-
+  
     setIsProcessing(true);
     setErrorMessage(null);
-
+  
     try {
       const currentTime = Math.floor(Date.now() / 1000);
       const isExpired = currentTime > selectedPosition.expiryTime;
       const isUnbought = selectedPosition.counterpartyAddress === ethers.ZeroAddress;
-
+  
       let tx;
-
+  
       if (selectedPosition.isWriter) {
         if (isExpired) {
           // Writer after expiry
@@ -139,12 +139,31 @@ const ActiveContracts: React.FC<ActiveContractsProps> = ({
           throw new Error("Cannot close a written option that has been bought before expiry");
         }
       } else {
-        // Buyer exercising option
-        tx = await optionsContract.exerciseCall(selectedPosition.id);
+        // Calculate total value needed for the transaction
+        const premium = Number(selectedPosition.premium);
+        const amount = Number(selectedPosition.amount);
+        const price = Number(selectedPosition.price);
+        
+        // Calculate total (amount * price + premium)
+        const total = (amount * price) + premium;
+        
+        console.log("Premium:", premium);
+        console.log("Amount:", amount);
+        console.log("Price:", price);
+        console.log("Total before parsing:", total);
+        
+        // Convert to Wei
+        const totalInWei = ethers.parseEther(total.toString());
+        console.log("Total in Wei:", totalInWei);
+  
+        tx = await optionsContract.exerciseCall(
+          selectedPosition.id,
+          {
+            value: totalInWei
+          }
+        );
       }
-
-      //await tx.wait();
-      
+  
       // Refresh the contracts list
       const updatedContracts = activeContracts.filter(
         contract => contract.id !== selectedPosition.id
@@ -152,7 +171,6 @@ const ActiveContracts: React.FC<ActiveContractsProps> = ({
       setActiveContracts(updatedContracts);
       setShowCloseModal(false);
       setIsProcessing(false);
-
     } catch (error: any) {
       console.error('Error closing position:', error);
       setErrorMessage(error.message || 'Error closing position');
