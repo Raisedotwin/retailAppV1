@@ -78,7 +78,7 @@ const ActiveContracts: React.FC<ActiveContractsProps> = ({
         const writtenPositions = writtenCalls.map((call: any) => ({
           id: call.id.toString(),
           amount: Number(ethers.formatEther(call.amount)),
-          price: Number(ethers.formatEther(call.strikePrice)),
+          price: Number(ethers.formatEther(call.strikePrice)).toFixed(7),
           expiryTime: Number(call.expiryTime),
           isWriter: true,
           premium: Number(ethers.formatEther(call.premium)).toFixed(12),
@@ -89,7 +89,7 @@ const ActiveContracts: React.FC<ActiveContractsProps> = ({
         const boughtPositions = boughtCalls.map((call: any) => ({
           id: call.id.toString(),
           amount: Number(ethers.formatEther(call.amount)),
-          price: Number(ethers.formatEther(call.strikePrice)),
+          price: Number(ethers.formatEther(call.strikePrice)).toFixed(7),
           expiryTime: Number(call.expiryTime),
           isWriter: false,
           premium: Number(ethers.formatEther(call.premium)).toFixed(12),

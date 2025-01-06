@@ -751,9 +751,7 @@ const calculatePremium = async () => {
       });
 
       console.log('Buy option transaction submitted:', tx.hash);
-    
-      // Wait for transaction confirmation
-      await tx.wait();
+      const receipt = await provider.waitForTransaction(tx.hash, 1);
     
       // Refresh the options list
       const activeOptionsResult = await optionsContract.getActiveCallsByToken(tokenAddress);
