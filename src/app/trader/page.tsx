@@ -132,6 +132,9 @@ const handleInitialize = async () => {
         setTokenAddress(tokenAddr);
         setNeedsInitialization(false);
         setModalMessage('Token initialized successfully');
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       }
     } else {
       setModalMessage('Initialization failed');
@@ -415,17 +418,29 @@ const handleCreateWallet = async () => {
           if (!tokenAddr || tokenAddr === "0x0000000000000000000000000000000000000000") {
             setNeedsInitialization(true);
             setModalMessage('Wallet created but needs initialization');
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
           } else {
             setModalMessage('Wallet created and shares minted successfully');
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
           }
         } else {
           setNeedsInitialization(true);
           setModalMessage('Share minting failed - initialization needed');
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
         }
       } catch (buyError) {
         console.error('Error in buyShares:', buyError);
         setNeedsInitialization(true);
         setModalMessage('Failed to mint initial shares - initialization needed');
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       }
     } else {
       setModalMessage('Wallet creation failed');
