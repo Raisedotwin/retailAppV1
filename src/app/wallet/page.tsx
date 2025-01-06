@@ -1,25 +1,21 @@
 "use client";
 
 import React, { use } from 'react';
-import Link from 'next/link';
-import { useAccount } from '../context/AccountContext';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
 import Image from 'next/image';
-import { EIP155_CHAINS, TEIP155Chain } from '@/data/EIP155Data';
+import { EIP155_CHAINS } from '@/data/EIP155Data';
 
 const WalletPage: React.FC = () => {
   const [profileExists, setProfileExists] = useState(false);
   const [ethBalance, setEthBalance] = useState('0.00');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
-  const [loggedInToX, setLoggedIntoX] = useState(false);
   const [isProfileAssociated, setIsProfileAssociated] = useState(false);
   const [profileAddress, setProfileAddress] = useState('');
   const [claimableBalance, setClaimableBalance] = useState('0.00');
-  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(false); // New state for whitelist toggle
-
+  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(true); // New state for whitelist toggle
 
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
 
@@ -28,21 +24,43 @@ const WalletPage: React.FC = () => {
   const { login, logout, user } = usePrivy();
 
   const { wallets } = useWallets();
+  let wallet = wallets[0];
 
-  const wallet = getEmbeddedConnectedWallet(wallets);
+  // Add new function to get the appropriate wallet
+  const getWallet = useCallback(async () => {
+    if (user?.twitter?.username) {
+      const embeddedWallet = getEmbeddedConnectedWallet(wallets);
+      const privyProvider = await embeddedWallet?.address;
+      return wallets.find(w => w.address === privyProvider) || wallet;
+    }
+    return wallet;
+  }, [user, wallets, wallet]);
+
+  // Update getSigner function
+  const getSigner = async () => {
+    const currentWallet = await getWallet();
+    if (!currentWallet) throw new Error("No wallet available");
+    
+    try {
+      await currentWallet.switchChain(8453);
+      const provider = await currentWallet.getEthersProvider();
+      return provider.getSigner();
+    } catch (error) {
+      console.error("Failed to get signer:", error);
+      throw error;
+    }
+  };
 
   const nativeAddress = user?.wallet?.address;
-
-  
 
   const tokenPoolABI = require("../abi/traderPool");
   const traderPayoutsABI = require("../abi/traderPayouts");
 
-  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
+  const profileAddr = '0xF449ee02878297d5bc73E69a1A5B379E503806cE';
   const profileABI = require("../abi/profile");
 
   const whitelist = require("../abi/BETAWhitelist.json");
-  const whitelistAddr = '0x36dc0FE2E558E0d7a5505CE717bc01470D52C353';
+  const whitelistAddr = '0xb300D6070ffb261F00dd3a2B5A575Ff329e507D9';
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
   const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
@@ -51,23 +69,77 @@ const WalletPage: React.FC = () => {
   const [newAddress, setNewAddress] = useState('');
   const [isSwitching, setIsSwitching] = useState(false);
 
-    // Create a wallet instance from the private key
+  // Create a wallet instance from the private key
   const adminWallet = useMemo(() => {
-      if (typeof process !== 'undefined' && process.env.PRIVATE_KEY) {
-        return new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-      }
-      return null;
+        return new ethers.Wallet('cac636e07dd1ec983b66c5693b97ac5150d9a0cc5db8dd39ddb58b2e142cb192', provider);
   }, [provider]);
 
-  const checkWhitelistStatus = async (address: string | undefined): Promise<boolean> => {
+
+  const handleWithdrawRewards = async () => {
+    if (!wallet) {
+      console.error("Wallet not available");
+      return;
+    }
+
+    setModalMessage('Processing withdrawal...');
+    setIsModalVisible(true);
+
     try {
-      const isWhitelisted = await whitelistContract.isWhitelisted(address);
+      const signer: any = await getSigner();
+      const currentWallet = await getWallet();
+      const walletAddress = currentWallet?.address || user?.wallet?.address;
+
+      const profile = await profileContract.getProfile(walletAddress);
+      const payoutsAddress = profile[6];
+
+      if (payoutsAddress && payoutsAddress !== "0x0000000000000000000000000000000000000000") {
+        const traderPayoutsInstance = new ethers.Contract(payoutsAddress, traderPayoutsABI, signer);
+        const tx = await traderPayoutsInstance.withdraw();
+        //await tx.wait();
+
+        setModalMessage('Rewards successfully withdrawn!');
+        setClaimableBalance('0.00');
+      } else {
+        setModalMessage('No rewards contract found');
+      }
+
+      setTimeout(() => setIsModalVisible(false), 2000);
+    } catch (error) {
+      console.error('Error withdrawing rewards:', error);
+      //setModalMessage('Failed to withdraw rewards');
+      setTimeout(() => setIsModalVisible(false), 2000);
+    }
+  };
+
+  const checkWhitelistStatus = async (username: string | undefined): Promise<boolean> => {
+    try {
+      const isWhitelisted = await whitelistContract.isUsernameWhitelisted(username);
       return isWhitelisted;
     } catch (error) {
       console.error('Error checking whitelist status:', error);
       return false;
     }
   };
+
+  // Add the approval function before wallet claim
+  const approveAddressForClaim = async (addressToApprove: string) => {
+  if (!adminWallet) {
+    console.error("Admin wallet not initialized");
+    return false;
+  }
+
+  try {
+    // Create contract instance with admin wallet as signer
+    const profileContractWithAdmin = new ethers.Contract(profileAddr, profileABI, adminWallet);
+    const tx = await profileContractWithAdmin.approveAddressForClaim(addressToApprove);
+    //await tx.wait();
+    console.log("Address approved successfully");
+    return true;
+  } catch (error) {
+    console.error("Error approving address:", error);
+    return false;
+  }
+};
 
   const getPrivyProvider = async (chainName: string) => {
     if (!wallet) {
@@ -105,11 +177,12 @@ const formatEthValue = (value: string) => {
   return num.toFixed(6);
 };
 
-  const checkProfileAssociation = useCallback(async () => {
+const checkProfileAssociation = useCallback(async () => {
     if (!nativeAddress || !profileContract) return false;
     try {
       const isAssociated = await profileContract.isProfileAssociated(nativeAddress);
       setIsProfileAssociated(isAssociated);
+      console.log('Profile check results:', isAssociated);
       return isAssociated;
     } catch (error) {
       console.error('Error checking profile association:', error);
@@ -119,62 +192,81 @@ const formatEthValue = (value: string) => {
   }, [nativeAddress, profileContract]);
 
   const handleWalletClaim = async () => {
-    if (profileAddr && wallet) {
-      if (isWhitelistEnabled) {
-        const isWhitelisted = await checkWhitelistStatus(nativeAddress);
-        if (!isWhitelisted) {
-          setIsModalVisible(true);
-          setModalMessage('Address not whitelisted. Please contact support.');
-          setTimeout(() => setIsModalVisible(false), 2000);
-          return;
-        }
+    if (!profileAddr || !wallet) {
+      console.error("Missing required parameters");
+      return;
+    }
+
+    if (isWhitelistEnabled && user?.twitter?.username) {
+      const userprofile = user.twitter.username;
+      console.log('Checking whitelist status for:', userprofile);
+      const isWhitelisted = await checkWhitelistStatus(userprofile);
+      if (!isWhitelisted) {
+        setIsModalVisible(true);
+        setModalMessage('Address not whitelisted. Please contact support.');
+        setTimeout(() => setIsModalVisible(false), 2000);
+        return;
+      }
+    }
+
+    setModalMessage('Approving address...');
+    setIsModalVisible(true);
+
+    try {
+      const currentWallet = await getWallet();
+      const walletAddress: any = currentWallet?.address || user?.wallet?.address;
+
+      // First, approve the address
+      const isApproved = await approveAddressForClaim(walletAddress);
+      if (!isApproved) {
+        setModalMessage('Address approval failed');
+        setTimeout(() => setIsModalVisible(false), 2000);
+        return;
       }
 
-      setModalMessage('Claiming wallet...');
-      setIsModalVisible(true);
-      try {
-        getPrivyProvider("base");
-        const privyProvider = await wallet.getEthersProvider();
-        const signer: any = privyProvider?.getSigner();
+      setModalMessage('Address approved. Claiming wallet...');
 
-        const profileContractTwo = new ethers.Contract(profileAddr, profileABI, signer);
+      const signer: any = await getSigner();
+      const profileContractTwo = new ethers.Contract(profileAddr, profileABI, signer);
 
-        let username = user?.twitter?.username;
-        let profile = await profileContractTwo.getProfileByName(username);
-        let payouts = profile[6];
-
-        if (profile[2] === username) {
-          await profileContractTwo.claimProfile(nativeAddress, username, true);
-        } else {
-          alert('Incorrect Twitter AUTH');
-          return;
-        }
-
-        if (payouts !== "0x0000000000000000000000000000000000000000") {
-          const traderPayoutsInstance = new ethers.Contract(payouts, traderPayoutsABI, signer);
-
-          const ethBalance = await provider.getBalance(payouts);
-          console.log('ETH Balance:', ethers.formatEther(ethBalance));
-          const amountMsg = ethBalance.toString();
-
-          const tx = await traderPayoutsInstance.withdraw();
-          await tx.wait();
-
-          setModalMessage('Congratulations! You have successfully earned ' + amountMsg);
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          setIsModalVisible(false);
-        }
-      } catch (error) {
-        console.error('Error claiming wallet:', error);
-        setModalMessage('Wallet Claim Failed');
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setIsModalVisible(false);
+      let username = user?.twitter?.username;
+      let profile = username ? await profileContractTwo.getProfileByName(username) : null;
+      
+      if (profile && profile[2] === username) {
+        await profileContractTwo.claimProfile(username, true);
+      } else {
+        // Handle non-Twitter users or invalid profiles
+        setModalMessage('Unable to claim profile. Please check requirements.');
+        setTimeout(() => setIsModalVisible(false), 2000);
+        return;
       }
+
+      let payouts = profile[6];
+      if (payouts !== "0x0000000000000000000000000000000000000000") {
+        const traderPayoutsInstance = new ethers.Contract(payouts, traderPayoutsABI, signer);
+        const ethBalance = await provider.getBalance(payouts);
+        const amountMsg = ethBalance.toString();
+
+        const tx = await traderPayoutsInstance.withdraw();
+        //await tx.wait();
+
+        setModalMessage('Congratulations! You have successfully earned ' + amountMsg);
+      } else {
+        setModalMessage('Wallet claimed successfully!');
+      }
+      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      setIsModalVisible(false);
+      
+    } catch (error) {
+      console.error('Error in wallet claim process:', error);
+      //setModalMessage('Error processing claim. Please try again.');
+      setTimeout(() => setIsModalVisible(false), 2000);
     }
   };
 
   // Add new function to fetch claimable balance
-const fetchClaimableBalance = useCallback(async (username: string) => {
+  const fetchClaimableBalance = useCallback(async (username: string) => {
   if (!username || !profileContract) return;
   
   try {
@@ -252,41 +344,30 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
     }
   };
 
-  const executeAdminFunction = async () => {
-    if (!adminWallet) {
-      console.error("Admin wallet not initialized");
-      return;
-    }
-
-    try {
-      // Example transaction
-      const tx = await profileContract.someAdminFunction();
-      await tx.wait();
-      console.log("Transaction successful");
-    } catch (error) {
-      console.error("Transaction failed:", error);
-    }
-  };
-
   useEffect(() => {
     const initContract = async () => {
       try {
-        const isAssociated = await checkProfileAssociation();
+        const currentWallet = await getWallet();
+        const walletAddress = currentWallet?.address || user?.wallet?.address;
         
-        // Try fetching by username first if available
-        let profile = null;
-        if (user?.twitter?.username) {
-          profile = await fetchProfileByUsername(user.twitter.username);
-          await fetchClaimableBalance(user.twitter.username);
-        }
-        
-        // If no profile found by username and we have an address, try fetching by address
-        if (!profile && nativeAddress) {
-          profile = await fetchProfileByAddress(nativeAddress);
-        }
+        if (walletAddress) {
+          const isAssociated = await checkProfileAssociation();
+          
+          // Try fetching by username first if available
+          let profile = null;
+          if (user?.twitter?.username) {
+            profile = await fetchProfileByUsername(user.twitter.username);
+            await fetchClaimableBalance(user.twitter.username);
+          }
+          
+          // If no profile found by username and we have an address, try fetching by address
+          if (!profile) {
+            profile = await fetchProfileByAddress(walletAddress);
+          }
 
-        if (profile) {
-          await fetchBalanceFromProfile(profile);
+          if (profile) {
+            await fetchBalanceFromProfile(profile);
+          }
         }
       } catch (error) {
         console.error('Error initializing contract:', error);
@@ -294,7 +375,7 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
     };
 
     initContract();
-  }, [user, nativeAddress, fetchProfileByUsername, fetchProfileByAddress, checkProfileAssociation, fetchClaimableBalance]);
+  }, [user, wallet, getWallet, fetchProfileByUsername, fetchProfileByAddress, checkProfileAssociation, fetchClaimableBalance]);
 
   const handleSwitchAddress = async () => {
     if (!ethers.isAddress(newAddress)) {
@@ -307,14 +388,11 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
     setIsModalVisible(true);
 
     try {
-      await getPrivyProvider("base");
-      const privyProvider = await wallet?.getEthersProvider();
-      const signer: any = privyProvider?.getSigner();
-
+      const signer:any = await getSigner();
       const profileContractWithSigner = new ethers.Contract(profileAddr, profileABI, signer);
 
       const tx = await profileContractWithSigner.updateUserAddress(newAddress);
-      await tx.wait();
+      //await tx.wait();
 
       setModalMessage('Address switched successfully');
       setTimeout(() => {
@@ -364,40 +442,48 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
         </div>
       ) : (
         <div className="max-w-3xl w-full mx-auto p-8 bg-gray-900 rounded-lg shadow-lg flex flex-col">
-          <div>
-<div className="flex flex-col md:flex-row justify-between items-center mb-8">
-  <div className="flex items-center space-x-4">
-    <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Raise Wallet:</h2>
-    {profileExists && (
-      <div className="flex items-center space-x-4">
-        <button
-          type="button"
-          onClick={handleWalletClaim}
-          className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg hover:from-green-500 hover:to-blue-600 transition duration-300"
-        >
-          Claim
-        </button>
-        <div className="flex flex-col items-end">
-          <span className="text-sm font-medium text-blue-400">Claimable</span>
-          <div className="bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">
-            <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-              {formatEthValue(claimableBalance)} ETH
-            </span>
+        <div>
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Raise Wallet:</h2>
+              {profileExists && (
+                <div className="flex items-center space-x-4">
+                  <button
+                    type="button"
+                    onClick={handleWalletClaim}
+                    className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg hover:from-green-500 hover:to-blue-600 transition duration-300"
+                  >
+                    Claim
+                  </button>
+                  <div className="flex flex-col items-end">
+                    {isProfileAssociated ? (
+                      <button
+                        onClick={handleWithdrawRewards}
+                        className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                      >
+                        Get Rewards!
+                      </button>
+                    ) : (
+                      <span className="text-sm font-medium text-blue-400">Get Rewards!</span>
+                    )}
+                    <div className="bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">
+                      <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
+                        {formatEthValue(claimableBalance)} ETH
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div>
+              <button
+                onClick={() => setShowSwitchAddressModal(true)}
+                className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300"
+              >
+                Switch Address
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
-    )}
-  </div>
-  <div>
-    <button
-      onClick={() => setShowSwitchAddressModal(true)}
-      className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300"
-    >
-      Switch Address
-    </button>
-  </div>
-</div>
-
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-2">
                 <h3 className="text-lg font-semibold text-white">Connected Address:</h3>
@@ -426,7 +512,7 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
           <div className="mb-8">
             <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
               <div className="text-center">
-                <p className="text-gray-400 text-sm mb-2">Available Balance</p>
+                <p className="text-gray-400 text-sm mb-2">Raise Wallet Balance</p>
                 <p className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
                   {ethBalance} ETH
                 </p>
@@ -439,14 +525,15 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
               How To Use Your Raise Wallet
             </h2>
             <div className="relative w-full aspect-video bg-gray-800 rounded-xl overflow-hidden shadow-xl">
-              <video 
-                controls 
-                className="w-full h-full object-cover"
-                poster="/api/placeholder/400/320"
-              >
-                <source src="/path-to-your-wallet-guide-video.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
+              <iframe 
+                className="absolute top-0 left-0 w-full h-full"
+                src="https://www.youtube.com/embed/tJAeaTa1O3Q?si=frBVOd42kLHOEKSJ"
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+              />
             </div>
           </div>
         </div>
@@ -477,7 +564,7 @@ const fetchClaimableBalance = useCallback(async (username: string) => {
             <div className="w-full mb-6">
               <input
                 type="text"
-                placeholder="Enter new Ethereum address"
+                placeholder="Link new EVM address to Raise"
                 value={newAddress}
                 onChange={(e) => setNewAddress(e.target.value)}
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"

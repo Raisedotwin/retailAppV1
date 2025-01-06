@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import PerpsForm from "../componants/PerpsForm";
-import HowToTrade from "../componants/HowToTrade";
 import { usePrivy, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
@@ -21,7 +20,7 @@ const PerpsPage: React.FC = () => {
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
+  const profileAddr = '0xF449ee02878297d5bc73E69a1A5B379E503806cE';
   const profileABI = require("../abi/profile");
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
 
@@ -147,15 +146,15 @@ const PerpsPage: React.FC = () => {
 
             {/* Video container with better centering */}
             <div className="flex flex-col items-center bg-black/30 rounded-xl p-6 mb-6">
-              <div className="w-full max-w-2xl aspect-video bg-gray-800 rounded-lg overflow-hidden">
-                <video 
-                  controls 
-                  className="w-full h-full object-cover"
-                  poster="/api/placeholder/400/320"
-                >
-                  <source src="/path-to-your-guide-video.mp4" type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
+            <div className="w-full max-w-2xl aspect-video bg-gray-800 rounded-lg overflow-hidden">
+                <iframe
+                  className="w-full h-full"
+                  src="https://www.youtube.com/embed/22wxQIPH6Ck"
+                  title="Trading Guide"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
               </div>
             </div>
 

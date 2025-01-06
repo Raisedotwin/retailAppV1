@@ -24,19 +24,17 @@ const DashboardPage: React.FC = () => {
   const nativeAddress = user?.wallet?.address; //right now supply isd not showing because this is not a connected address
 
   const [balance, setBalance] = useState('0');
-  const [positions, setPositions] = useState([]);
 
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
 
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const tokenContractAddr = '0x23762539685db622E5D841Dd224C7EA1eF3Deafd';
+  const tokenContractAddr = '0xa442E4A5345109fE54E3aba09B670D7f50Fa6933';
   const tokenMarketABI = require("../abi/tokenMarket");
 
   const tokenPoolABI = require("../abi/traderPool");
-  const traderPayoutsABI = require("../abi/traderPayouts");
 
-  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
+  const profileAddr = '0xF449ee02878297d5bc73E69a1A5B379E503806cE';
   const profileABI = require("../abi/profile");
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);

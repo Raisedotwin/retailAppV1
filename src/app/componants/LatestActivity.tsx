@@ -34,20 +34,6 @@ const CommunityLinks: React.FC = () => {
       bgDecoration: '✨'
     },
     {
-      name: 'YouTube',
-      url: 'https://www.youtube.com/@raisedotwin',
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
-          <path d="M23.498 6.186a2.84 2.84 0 00-1.996-2.016C19.42 3.513 12 3.513 12 3.513s-7.42 0-9.502.657A2.84 2.84 0 00.502 6.186C0 8.268 0 12 0 12s0 3.732.502 5.814a2.84 2.84 0 001.996 2.016c2.082.656 9.502.656 9.502.656s7.42 0 9.502-.657a2.84 2.84 0 001.996-2.016C24 15.732 24 12 24 12s0-3.732-.502-5.814zM9.546 15.568V8.432L15.818 12l-6.272 3.568z" />
-        </svg>
-      ),
-      color: 'from-red-400 to-red-600',
-      hoverColor: 'group-hover:from-red-500 group-hover:to-red-700',
-      label: 'Subscribe to YouTube',
-      stats: '1K+ Subscribers',
-      bgDecoration: '🎥'
-    },
-    {
       name: 'Telegram',
       url: 'https://t.me/raisedotwin',
       icon: (
@@ -60,7 +46,21 @@ const CommunityLinks: React.FC = () => {
       label: 'Join Telegram',
       stats: '15K+ Members',
       bgDecoration: '💬'
-    }
+    },
+    {
+      name: 'Docs',
+      url: 'https://docs.google.com/document/d/1OH1hj-01vZyqifnXKdaqFqg8WARIBXEhnXe7A81uN5w/edit?tab=t.6bncxdjw1hly',
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-8 h-8" fill="currentColor">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-1.99 6H7V7h10.01v2zm0 4H7v-2h10.01v2zm-3 4H7v-2h7.01v2z" />
+        </svg>
+      ),
+      color: 'from-indigo-400 to-purple-500',
+      hoverColor: 'group-hover:from-indigo-500 group-hover:to-purple-600',
+      label: 'Read the Docs',
+      stats: '500+ Pages',
+      bgDecoration: '📚'
+    },
   ];
   return (
     <section className="max-w-6xl mx-auto px-4 py-12">

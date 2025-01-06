@@ -4,17 +4,15 @@ import React, { useState, Suspense, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation'; // Use this to access query parameters
 import { EIP155_CHAINS } from '@/data/EIP155Data';
 import { ethers, Contract } from 'ethers';
-import { Avatar, Spinner} from '@nextui-org/react';
+import { Avatar } from '@nextui-org/react';
 import { getEmbeddedConnectedWallet, usePrivy,   useWallets  } from '@privy-io/react-auth'; 
 import Image from 'next/image';
-import TokenActivity from '../componants/TokenActivity';
 import TradingActivity from '../componants/TradingActivity';
 import TopHolders from '../componants/TopHolders';
-import BarChart from '../componants/BarChart';
 import Options from '../componants/Options';
 import AddressDisplay from '../componants/AddressDisplay';
 import { formatBlockTimestamp } from '../utils/timestamp';
-import MyShorts from '../componants/MyShorts';
+import ActiveContracts from '../componants/ActiveContracts';
 
 const TraderPageContent: React.FC = () => {
   const searchParams = useSearchParams(); // Access the query parameters
@@ -33,22 +31,22 @@ const TraderPageContent: React.FC = () => {
 
   const tokenPoolABI = require("../abi/traderPool");
 
-  const tokenContractAddr = '0x23762539685db622E5D841Dd224C7EA1eF3Deafd';
+  const tokenContractAddr = '0xa442E4A5345109fE54E3aba09B670D7f50Fa6933';
   const tokenMarketABI = require('../abi/tokenMarket.json');
 
-  const marketDataAddr = '0x81D889c29BED75352aF82CA93d0352c909723CeD';
+  const marketDataAddr = '0x3EEcD71b8E891971D760E05D0a64bE5E8edEc81A';
   const marketDataABI = require("../abi/marketdata.json");
 
-  const createAccountAddr = '0x1fAf3809a4C6CE515038EC6Dc561036Ba1eEfe5e';
+  const createAccountAddr = '0xf30466ab670168e93De31A5bc2c93aF078B7916a';
   const createAccountABI = require("../abi/createAccount.json");
 
-  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
+  const profileAddr = '0xF449ee02878297d5bc73E69a1A5B379E503806cE';
   const profileABI = require("../abi/profile.json");
 
   const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('tradingActivity');
   const [traderProfileExists, setTraderProfileExists] = useState(false);
 
-  const optionsContractAddr = '0x38725e0692153681772dD81906b8AB783019F4d3'; // Update with your contract address
+  const optionsContractAddr = '0xcFfCA669CA2DF02801BB9896aE89C20e2F564FE8'; // Update with your contract address
   const optionsABI = require("../abi/shorts");
 
   // Setting default values or using the query parameters
@@ -72,7 +70,6 @@ const TraderPageContent: React.FC = () => {
   const [showCreateWalletModal, setShowCreateWalletModal] = useState(false);
   const [marketDataContract, setMarketDataContract] = useState<Contract | null>(null);
   const [lastBuybackValue, setLastBuybackValue] = useState('0');
-  const [loading, setLoading] = useState(false);
   const [winRatio, setWinRatio] = useState('0');
   const [price, setPrice] = useState<string | null>(null);
   const [balance, setBalance] = useState('0');
@@ -83,11 +80,12 @@ const TraderPageContent: React.FC = () => {
   const [traderAddress, setTraderAddress] = useState('');
   const { user } = usePrivy();
   const { wallets } = useWallets(); // Use useWallets to get connected wallets
-  const [isActive, setIsActive] = useState(true); // You can control this state as needed
+  const [isActive, setIsActive] = useState(false); // You can control this state as needed
   const [profile, setProfile] = useState<any>(null);
   const [needsInitialization, setNeedsInitialization] = useState(false);
   const [optionsContract, setOptionsContract] = useState<any>(null);
   const [signer, setSigner] = useState<any>(null);
+  const [inactiveTraderDisabled, setInactiveTraderDisabled] = useState(false);
 
 
   let wallet: any = wallets[0] // Get the first connected wallet privy wallet specifiy privy wallet
@@ -121,7 +119,8 @@ const handleInitialize = async () => {
 
     // Buy 1 token to initialize
     const amountInWei = ethers.parseEther('1');
-    const tx = await contract.buyShares(accNum, amountInWei);
+    const paymentInWei = ethers.parseEther('0.0000000000000116');
+    const tx = await contract.buyShares(accNum, amountInWei, { value: paymentInWei });
 
     setModalMessage('Waiting for initialization confirmation...');
     const receipt = await provider.waitForTransaction(tx.hash, 1);
@@ -146,7 +145,7 @@ const handleInitialize = async () => {
   }
 };
 
-  const updatePrices = async () => {
+const updatePrices = async () => {
     if (contract && profileContract && amount && !isNaN(Number(amount))) {
       try {
         const profile = await profileContract.getProfileByName(username as string);
@@ -266,7 +265,12 @@ useEffect(() => {
           const profile = await profileContractInstance.getProfileByName(username as string);
           const nativeAddr = profile[0];
           const traderAcc = profile[1];
-          setTraderAddress(nativeAddr);          
+          setTraderAddress(nativeAddr); 
+          
+          console.log('Profile address:', nativeAddr);
+
+          const isClaimed = await profileContractInstance.isProfileClaimed(nativeAddr);
+          setIsActive(isClaimed);
           
           // Check if trader profile exists
           const profileExists = traderAcc !== "0" && traderAcc !== undefined;
@@ -289,6 +293,11 @@ useEffect(() => {
             const tokenAddress = await marketContractInstance.getTokenAddressByAccount(traderAcc.toString());
             setTokenAddress(tokenAddress);
 
+            //check curve initialization
+            if (tokenAddress && tokenAddress == "0x0000000000000000000000000000000000000000") {
+              setNeedsInitialization(true);
+            }
+
             // Get market data
             const MCAP = await marketContractInstance.getMarketCap(traderAcc.toString());
             setMarketCap(ethers.formatEther(MCAP));
@@ -305,6 +314,7 @@ useEffect(() => {
 
             const freq = await marketDataContractInstance.getLastBuybackTimestamp(username as string);
             setFrequency(formatBlockTimestamp(freq.toString()));
+
           }
         } catch (error) {
           console.error('Error fetching profile:', error);
@@ -393,7 +403,8 @@ const handleCreateWallet = async () => {
       try {
         setModalMessage('Minting first trader share');
         const amountInWei = ethers.parseEther('1');
-        const tx = await contract.buyShares(accountCounter, amountInWei);
+        const paymentInWei = ethers.parseEther('0.0000000000000116');
+        const tx = await contract.buyShares(accountCounter, amountInWei, { value: paymentInWei });
 
         setModalMessage('Waiting for share minting confirmation...');
         const buyReceipt = await provider.waitForTransaction(tx.hash, 1);
@@ -692,7 +703,7 @@ const handleCreateWallet = async () => {
           </button>
         </div>
 
-{activeTab === 'buy' && (
+        {activeTab === 'buy' && (
   <div className="space-y-6">
     <h3 className="text-xl font-semibold text-gray-800">
       {traderProfileExists ? `Buy $${params.username}` : 'Create Token'}
@@ -707,11 +718,8 @@ const handleCreateWallet = async () => {
         min="0"
         className="w-full p-3 text-lg border-2 border-green-500 rounded-lg focus:ring-2 focus:ring-green-300 outline-none transition-all"
         value={amount}
-        onChange={(e) => {
-          setAmount(e.target.value);
-          setIsPriceLoading(true);
-        }}
-        disabled={!traderProfileExists || needsInitialization}
+        onChange={(e) => setAmount(e.target.value)}
+        disabled={!traderProfileExists || needsInitialization || (inactiveTraderDisabled && !isActive)}
       />
     </div>
     <div className="flex justify-between items-center py-4 px-6 bg-gray-50 rounded-lg">
@@ -737,6 +745,7 @@ const handleCreateWallet = async () => {
             : 'bg-blue-500 hover:bg-blue-600'
         }`}
         onClick={traderProfileExists ? handleBuyShares : handleCreateWallet}
+        disabled={inactiveTraderDisabled && !isActive}
       >
         {traderProfileExists ? 'Buy Now' : 'Create Token'}
       </button>
@@ -772,7 +781,7 @@ const handleCreateWallet = async () => {
           <span className="text-gray-600">You'll Receive</span>
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold">
-              {Number(sellPrice).toFixed(4)} ETH
+              {Number(sellPrice).toFixed(16)} ETH
             </span>
           </div>
         </div>
@@ -814,10 +823,10 @@ const handleCreateWallet = async () => {
                   </div>
                   <div className="ml-3">
                     <p className="text-sm text-yellow-700">
-                      <strong>Warning:</strong> These tokens are taxable at 50%+ when sent to{' '}
-                      <a href="#" className="font-medium underline hover:text-yellow-600">
+                      <strong>Warning:</strong> Trader tokens do not guarantee profits and carry a significant level of risk, including total loss.  It’s essential to practice risk management and invest within your means.{' '}
+                      {/*<a href="#" className="font-medium underline hover:text-yellow-600">
                         these addresses
-                      </a>
+                      </a> */}
                     </p>
                   </div>
                 </div>
@@ -857,7 +866,7 @@ const handleCreateWallet = async () => {
           <div className="mt-6">
             {activeModalTab === 'topHolders' && <TopHolders />}
             {activeModalTab === 'tradingActivity' && <TradingActivity />}
-            {activeModalTab === 'shorts' && tokenAddress ? (
+            {activeModalTab === 'shorts' &&
               <Options 
                 isEnabled={true}
                 tokenAddress={tokenAddress}
@@ -865,11 +874,13 @@ const handleCreateWallet = async () => {
                 signer={signer}
                 traderAddress={traderAddress}
                 marketContract={contract}
-              />
-              ) : (
-                <div>Loading options data...</div>
-              )}
-            {activeModalTab === 'activity' && <MyShorts />}
+              />}
+            {activeModalTab === 'activity' && 
+             <ActiveContracts
+              tokenAddress={tokenAddress}
+              optionsContract={optionsContract}
+              userAddress={walletAddress}
+             />}
           </div>
         </div>
       </div>
@@ -912,14 +923,6 @@ const handleCreateWallet = async () => {
     </div>
   );
 };
-
-// Helper Components
-const StatCard = ({ label, value }: { label: string; value: string }) => (
-  <div className="bg-gray-50 p-4 rounded-xl">
-    <p className="text-xl font-bold text-gray-800">{value}</p>
-    <p className="text-sm text-gray-500">{label}</p>
-  </div>
-);
 
 const TabButton = ({ 
   children, 

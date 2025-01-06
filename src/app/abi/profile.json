@@ -26,38 +26,6 @@
 		"type": "error"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "target",
-				"type": "address"
-			}
-		],
-		"name": "AddressEmptyCode",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "implementation",
-				"type": "address"
-			}
-		],
-		"name": "ERC1967InvalidImplementation",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "ERC1967NonPayable",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "FailedCall",
-		"type": "error"
-	},
-	{
 		"inputs": [],
 		"name": "InvalidInitialization",
 		"type": "error"
@@ -65,22 +33,6 @@
 	{
 		"inputs": [],
 		"name": "NotInitializing",
-		"type": "error"
-	},
-	{
-		"inputs": [],
-		"name": "UUPSUnauthorizedCallContext",
-		"type": "error"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "bytes32",
-				"name": "slot",
-				"type": "bytes32"
-			}
-		],
-		"name": "UUPSUnsupportedProxiableUUID",
 		"type": "error"
 	},
 	{
@@ -313,19 +265,6 @@
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "implementation",
-				"type": "address"
-			}
-		],
-		"name": "Upgraded",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
 				"name": "oldAddress",
 				"type": "address"
 			},
@@ -360,6 +299,19 @@
 	},
 	{
 		"inputs": [],
+		"name": "APPROVER_ROLE",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "DEFAULT_ADMIN_ROLE",
 		"outputs": [
 			{
@@ -373,25 +325,12 @@
 	},
 	{
 		"inputs": [],
-		"name": "UPGRADER_ROLE",
+		"name": "approvalAuth",
 		"outputs": [
 			{
-				"internalType": "bytes32",
+				"internalType": "address",
 				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "UPGRADE_INTERFACE_VERSION",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -401,9 +340,17 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "newAddress",
+				"name": "_address",
 				"type": "address"
-			},
+			}
+		],
+		"name": "approveAddressForClaim",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
 			{
 				"internalType": "string",
 				"name": "_name",
@@ -765,23 +712,19 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "defaultAdmin",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "upgrader",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "initialAdmin",
+				"name": "_address",
 				"type": "address"
 			}
 		],
-		"name": "initialize",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"name": "isAddressApproved",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -804,13 +747,19 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "proxiableUUID",
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			}
+		],
+		"name": "isProfileClaimed",
 		"outputs": [
 			{
-				"internalType": "bytes32",
+				"internalType": "bool",
 				"name": "",
-				"type": "bytes32"
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -830,6 +779,19 @@
 			}
 		],
 		"name": "renounceRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_address",
+				"type": "address"
+			}
+		],
+		"name": "revokeApproval",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -861,6 +823,19 @@
 			}
 		],
 		"name": "setAdminAddress",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_address",
+				"type": "address"
+			}
+		],
+		"name": "setApprovalAuthority",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -918,24 +893,6 @@
 		"name": "updateUserAddress",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newImplementation",
-				"type": "address"
-			},
-			{
-				"internalType": "bytes",
-				"name": "data",
-				"type": "bytes"
-			}
-		],
-		"name": "upgradeToAndCall",
-		"outputs": [],
-		"stateMutability": "payable",
 		"type": "function"
 	}
 ]

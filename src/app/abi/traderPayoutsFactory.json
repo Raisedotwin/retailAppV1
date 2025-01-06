@@ -10,6 +10,11 @@
 				"internalType": "uint256",
 				"name": "_accountId",
 				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_admin",
+				"type": "address"
 			}
 		],
 		"name": "createPayouts",

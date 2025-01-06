@@ -32,7 +32,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
   const { user } = usePrivy();
 
   // Contract initialization
-  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
+  const profileAddr = '0xfF0b735A70B492CF6c3Ea45ec2dcf4e3Be094fBc';
   const profileABI = [
     "function getProfileByName(string memory name) external view returns (address, uint256, string memory, string memory, string memory, address, address, uint256, address)"
   ];

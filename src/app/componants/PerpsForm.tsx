@@ -90,7 +90,7 @@ const PerpsForm: React.FC = () => {
   const { wallets } = useWallets();
   let wallet = wallets[0]; // Default to first wallet
 
-  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
+  const profileAddr = '0xF449ee02878297d5bc73E69a1A5B379E503806cE';
   const profileABI = require("../abi/profile");
   const tokenPoolABI = require("../abi/traderPool");
 
@@ -384,7 +384,7 @@ const PerpsForm: React.FC = () => {
             }`}
           >
             <ArrowUpIcon />
-            <span>Take Profit</span>
+            <span>Withdraw</span>
           </button>
         </div>
 
@@ -415,7 +415,7 @@ const PerpsForm: React.FC = () => {
                   type="number"
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
-                  placeholder="Enter amount to withdraw"
+                  placeholder="Enter USDC to withdraw"
                   className="w-full bg-gray-800/50 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all duration-200"
                 />
                 <span className="absolute right-4 top-3 text-gray-400">USDC</span>

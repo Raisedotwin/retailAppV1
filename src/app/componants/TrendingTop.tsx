@@ -30,8 +30,8 @@ const AnimatedHeader = () => (
       <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-10 group-hover:opacity-20 transition duration-1000 group-hover:duration-200"></div>
       <div className="relative px-8 py-4 bg-white bg-opacity-90 backdrop-blur-sm rounded-lg shadow-xl">
         <p className="text-xl font-medium bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          <span className="font-bold">Raise.win</span> is a game.{' '}
-          Bet on traders you think will give the best pumps{' '}
+          <span className="font-bold">DM @MrSatler or @RomanCola on TG to become a trader</span>, $NUGGET holders{' '}
+          get  whitelist priority{' '}
           <span className="animate-pulse inline-block">📈</span>
         </p>
       </div>
@@ -55,7 +55,7 @@ const HowItWorks = () => {
     {
       number: '01',
       title: 'Create Tokens',
-      description: "Sign in with your X account to create a token. Alternatively, create a token for a friend by searching for their X account. Tokens trade on a curve & earn fees.",
+      description: "Look up an X account and create a token, if the token gets enough trading volume the owner of the X account will be automically whitelisted.",
       icon: (
         <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
@@ -67,7 +67,7 @@ const HowItWorks = () => {
     {
       number: '02',
       title: 'Create Profit',
-      description: "With fees from token trading you purchase Perps, NFTs or Swap on partnered platforms. All trades are settled are in WETH.",
+      description: "Fees from token trading are sent to a raise wallet, from the raise wallet the account owner can trade NFTs or Swap on partnered platforms. All trades are settled are in WETH.",
       icon: (
         <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
@@ -79,7 +79,7 @@ const HowItWorks = () => {
     {
       number: '03',
       title: 'Create Pumps',
-      description: "Whenever a token 'creator' sells a perp, nft or swap, 70% of the proceeds will go toward buying back the trader tokens. Find the token createors generating the best pumps.",
+      description: "Whenever a token 'creator' sells a perp, nft or swap, 70% of the proceeds will go toward buying back the trader tokens. The other 30% is kept by the trader to use however they see fit.",
       icon: (
         <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 8c2 2.5 2 6.5 0 9M6 8c-2 2.5-2 6.5 0 9"/>
@@ -94,16 +94,16 @@ const HowItWorks = () => {
 
   const faqs = [
     {
-      question: 'What is shorting and how does it work?',
-      answer: 'Raise provides a built in marketplace to short trader tokens, allowing you to profit from a token price decrease.'
+      question: 'What are options and how do they work?',
+      answer: 'Raise allows token holders to write options on their trader tokens. Writing options allows holders to sell tokens at price "a strike price" of their choosing within a specified expiry date. In return the token holder gets to collect a premium or a fee paid to them by the buyer of their options contract. If the buyer chooses to execute the contract within the expiry period they will purchase the tokens from the original token holder at the strike price. If the buyer chooses not to execute the contract the token holder keeps the premium and the contract expires worthless, the token holder will then re collect their tokens.'
     },
     {
       question: 'How do you track buybacks?',
-      answer: 'Raise offers a panel where you can view a buyback frequencyt counter to see often the trader is selling. Whenever positions are sold the buy back is made.'
+      answer: 'Raise has a panel where you can view a buyback frequency counter to see how often the trader is selling. Whenever positions are sold the buyback is made. You can also see a trader win rate and other stats.'
     },
     {
-      question: 'What is the token tax?',
-      answer: 'Raise tokens can be traded anywhere on the Ethereum network. A 50% tax is applied to specific addresses (Uniswap and others) to incentivize purchasing on Raise first. eventually taxes will be phased out as the platform grows.'
+      question: 'How do I buy trader tokens?',
+      answer: 'Go to the "traders" tab and click on already created trader accounts to navigate to the buy and sell buttons. Look up a trader by typing in their X username and create an account for them. If it gets enough trading volume we will whitelist them.'
     }
   ];
 

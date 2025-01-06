@@ -88,9 +88,9 @@ const BrowseCategories: React.FC = () => {
   ];
 
   return (
-    <section className="max-w-6xl mx-auto px-4 py-12">
-      {/* Title */}
-      <div className="text-center mb-12">
+    <section>
+   {/*<section className="max-w-6xl mx-auto px-4 py-12">
+      {/*<div className="text-center mb-12">
         <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
           Video Walkthroughs
         </h2>
@@ -101,7 +101,6 @@ const BrowseCategories: React.FC = () => {
         </div>
       </div>
 
-      {/* Video grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {videos.map((video, index) => (
           <VideoCard
@@ -109,7 +108,7 @@ const BrowseCategories: React.FC = () => {
             {...video}
           />
         ))}
-      </div>
+      </div>*/}
     </section>
   );
 };

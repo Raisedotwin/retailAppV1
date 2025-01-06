@@ -5,7 +5,6 @@ import Holdings from '../componants/Holdings';
 import { usePrivy } from '@privy-io/react-auth';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
 import { ethers } from 'ethers';
-import NextLink from 'next/link';
 
 type AccountBalance = {
   account: string;
@@ -23,9 +22,9 @@ const HoldingsPage = () => {
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const tokenContractAddr = '0x23762539685db622E5D841Dd224C7EA1eF3Deafd';
-  const createAccountAddr = '0x1fAf3809a4C6CE515038EC6Dc561036Ba1eEfe5e';
-  const profileAddr = '0x0106381DaDbcc6b862B4cecdD253fD0E3626738E';
+  const tokenContractAddr = '0xa442E4A5345109fE54E3aba09B670D7f50Fa6933';
+  const createAccountAddr = '0xf30466ab670168e93De31A5bc2c93aF078B7916a';
+  const profileAddr = '0xF449ee02878297d5bc73E69a1A5B379E503806cE';
 
   const tokenMarketABI = require("../abi/tokenMarket");
   const createAccountABI = require("../abi/createAccount");

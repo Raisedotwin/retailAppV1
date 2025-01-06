@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useAccount } from '../context/AccountContext';
 import { getEmbeddedConnectedWallet, useFundWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import { ethers } from 'ethers';

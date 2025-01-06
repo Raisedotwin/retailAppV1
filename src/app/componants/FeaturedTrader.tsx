@@ -23,7 +23,7 @@ const NeonText = () => (
   <p className="relative text-l md:text-2xl font-bold text-center">
    
     <span className="relative text-black bg-clip-text">
-      Tokenized Copy Trading On BASE
+      The #1 Buyback Protocol On BASE
     </span>
   </p>
 );

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { usePrivy, useWallets, getEmbeddedConnectedWallet } from '@privy-io/react-auth';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
-import lodash from 'lodash';
+import lodash, { set } from 'lodash';
 
 interface CallOption {
   id: number;
@@ -217,7 +217,10 @@ const OptionsTable = ({
   currentPage: number,
   itemsPerPage?: number
 }) => {
-  // Calculate pagination indexes
+  useEffect(() => {
+    console.log('Options in table:', options);
+  }, [options]);
+
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedOptions = options.slice(startIndex, endIndex);
@@ -262,12 +265,15 @@ const OptionsTable = ({
                 </span>
               </td>
               <td className="p-4">
-                <button
-                  onClick={() => onBuyClick(option)}
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 shadow-lg"
-                  disabled={!option.active || option.buyer !== ethers.ZeroAddress}
-                >
-                  🎯 Buy Option
+              <button
+                    onClick={() => {
+                      console.log('Buy clicked for option ID:', option.id);
+                      onBuyClick(option);
+                    }}
+                    className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-105 shadow-lg"
+                    disabled={!option.active || option.buyer !== ethers.ZeroAddress}
+                  >
+                    🎯 Buy Option
                 </button>
               </td>
             </tr>
@@ -283,12 +289,14 @@ const OptionsTable = ({
   onClose, 
   option, 
   onBuyConfirm,
+  priceData,
   isProcessing
 }: { 
   isOpen: boolean, 
   onClose: () => void, 
   option: CallOption | null,
   onBuyConfirm: () => void,
+  priceData: any,
   isProcessing: boolean
 }) => {
   if (!isOpen || !option) return null;
@@ -305,6 +313,13 @@ const OptionsTable = ({
             <span className="text-gray-400">Amount:</span>
             <span className="text-white font-medium">
               {ethers.formatEther(option.amount)} Tokens
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400">Current Price:</span>
+            <span className="text-white font-medium">
+              {priceData ? `${priceData} ETH` : '---'}
             </span>
           </div>
 
@@ -376,6 +391,7 @@ const Options: React.FC<OptionsProps> = ({ isEnabled = true, tokenAddress, optio
   const [isLoading, setIsLoading] = useState(true);
   const [calculatedPremium, setCalculatedPremium] = useState<string>('');
   const [isCalculating, setIsCalculating] = useState(false);
+  const [currentTokenPrice, setCurrentTokenPrice] = useState<string | null>(null);
 
   const [showBuyModal, setShowBuyModal] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<CallOption | null>(null);
@@ -393,11 +409,13 @@ const Options: React.FC<OptionsProps> = ({ isEnabled = true, tokenAddress, optio
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
   
-  const optionsContractAddr = '0x38725e0692153681772dD81906b8AB783019F4d3';
+  const optionsContractAddr = '0xcFfCA669CA2DF02801BB9896aE89C20e2F564FE8';
   const tokenABI = require("../abi/traderToken");
   const optionsABI = require("../abi/shorts");
 
-    // Handle page change
+  const marketABI = require("../abi/tokenMarket");
+
+  // Handle page change
   const handlePageChange = (newPage: number) => {
       if (newPage >= 1 && newPage <= totalPages) {
         setCurrentPage(newPage);
@@ -417,12 +435,17 @@ const Options: React.FC<OptionsProps> = ({ isEnabled = true, tokenAddress, optio
 
         if (tokenAddress) {
           const activeOptionsResult = await optionsContract.getActiveCallsByToken(tokenAddress);
-          const optionsWithIds = activeOptionsResult.map((option: CallOption, index: number) => ({
+          const optionsWithContractIds = activeOptionsResult.map((option: CallOption) => ({
             ...option,
-            id: index // If your contract returns the actual IDs, use those instead
+            // The id is already included in the contract response, no need to map index
+            id: option.id
           }));
+          
           setActiveOptions(activeOptionsResult);
-          console.log('Active Options:', optionsWithIds);
+          console.log('Active Options:', optionsWithContractIds);
+
+          //const priceData = await fetchPriceData();
+          //console.log('Price Data:', priceData);
 
           //setActiveOptions(activeOptionsResult);
           //console.log('Active Options:', activeOptionsResult);
@@ -439,6 +462,8 @@ const Options: React.FC<OptionsProps> = ({ isEnabled = true, tokenAddress, optio
     };
 
     initContract();
+    fetchPriceData();
+    console.log('Token Address:', currentTokenPrice);
   }, [user, wallets, tokenAddress]);
 
   interface PriceEvent {
@@ -453,6 +478,28 @@ interface ProcessedPrice {
   price: number;
   timestamp: number;
 }
+
+const fetchPriceData = async () => {
+  if (!marketContract || !tokenAddress) return null;
+
+  try {
+    const formattedPrice = ethers.parseEther("1"); // 1 token with 18 decimals
+    const currentPrice = await marketContract.getBuyPriceAfterFee(
+      tokenAddress,
+      formattedPrice
+    );
+
+    setCurrentTokenPrice(ethers.formatEther(currentPrice));
+    console.log('Current Token Price:', ethers.formatEther(currentPrice));
+
+    return {
+      currentPrice: currentPrice.toString(),
+    };
+  } catch (error) {
+    console.error('Error fetching token price:', error);
+    return null;
+  }
+};
 
 const fetchMarketData = async () => {
   if (!marketContract || !tokenAddress) return null;
@@ -551,6 +598,8 @@ const fetchMarketData = async () => {
       formattedPrice
     );
 
+    //setCurrentTokenPrice(ethers.formatEther(currentPrice));
+
     console.log('Current Price:', ethers.formatEther(currentPrice));
     console.log('Calculated Volatility:', volatility);
 
@@ -623,7 +672,7 @@ const calculatePremium = async () => {
         + (ethers.parseEther(minPremium));
 
   // Format the total with 6 decimal places for readability
-  const totalValue = parseFloat(ethers.formatEther(total)).toFixed(6);
+  const totalValue = parseFloat(ethers.formatEther(total)).toFixed(18);
   console.log('Total Premium:', totalValue, 'ETH');
 
     setCalculatedPremium(totalValue);
@@ -689,43 +738,30 @@ const calculatePremium = async () => {
     setShowBuyModal(true);
   };
 
+  // Update the handleBuyConfirm function
   const handleBuyConfirm = async () => {
     if (!selectedOption || !optionsContract || !signer) return;
 
     setIsProcessing(true);
     try {
-      // Get the option ID (assuming it's stored in the option object or can be derived)
-      //const optionId = "1"; // You'll need to add this to your CallOption interface
-      
-      // Create transaction with exact premium value
-      //const tx = await optionsContract.buyOption(optionId, {
-        //value: selectedOption.premium
-      //});
-
-      console.log('selectedOption:', selectedOption);
-
+      console.log('Buying option with ID:', selectedOption.id);
+    
       const tx = await optionsContract.buyOption(selectedOption.id, {
         value: selectedOption.premium
       });
 
-
       console.log('Buy option transaction submitted:', tx.hash);
-      
+    
       // Wait for transaction confirmation
       await tx.wait();
-      
+    
       // Refresh the options list
       const activeOptionsResult = await optionsContract.getActiveCallsByToken(tokenAddress);
-      const optionsWithIds = activeOptionsResult.map((option: CallOption, index: number) => ({
-        ...option,
-        id: index
-      }));
       setActiveOptions(activeOptionsResult);
-      
-      // Close modal and reset state
+    
       setShowBuyModal(false);
       setSelectedOption(null);
-      
+    
     } catch (error) {
       console.error('Error buying option:', error);
     } finally {
@@ -757,6 +793,7 @@ const calculatePremium = async () => {
           onClose={() => setShowBuyModal(false)}
           option={selectedOption}
           onBuyConfirm={handleBuyConfirm}
+          priceData={currentTokenPrice}
           isProcessing={isProcessing}
         />
 
@@ -789,6 +826,16 @@ const calculatePremium = async () => {
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 text-gray-100"
               />
             </div>
+
+            <div>
+              <label className="block text-gray-300 text-sm mb-2">
+              Current Token Price (ETH)
+              </label>
+              <div className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-blue-400">
+                {currentTokenPrice ? `${currentTokenPrice} ETH` : 'Loading...'}
+              </div>
+            </div>
+
 
             <div>
               <label className="block text-gray-300 text-sm mb-2">
