@@ -30,7 +30,7 @@ const AnimatedHeader = () => (
       <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-10 group-hover:opacity-20 transition duration-1000 group-hover:duration-200"></div>
       <div className="relative px-8 py-4 bg-white bg-opacity-90 backdrop-blur-sm rounded-lg shadow-xl">
         <p className="text-xl font-medium bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          <span className="font-bold">DM @MrSatler or @RomanCola on TG to become a trader</span>, $NUGGET holders{' '}
+          <span className="font-bold">DM @MrSatler or @RomanCola87 on TG to become a trader</span>, $NUGGET holders{' '}
           get  whitelist priority{' '}
           <span className="animate-pulse inline-block">📈</span>
         </p>
