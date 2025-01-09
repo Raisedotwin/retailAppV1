@@ -56,11 +56,11 @@ const WalletPage: React.FC = () => {
   const tokenPoolABI = require("../abi/traderPool");
   const traderPayoutsABI = require("../abi/traderPayouts");
 
-  const profileAddr = '0xF449ee02878297d5bc73E69a1A5B379E503806cE';
+  const profileAddr = '0x80B2FAA3D1FBD00e88941D76866420198B693329';
   const profileABI = require("../abi/profile");
 
   const whitelist = require("../abi/BETAWhitelist.json");
-  const whitelistAddr = '0xb300D6070ffb261F00dd3a2B5A575Ff329e507D9';
+  const whitelistAddr = '0xA8620885Cf92346878D6C7346E09784C52060253';
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
   const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
@@ -413,7 +413,6 @@ const checkProfileAssociation = useCallback(async () => {
       setTimeout(() => {
         setIsModalVisible(false);
         setShowSwitchAddressModal(false);
-        setNewAddress('');
         window.location.reload();
       }, 2000);
     } catch (error) {
@@ -421,9 +420,10 @@ const checkProfileAssociation = useCallback(async () => {
       setModalMessage('Failed to switch address. Please ensure you own this profile.');
       setTimeout(() => {
         setIsModalVisible(false);
+        //window.location.reload();
       }, 2000);
     }
-    setIsSwitching(false);
+    //setIsSwitching(false);
   };
 
   // Add whitelist toggle to the admin section (if needed)

@@ -63,90 +63,146 @@ const TableHeader = () => (
   </div>
 );
 
+// Constants for meme coin premium calculations
 const SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
-const BASE_RATE = 0.001; // 0.1% base premium
-const VOLATILITY_SCALING = 0.5; // Scale down volatility impact
-const TIME_DECAY_FACTOR = 0.7; // Theta decay factor
+const BASE_RATE = 0.05;           // 2% base premium for meme coins
+const VOLATILITY_SCALING = 2.0;   // Double the volatility impact
+const TIME_DECAY_FACTOR = 1.5;    // Faster time decay for meme markets
+const MEME_MULTIPLIER = 1.5;      // 50% premium increase for meme coins
+const VIRAL_FACTOR = 1.3;         // Additional 30% for viral potential
+//We Will Add A Trader Performance Metric to the Premiums 
+
 
 const PremiumCalculator = {
-  // Calculate intrinsic value (if any)
+  // Helper function to safely handle large number multiplication
+  safeMultiplyBigInts(a: bigint, b: bigint, decimals: bigint = BigInt(1e4)): bigint {
+    try {
+      return (a * b) / decimals;
+    } catch (error) {
+      console.error('Error in multiplication:', error);
+      // Fall back to safer calculation for very large numbers
+      const reduced = a / BigInt(1000000);
+      return (reduced * b) / (decimals / BigInt(1000000));
+    }
+  },
+
+  // Calculate intrinsic value with meme coin premium and safety checks
   calculateIntrinsicValue(
     amount: string,
     currentPrice: string,
     strikePrice: string
   ): string {
-    const amountBN = ethers.parseEther(amount);
-    // Don't parse currentPrice since it's already in correct format
-    const currentPriceBN = BigInt(currentPrice);
-    const strikePriceBN = ethers.parseEther(strikePrice);
-    
-    // For calls, intrinsic value is max(0, current - strike)
-    if (currentPriceBN > strikePriceBN) {
-      const intrinsicPerToken = currentPriceBN - strikePriceBN;
-      let result = intrinsicPerToken * amountBN / ethers.parseEther('1');
-      return ethers.formatEther(result);
+    try {
+      const amountBN = ethers.parseEther(amount);
+      const currentPriceBN = BigInt(currentPrice);
+      const strikePriceBN = ethers.parseEther(strikePrice);
+      
+      // Handle extreme price differentials
+      if (strikePriceBN <= BigInt(0)) {
+        console.error('Invalid strike price');
+        return '0';
+      }
+      
+      if (currentPriceBN > strikePriceBN) {
+        const intrinsicPerToken = currentPriceBN - strikePriceBN;
+        // Add meme multiplier to intrinsic value with safe multiplication
+        let result = this.safeMultiplyBigInts(
+          this.safeMultiplyBigInts(intrinsicPerToken, amountBN),
+          BigInt(Math.floor(MEME_MULTIPLIER * 100)),
+          BigInt(100)
+        );
+        result = result / ethers.parseEther('1');
+        return ethers.formatEther(result);
+      }
+      return '0';
+    } catch (error) {
+      console.error('Error calculating intrinsic value:', error);
+      return '0';
     }
-    return '0';
   },
 
-  // Calculate time value component using square root of time
+  // Calculate time value with viral growth potential and safety checks
   calculateTimeValue(
     amount: string,
     currentPrice: string,
     duration: number
   ): string {
-    const amountBN = ethers.parseEther(amount);
-    // Don't parse currentPrice since it's already in correct format
-    const currentPriceBN = BigInt(currentPrice);
-    
-    // Scale duration to year fraction and apply square root to model time decay
-    const yearFraction = duration / SECONDS_PER_YEAR;
-    const timeDecay = Math.sqrt(yearFraction) * TIME_DECAY_FACTOR;
-    
-    // Calculate time value as percentage of current price
-    const timeValue = (currentPriceBN * BigInt(Math.floor(timeDecay * 1e4))) / BigInt(1e4);
-    
-    return ethers.formatEther(
-      (timeValue * amountBN) / ethers.parseEther('1')
-    );
+    try {
+      const amountBN = ethers.parseEther(amount);
+      const currentPriceBN = BigInt(currentPrice);
+      
+      const yearFraction = duration / SECONDS_PER_YEAR;
+      const timeDecay = Math.pow(yearFraction, 0.6) * TIME_DECAY_FACTOR * VIRAL_FACTOR;
+      
+      // Extra premium for short-term options (under 24h)
+      const shortTermBonus = duration < 86400 ? 1.5 : 1.0;
+      
+      // Safe multiplication for time value calculation
+      const timeValue = this.safeMultiplyBigInts(
+        currentPriceBN,
+        BigInt(Math.floor(timeDecay * shortTermBonus * 1e4))
+      );
+      
+      return ethers.formatEther(
+        this.safeMultiplyBigInts(timeValue, amountBN, ethers.parseEther('1'))
+      );
+    } catch (error) {
+      console.error('Error calculating time value:', error);
+      return '0';
+    }
   },
 
-  // Calculate volatility component
+  // Calculate volatility component with meme amplification and safety checks
   calculateVolComponent(
     amount: string,
     currentPrice: string,
     volatility: number
   ): string {
-    const amountBN = ethers.parseEther(amount);
-    // Don't parse currentPrice since it's already in correct format
-    const currentPriceBN = BigInt(currentPrice);
-    
-    // Scale volatility and convert to basis points
-    const scaledVol = Math.floor(volatility * VOLATILITY_SCALING * 100);
-    
-    const volComponent = (currentPriceBN * BigInt(scaledVol)) / BigInt(10000);
-    
-    return ethers.formatEther(
-      (volComponent * amountBN) / ethers.parseEther('1')
-    );
+    try {
+      const amountBN = ethers.parseEther(amount);
+      const currentPriceBN = BigInt(currentPrice);
+      
+      const baseVolatility = volatility * VOLATILITY_SCALING;
+      const volatilityMultiplier = Math.min(4.0, 1 + Math.pow(baseVolatility / 100, 1.8));
+      const scaledVol = Math.floor(baseVolatility * volatilityMultiplier * MEME_MULTIPLIER * VIRAL_FACTOR * 100);
+      
+      // Safe multiplication for volatility component
+      const volComponent = this.safeMultiplyBigInts(currentPriceBN, BigInt(scaledVol));
+      
+      return ethers.formatEther(
+        this.safeMultiplyBigInts(volComponent, amountBN, ethers.parseEther('1'))
+      );
+    } catch (error) {
+      console.error('Error calculating volatility component:', error);
+      return '0';
+    }
   },
 
-  // Calculate minimum premium as percentage of notional value
+  // Calculate minimum premium with higher base rate and safety checks
   calculateMinPremium(
     amount: string,
     currentPrice: string
   ): string {
-    const amountBN = ethers.parseEther(amount);
-    // Don't parse currentPrice since it's already in correct format
-    const currentPriceBN = BigInt(currentPrice);
-    const baseRateBips = Math.floor(BASE_RATE * 10000);
-    
-    return ethers.formatEther(
-      (amountBN * currentPriceBN * BigInt(baseRateBips)) / BigInt(10000) / ethers.parseEther('1')
-    );
+    try {
+      const amountBN = ethers.parseEther(amount);
+      const currentPriceBN = BigInt(currentPrice);
+      const baseRateBips = Math.floor(BASE_RATE * 10000);
+      
+      // Safe multiplication for minimum premium
+      return ethers.formatEther(
+        this.safeMultiplyBigInts(
+          this.safeMultiplyBigInts(amountBN, currentPriceBN),
+          BigInt(baseRateBips),
+          BigInt(10000) * ethers.parseEther('1')
+        )
+      );
+    } catch (error) {
+      console.error('Error calculating minimum premium:', error);
+      return '0.0000001'; // Fallback minimum premium
+    }
   },
 
-  // Combine all components with proper scaling
+  // Calculate total premium with all meme-specific factors and safety checks
   calculateTotalPremium(
     amount: string,
     currentPrice: string,
@@ -154,23 +210,53 @@ const PremiumCalculator = {
     duration: number,
     volatility: number
   ): string {
-    // Get individual components
-    const intrinsicValue = this.calculateIntrinsicValue(amount, currentPrice, strikePrice);
-    const timeValue = this.calculateTimeValue(amount, currentPrice, duration);
-    const volComponent = this.calculateVolComponent(amount, currentPrice, volatility);
-    const minPremium = this.calculateMinPremium(amount, currentPrice);
+    try {
+      // Basic validation
+      if (!amount || !currentPrice || !strikePrice || !duration) {
+        throw new Error('Missing required parameters');
+      }
 
-    // Sum components
-    const total = ethers.parseEther(intrinsicValue) +
-                 ethers.parseEther(timeValue) +
-                 ethers.parseEther(volComponent) +
-                 ethers.parseEther(minPremium);
+      const intrinsicValue = this.calculateIntrinsicValue(amount, currentPrice, strikePrice);
+      const timeValue = this.calculateTimeValue(amount, currentPrice, duration);
+      const volComponent = this.calculateVolComponent(amount, currentPrice, volatility);
+      const minPremium = this.calculateMinPremium(amount, currentPrice);
 
-    // Format with limited decimals for readability
-    const formatted = ethers.formatEther(total);
-    const premium = parseFloat(formatted).toFixed(6);
-    
-    return premium.toString();
+      // Sum all components with safety checks
+      let total = BigInt(0);
+      try {
+        total = ethers.parseEther(intrinsicValue) +
+                ethers.parseEther(timeValue) +
+                ethers.parseEther(volComponent) +
+                ethers.parseEther(minPremium);
+      } catch (error) {
+        console.error('Error summing components:', error);
+        // Fallback to minimum premium
+        return '0.0000001';
+      }
+
+      // Add "moon potential" bonus for very short duration options
+      const moonBonus = duration < 3600 ? BigInt(120) : BigInt(100);
+      const finalTotal = this.safeMultiplyBigInts(total, moonBonus, BigInt(100));
+
+      // Add strike price ratio multiplier for extreme price differences
+      const strikeCurrentRatio = parseFloat(strikePrice) / parseFloat(ethers.formatEther(currentPrice));
+      const additionalMultiplier = Math.min(3, Math.max(1, Math.log10(strikeCurrentRatio)));
+      
+      const adjustedTotal = this.safeMultiplyBigInts(
+        finalTotal,
+        BigInt(Math.floor(additionalMultiplier * 1e4)),
+        BigInt(1e4)
+      );
+
+      // Format with 6 decimals for readability
+      const formattedTotal = parseFloat(ethers.formatEther(adjustedTotal)).toFixed(6);
+      
+      // Ensure we never return zero
+      return formattedTotal === '0.000000' ? '0.000001' : formattedTotal;
+    } catch (error) {
+      console.error('Error in premium calculation:', error);
+      return '0.000001'; // Fallback minimum premium
+    }
   }
 };
 
@@ -409,7 +495,7 @@ const Options: React.FC<OptionsProps> = ({ isEnabled = true, tokenAddress, optio
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
   
-  const optionsContractAddr = '0xcFfCA669CA2DF02801BB9896aE89C20e2F564FE8';
+  const optionsContractAddr = '0x195e549D5CBe4479e2d9b75F4Fd0E4A9D34d04b9';
   const tokenABI = require("../abi/traderToken");
   const optionsABI = require("../abi/shorts");
 
@@ -771,6 +857,18 @@ const calculatePremium = async () => {
     <div className="relative">
       <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-8 rounded-2xl shadow-xl">
         <TableHeader />
+
+        <div className="mb-6 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-4">
+          <div className="flex items-center gap-2 text-yellow-400 font-semibold mb-2">
+            <span className="text-xl">⚠️</span>
+            Experimental Feature - Please Read
+          </div>
+          <p className="text-yellow-200/70 text-sm">
+            Options trading on RAISE is currently experimental. Covered calls are complex financial instruments that carry significant risks. 
+            Please ensure you fully understand how covered calls work, including potential risks and loss scenarios, before engaging with options trading. 
+            Never invest more than you can afford to lose.
+          </p>
+        </div>
         
         <OptionsTable 
           options={activeOptions}

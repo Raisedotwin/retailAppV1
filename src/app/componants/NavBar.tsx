@@ -25,7 +25,7 @@ const NavBar: React.FC = () => {
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
   
-  const whitelistAddr = '0xb300D6070ffb261F00dd3a2B5A575Ff329e507D9';
+  const whitelistAddr = '0xA8620885Cf92346878D6C7346E09784C52060253';
   const whitelist = require("../abi/BETAWhitelist.json");
   const whitelistContract = useMemo(
     () => new ethers.Contract(whitelistAddr, whitelist, provider),

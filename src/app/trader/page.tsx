@@ -31,23 +31,28 @@ const TraderPageContent: React.FC = () => {
 
   const tokenPoolABI = require("../abi/traderPool");
 
-  const tokenContractAddr = '0xa442E4A5345109fE54E3aba09B670D7f50Fa6933';
+  const tokenContractAddr = '0x78Ce14DAA797D49fDD42025243c3B8d79110BF8C';
   const tokenMarketABI = require('../abi/tokenMarket.json');
 
-  const marketDataAddr = '0x3EEcD71b8E891971D760E05D0a64bE5E8edEc81A';
+  const marketDataAddr = '0x89571d017702F6324D53A238fFa62cF4B4e31180';
   const marketDataABI = require("../abi/marketdata.json");
 
-  const createAccountAddr = '0xf30466ab670168e93De31A5bc2c93aF078B7916a';
+  const createAccountAddr = '0xc539cb20449001BC5F9C31db3f74B78888F8285e';
   const createAccountABI = require("../abi/createAccount.json");
 
-  const profileAddr = '0xF449ee02878297d5bc73E69a1A5B379E503806cE';
+  const profileAddr = '0x80B2FAA3D1FBD00e88941D76866420198B693329';
   const profileABI = require("../abi/profile.json");
 
   const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('tradingActivity');
   const [traderProfileExists, setTraderProfileExists] = useState(false);
 
-  const optionsContractAddr = '0xcFfCA669CA2DF02801BB9896aE89C20e2F564FE8'; // Update with your contract address
+  const optionsContractAddr = '0x195e549D5CBe4479e2d9b75F4Fd0E4A9D34d04b9'; // Update with your contract address
   const optionsABI = require("../abi/shorts");
+
+  const whitelist = require("../abi/BETAWhitelist.json");
+  const whitelistAddr = '0xA8620885Cf92346878D6C7346E09784C52060253';
+  
+  const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
 
   // Setting default values or using the query parameters
   const [params] = useState({
@@ -87,6 +92,12 @@ const TraderPageContent: React.FC = () => {
   const [signer, setSigner] = useState<any>(null);
   const [inactiveTraderDisabled, setInactiveTraderDisabled] = useState(false);
 
+  const [createUserWhitelistEnabled, setCreateUserWhitelistEnabled] = useState(true);
+  const [isUserWhitelisted, setIsUserWhitelisted] = useState(false);
+
+  const [disableOptionMarket] = useState(true); // Set to true to show placeholder, false to show options panel
+
+  
 
   let wallet: any = wallets[0] // Get the first connected wallet privy wallet specifiy privy wallet
 
@@ -145,6 +156,18 @@ const handleInitialize = async () => {
     console.error('Error in initialization:', error);
     setModalMessage(`Initialization error: ${error || 'Unknown error'}`);
     setTimeout(() => setIsModalVisible(false), 2000);
+  }
+};
+
+// Add new whitelist checking function
+const checkTraderWhitelist = async (username: string | undefined): Promise<boolean> => {
+  if (!whitelistContract || !username) return false;
+  try {
+    const isWhitelisted = await whitelistContract.isUsernameWhitelisted(username);
+    return isWhitelisted;
+  } catch (error) {
+    console.error('Error checking trader whitelist status:', error);
+    return false;
   }
 };
 
@@ -248,6 +271,12 @@ useEffect(() => {
       const signer: any = privyProvider?.getSigner();
       setSigner(signer);
 
+      // Add whitelist check
+      if (createUserWhitelistEnabled && username) {
+          const whitelisted = await checkTraderWhitelist(username as string);
+        setIsUserWhitelisted(whitelisted);
+        }
+
       // Initialize contracts
       const marketContractInstance = new ethers.Contract(tokenContractAddr, tokenMarketABI, signer);
       setContract(marketContractInstance);
@@ -329,7 +358,7 @@ useEffect(() => {
   };
 
   initContract();
-}, [user, username, wallets]);
+}, [user, username, wallets, whitelistContract, createUserWhitelistEnabled]);
 
   const getPrivyProvider = async (chainName: string) => {
     if (!wallet) {
@@ -444,6 +473,9 @@ const handleCreateWallet = async () => {
       }
     } else {
       setModalMessage('Wallet creation failed');
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     }
 
     setTimeout(() => setIsModalVisible(false), 2000);
@@ -451,6 +483,9 @@ const handleCreateWallet = async () => {
     console.error('Error in wallet creation:', error);
     setModalMessage(`Wallet creation error: ${error || 'Unknown error'}`);
     setTimeout(() => setIsModalVisible(false), 2000);
+    setTimeout(() => {
+      window.location.reload();
+    }, 2000);
   }
 };
 
@@ -717,8 +752,7 @@ const handleCreateWallet = async () => {
           Sell
           </button>
         </div>
-
-        {activeTab === 'buy' && (
+{activeTab === 'buy' && (
   <div className="space-y-6">
     <h3 className="text-xl font-semibold text-gray-800">
       {traderProfileExists ? `Buy $${params.username}` : 'Create Token'}
@@ -753,21 +787,34 @@ const handleCreateWallet = async () => {
         Initialize Token
       </button>
     ) : (
-      <button 
-        className={`w-full py-4 text-white text-lg font-medium rounded-lg transition-colors duration-200 shadow-lg ${
-          traderProfileExists 
-            ? 'bg-green-500 hover:bg-green-600' 
-            : 'bg-blue-500 hover:bg-blue-600'
-        }`}
-        onClick={traderProfileExists ? handleBuyShares : handleCreateWallet}
-        disabled={inactiveTraderDisabled && !isActive}
-      >
-        {traderProfileExists ? 'Buy Now' : 'Create Token'}
-      </button>
+      <>
+        <button 
+          className={`w-full py-4 text-white text-lg font-medium rounded-lg transition-colors duration-200 shadow-lg ${
+            traderProfileExists 
+              ? 'bg-green-500 hover:bg-green-600' 
+              : (!createUserWhitelistEnabled || isUserWhitelisted)
+                ? 'bg-blue-500 hover:bg-blue-600'
+                : 'bg-gray-400 cursor-not-allowed'
+          }`}
+          onClick={traderProfileExists ? handleBuyShares : handleCreateWallet}
+          disabled={traderProfileExists 
+            ? (inactiveTraderDisabled && !isActive)
+            : (createUserWhitelistEnabled && !isUserWhitelisted)}
+        >
+          {traderProfileExists ? 'Buy Now' : 'Create Token'}
+        </button>
+        {createUserWhitelistEnabled && !isUserWhitelisted && !traderProfileExists && (
+          <div className="mt-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600 text-center">
+              This trader is not whitelisted for token creation
+            </p>
+          </div>
+        )}
+      </>
     )}
   </div>
 )}
-
+        
 {activeTab === 'sell' && (
   <div className="space-y-6">
     <h3 className="text-xl font-semibold text-gray-800">
@@ -856,32 +903,39 @@ const handleCreateWallet = async () => {
         </div>
 
         {/* Activity Tabs Section */}
-        <div className="bg-white rounded-2xl shadow-lg mt-8 p-6">
-          <div className="flex space-x-8 mb-6 border-b">
-            <TabButton 
-              active={activeModalTab === 'tradingActivity'} 
-              onClick={() => setActiveModalTab('tradingActivity')}
-            >
-              Trading Activity
-            </TabButton>
-            <TabButton 
-              active={activeModalTab === 'shorts'} 
-              onClick={() => setActiveModalTab('shorts')}
-            >
-              Options
-            </TabButton>
-            <TabButton 
-              active={activeModalTab === 'activity'} 
-              onClick={() => setActiveModalTab('activity')}
-            >
-              My Contracts
-            </TabButton>
-          </div>
+    {/* Activity Tabs Section */}
+    <div className="bg-white rounded-2xl shadow-lg mt-8 p-6">
+        <div className="flex space-x-8 mb-6 border-b">
+          <TabButton 
+            active={activeModalTab === 'tradingActivity'} 
+            onClick={() => setActiveModalTab('tradingActivity')}
+          >
+            Trading Activity
+          </TabButton>
+          <TabButton 
+            active={activeModalTab === 'shorts'} 
+            onClick={() => setActiveModalTab('shorts')}
+          >
+            Options
+          </TabButton>
+          <TabButton 
+            active={activeModalTab === 'activity'} 
+            onClick={() => setActiveModalTab('activity')}
+          >
+            My Contracts
+          </TabButton>
+        </div>
 
-          <div className="mt-6">
-            {activeModalTab === 'topHolders' && <TopHolders />}
-            {activeModalTab === 'tradingActivity' && <TradingActivity />}
-            {activeModalTab === 'shorts' &&
+        <div className="mt-6">
+          {activeModalTab === 'topHolders' && <TopHolders />}
+          {activeModalTab === 'tradingActivity' && <TradingActivity />}
+          {activeModalTab === 'shorts' && (
+            disableOptionMarket ? (
+              <div className="flex flex-col items-center justify-center p-12 bg-gray-50 rounded-lg">
+                <p className="text-xl font-medium text-gray-600">Options Coming Soon</p>
+                <p className="mt-2 text-gray-500">We're working hard to bring options trading to the platform.</p>
+              </div>
+            ) : (
               <Options 
                 isEnabled={true}
                 tokenAddress={tokenAddress}
@@ -889,15 +943,18 @@ const handleCreateWallet = async () => {
                 signer={signer}
                 traderAddress={traderAddress}
                 marketContract={contract}
-              />}
-            {activeModalTab === 'activity' && 
-             <ActiveContracts
+              />
+            )
+          )}
+          {activeModalTab === 'activity' && 
+            <ActiveContracts
               tokenAddress={tokenAddress}
               optionsContract={optionsContract}
               userAddress={walletAddress}
-             />}
-          </div>
+            />
+          }
         </div>
+      </div>
       </div>
 
       {/* Processing Modal */}

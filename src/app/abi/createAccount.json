@@ -857,5 +857,70 @@
 		],
 		"stateMutability": "view",
 		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_marketData",
+				"type": "address"
+			}
+		],
+		"name": "upgradeData",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_traderPayoutsFactory",
+				"type": "address"
+			}
+		],
+		"name": "upgradePayouts",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_traderPoolFactory",
+				"type": "address"
+			}
+		],
+		"name": "upgradePool",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_traderPositionsFactory",
+				"type": "address"
+			}
+		],
+		"name": "upgradePositions",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_dexAddress",
+				"type": "address"
+			}
+		],
+		"name": "upgradeSwap",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
 	}
 ]

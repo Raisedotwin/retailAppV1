@@ -3,7 +3,7 @@ import { usePrivy, useWallets, getEmbeddedConnectedWallet } from '@privy-io/reac
 import { ethers } from 'ethers';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
 
-// SVG icon components remain the same
+// SVG icon components
 const PowerIcon = () => (
   <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10" strokeLinecap="round" strokeLinejoin="round"/>
@@ -30,14 +30,13 @@ const ArrowUpIcon = () => (
   </svg>
 );
 
-// First, let's update the Modal interface
 interface ModalProps {
   show: boolean;
   title: string;
   message: string;
   color?: "blue" | "red" | "purple";
   amount?: string;
-  currency?: string;  // Add new currency prop
+  currency?: string;
 }
 
 const Modal: React.FC<ModalProps> = ({ show, title, message, color = "blue", amount, currency = "WETH" }) => {
@@ -71,7 +70,7 @@ const Modal: React.FC<ModalProps> = ({ show, title, message, color = "blue", amo
 };
 
 const PerpsForm: React.FC = () => {
-  // Existing state management...
+  // State management
   const [wethBalance, setWethBalance] = useState<string>("0.00");
   const [depositAmount, setDepositAmount] = useState<string>("");
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
@@ -80,7 +79,9 @@ const PerpsForm: React.FC = () => {
   const [showDisconnectModal, setShowDisconnectModal] = useState<boolean>(false);
   const [showDepositModal, setShowDepositModal] = useState<boolean>(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState<boolean>(false);
+  const [showWithdrawAllModal, setShowWithdrawAllModal] = useState<boolean>(false);
   const [traderPoolAddress, setTraderPoolAddress] = useState<string>("");
+  const [netValueUSDC, setNetValueUSDC] = useState<string>("0");
 
   // Contract setup
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
@@ -88,21 +89,19 @@ const PerpsForm: React.FC = () => {
   
   const { user } = usePrivy();
   const { wallets } = useWallets();
-  let wallet = wallets[0]; // Default to first wallet
+  let wallet = wallets[0];
 
-  const profileAddr = '0xF449ee02878297d5bc73E69a1A5B379E503806cE';
+  const profileAddr = '0x80B2FAA3D1FBD00e88941D76866420198B693329';
   const profileABI = require("../abi/profile");
   const tokenPoolABI = require("../abi/traderPool");
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
 
-  // New function to get the appropriate signer based on wallet type
   const getSigner = async () => {
     if (user?.twitter?.username) {
       let embeddedWallet = getEmbeddedConnectedWallet(wallets);
       let privyProvider = await embeddedWallet?.address;
       
-      // Fix the type declaration and assignment
       const foundWallet = wallets.find((w) => w.address === privyProvider);
       if (foundWallet) {
         wallet = foundWallet;
@@ -151,11 +150,15 @@ const PerpsForm: React.FC = () => {
           const traderPoolAddr = profile[5];
           setTraderPoolAddress(traderPoolAddr);
           
-          if (traderPoolAddr !== "0x0000000000000000000000000000000000000000") {
+          if (traderPoolAddr !== ethers.ZeroAddress) {
             const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, provider);
             const balance = await traderPoolInstance.getTotal();
             setWethBalance(ethers.formatEther(balance));
-            console.log(traderPoolAddr);
+
+            // Get account stats for net value
+            const stats = await traderPoolInstance.getAccountStats();
+            const formattedNetValue = ethers.formatUnits(stats[0], 6); // USDC has 6 decimals
+            setNetValueUSDC(formattedNetValue);
           }
         }
       }
@@ -168,12 +171,44 @@ const PerpsForm: React.FC = () => {
     fetchProfile();
   }, [fetchProfile]);
 
+  const handleWithdrawAll = async () => {
+    if (!traderPoolAddress) return;
+  
+    try {
+      setShowWithdrawAllModal(true);
+      const signer:any = await getSigner();
+      if (!signer) throw new Error("Failed to get signer");
+      
+      const traderPoolInstance = new ethers.Contract(
+        traderPoolAddress, 
+        tokenPoolABI, 
+        signer
+      );
+      
+      // Get current net value
+      const stats = await traderPoolInstance.getAccountStats();
+      const netValueInWei = stats[0]; // Already in USDC decimals (6)
+      
+      // Execute withdrawal of entire balance
+      const tx = await traderPoolInstance.JOJOGetProfitFast(netValueInWei);
+      await provider.waitForTransaction(tx.hash, 1);
+      
+      await fetchProfile();
+      setShowWithdrawAllModal(false);
+    } catch (error) {
+      console.error('Error withdrawing all funds:', error);
+      setShowWithdrawAllModal(false);
+      alert('Failed to withdraw all funds. Please try again.');
+    }
+  };
+
+  // Existing handlers
   const handleInitialize = async () => {
     if (!traderPoolAddress) return;
     
     setShowInitModal(true);
     try {
-      const signer: any = await getSigner();
+      const signer:any = await getSigner();
       if (!signer) throw new Error("Failed to get signer");
 
       const traderPoolInstance = new ethers.Contract(
@@ -183,11 +218,9 @@ const PerpsForm: React.FC = () => {
       );
       
       const tx = await traderPoolInstance.interactWithJOJO();
-      // Wait for transaction confirmation
       await provider.waitForTransaction(tx.hash, 1);
       
       await fetchProfile();
-      // Show success state briefly before closing modal
       setShowInitModal(false);
     } catch (error) {
       console.error('Error initializing JOJO:', error);
@@ -197,12 +230,10 @@ const PerpsForm: React.FC = () => {
   
   const handleDisconnect = async () => {
     if (!traderPoolAddress) return;
-
-    console.log("Disconnecting from JOJO", traderPoolAddress);
-  
+    
     setShowDisconnectModal(true);
     try {
-      const signer: any = await getSigner();
+      const signer:any = await getSigner();
       if (!signer) throw new Error("Failed to get signer");
       
       const traderPoolInstance = new ethers.Contract(
@@ -212,7 +243,6 @@ const PerpsForm: React.FC = () => {
       );
       
       const tx = await traderPoolInstance.disconnectJOJO();
-      // Wait for transaction confirmation
       await provider.waitForTransaction(tx.hash, 1);
       
       await fetchProfile();
@@ -224,17 +254,11 @@ const PerpsForm: React.FC = () => {
   };
 
   const handleDeposit = async () => {
-    if (!traderPoolAddress) return;
+    if (!traderPoolAddress || !depositAmount || parseFloat(depositAmount) <= 0) return;
     
-    // Add input validation
-    if (!depositAmount || depositAmount === "" || parseFloat(depositAmount) <= 0) {
-      console.error('Invalid deposit amount');
-      return;
-    }
-  
     try {
       setShowDepositModal(true);
-      const signer: any = await getSigner();
+      const signer:any = await getSigner();
       if (!signer) throw new Error("Failed to get signer");
       
       const traderPoolInstance = new ethers.Contract(
@@ -243,26 +267,9 @@ const PerpsForm: React.FC = () => {
         signer
       );
       
-      // Ensure the amount is properly formatted
-      //const formattedAmount = parseFloat(depositAmount); // Set precision to 18 decimals
       const amountToWei = ethers.parseEther(depositAmount);
-      
-      // Add gas estimation with a buffer
-      //const gasEstimate = await traderPoolInstance.depositCollateralEth.estimateGas(
-        //amountToWei,
-        //{ value: amountToWei }
-      //);
-      //const gasLimit = gasEstimate * BigInt(120) / BigInt(100); // Add 20% buffer
-
-      
-      //const tx = await traderPoolInstance.depositCollateralEth(amountToWei, {
-        //value: amountToWei,
-        //gasLimit: gasLimit
-      //});
-
       const tx = await traderPoolInstance.depositCollateralEth(amountToWei);
       
-      // Wait for transaction confirmation
       await provider.waitForTransaction(tx.hash, 1);
       
       await fetchProfile();
@@ -271,23 +278,16 @@ const PerpsForm: React.FC = () => {
     } catch (error) {
       console.error('Error depositing funds:', error);
       setShowDepositModal(false);
-      // Add user-friendly error handling
-      if (error === 'INVALID_ARGUMENT') {
-        alert('Please enter a valid deposit amount');
-      } else if (error === 'UNPREDICTABLE_GAS_LIMIT') {
-        alert('Transaction failed. Please check your balance and try again.');
-      } else {
-        alert('An error occurred while processing your deposit');
-      }
+      alert('Failed to process deposit. Please try again.');
     }
   };
 
   const handleWithdraw = async () => {
-    if (!traderPoolAddress || !withdrawAmount) return;
+    if (!traderPoolAddress || !withdrawAmount || parseFloat(withdrawAmount) <= 0) return;
   
     try {
       setShowWithdrawModal(true);
-      const signer: any = await getSigner();
+      const signer:any = await getSigner();
       if (!signer) throw new Error("Failed to get signer");
       
       const traderPoolInstance = new ethers.Contract(
@@ -296,14 +296,9 @@ const PerpsForm: React.FC = () => {
         signer
       );
       
-      // Convert USDC amount to Wei (USDC has 6 decimals)
-      // We multiply by 10^6 instead of using parseEther (which uses 18 decimals)
       const amountInUSDC = ethers.parseUnits(withdrawAmount, 6);
-      
-      // Call the contract function with USDC amount
       const tx = await traderPoolInstance.JOJOGetProfitFast(amountInUSDC);
       
-      // Wait for transaction confirmation
       await provider.waitForTransaction(tx.hash, 1);
       
       await fetchProfile();
@@ -312,20 +307,10 @@ const PerpsForm: React.FC = () => {
     } catch (error) {
       console.error('Error withdrawing funds:', error);
       setShowWithdrawModal(false);
-      // Add user-friendly error handling
-      if (error === 'INVALID_ARGUMENT') {
-        alert('Please enter a valid withdrawal amount');
-      } else if (error === 'UNPREDICTABLE_GAS_LIMIT') {
-        alert('Transaction failed. Please check your balance and try again.');
-      } else {
-        alert('An error occurred while processing your withdrawal');
-      }
+      alert('Failed to process withdrawal. Please try again.');
     }
   };
 
-
-
-  // Rest of the JSX remains largely the same, just update the balance display
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-xl p-6 space-y-6">
@@ -336,7 +321,8 @@ const PerpsForm: React.FC = () => {
           <p className="text-gray-400 text-sm">Manage your perpetual positions</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        {/* Action Buttons */}
+        <div className="grid grid-cols-3 gap-4">
           <button 
             onClick={handleInitialize}
             className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl text-white font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg shadow-blue-500/20 group"
@@ -351,8 +337,15 @@ const PerpsForm: React.FC = () => {
             <PowerIcon />
             Disconnect
           </button>
+          <button 
+            onClick={handleWithdrawAll}
+            className="flex items-center justify-center px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl text-white font-medium hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-purple-500/20 group"
+          >
+            Close
+          </button>
         </div>
 
+        {/* Balance Display */}
         <div className="bg-gray-800/50 rounded-xl p-4 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <span className="text-gray-400">Balance</span>
@@ -360,9 +353,16 @@ const PerpsForm: React.FC = () => {
               <WalletIcon />
               <span className="text-lg font-semibold text-white">{wethBalance} WETH</span>
             </div>
+            
           </div>
+           <div className="flex items-center justify-between mt-2">
+            <span className="text-gray-400">Net Value</span>
+            <span className="text-lg font-semibold text-white">${parseFloat(netValueUSDC).toFixed(9)} USDC</span>
+          </div> 
+
         </div>
 
+        {/* Deposit/Withdraw Tabs */}
         <div className="grid grid-cols-2 gap-2 bg-gray-800/30 p-1 rounded-lg">
           <button
             onClick={() => setActiveTab('deposit')}
@@ -388,6 +388,7 @@ const PerpsForm: React.FC = () => {
           </button>
         </div>
 
+        {/* Deposit/Withdraw Forms */}
         <div className="space-y-4">
           {activeTab === 'deposit' ? (
             <div className="space-y-4">
@@ -430,7 +431,7 @@ const PerpsForm: React.FC = () => {
           )}
         </div>
 
-        {/* All Modals */}
+        {/* Modals */}
         <Modal 
           show={showInitModal}
           title="Initializing JOJO Exchange"
@@ -453,14 +454,23 @@ const PerpsForm: React.FC = () => {
           amount={depositAmount}
         />
         
-      <Modal 
-        show={showWithdrawModal}
-        title="Processing Withdrawal"
-        message="Please wait while we process your withdrawal..."
-        color="purple"
-        amount={withdrawAmount}
-        currency="USDC"
-      />
+        <Modal 
+          show={showWithdrawModal}
+          title="Processing Withdrawal"
+          message="Please wait while we process your withdrawal..."
+          color="purple"
+          amount={withdrawAmount}
+          currency="USDC"
+        />
+
+        <Modal 
+          show={showWithdrawAllModal}
+          title="Withdrawing All Funds"
+          message="Please wait while we process your complete withdrawal..."
+          color="purple"
+          amount={netValueUSDC}
+          currency="USDC"
+        />
       </div>
     </div>
   );

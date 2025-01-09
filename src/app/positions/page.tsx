@@ -22,7 +22,7 @@ const PositionsPage = () => {
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
   const tokenPoolABI = require("../abi/traderPool");
-  const profileAddr = '0xF449ee02878297d5bc73E69a1A5B379E503806cE';
+  const profileAddr = '0x80B2FAA3D1FBD00e88941D76866420198B693329';
   const profileABI = require("../abi/profile");
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
 
