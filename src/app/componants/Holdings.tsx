@@ -102,7 +102,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data, itemsPerPage = 10 }) => {
       
       {data.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-600">No active traders found</p>
+          <p className="text-gray-600">Traders Coming Soon!</p>
         </div>
       ) : (
         <div className="px-6 py-4 border-t border-gray-200 bg-white">
