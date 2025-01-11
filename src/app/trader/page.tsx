@@ -31,26 +31,26 @@ const TraderPageContent: React.FC = () => {
 
   const tokenPoolABI = require("../abi/traderPool");
 
-  const tokenContractAddr = '0x78Ce14DAA797D49fDD42025243c3B8d79110BF8C';
+  const tokenContractAddr = '0x869C70BD085Ca85E5bc30DC5941f37F253B2c496';
   const tokenMarketABI = require('../abi/tokenMarket.json');
 
-  const marketDataAddr = '0x89571d017702F6324D53A238fFa62cF4B4e31180';
+  const marketDataAddr = '0xe897af009d435d62a35F3c29958A45243D221d83';
   const marketDataABI = require("../abi/marketdata.json");
 
-  const createAccountAddr = '0xc539cb20449001BC5F9C31db3f74B78888F8285e';
+  const createAccountAddr = '0x62Bd981D39a2146AC662f0e9dA4DBeE1fF723D7B';
   const createAccountABI = require("../abi/createAccount.json");
 
-  const profileAddr = '0x80B2FAA3D1FBD00e88941D76866420198B693329';
+  const profileAddr = '0x961267738C8f615DcFc92bE1b90bd54Aa943a616';
   const profileABI = require("../abi/profile.json");
 
   const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('tradingActivity');
   const [traderProfileExists, setTraderProfileExists] = useState(false);
 
-  const optionsContractAddr = '0x195e549D5CBe4479e2d9b75F4Fd0E4A9D34d04b9'; // Update with your contract address
+  const optionsContractAddr = '0xd3E9b76044EECc73D1dC8c7fb7ec1328c61c0eF9'; // Update with your contract address
   const optionsABI = require("../abi/shorts");
 
   const whitelist = require("../abi/BETAWhitelist.json");
-  const whitelistAddr = '0xA8620885Cf92346878D6C7346E09784C52060253';
+  const whitelistAddr = '0x8eF8153635a09CC4C25BC1397E63cCdCA329E315';
   
   const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
 
@@ -702,7 +702,11 @@ const handleCreateWallet = async () => {
   </div>
   <div className="text-center px-4">
     <p className="text-lg font-bold text-green-500">{Number(lastBuybackValue).toFixed(3)}</p>
-    <p className="text-xs text-gray-500">Coin Buybacks</p>
+    <p className="text-xs text-gray-500">Buyback #</p>
+  </div>
+  <div className="text-center px-4">
+    <p className="text-lg font-bold text-green-500">0</p>
+    <p className="text-xs text-gray-500">Sellback #</p>
   </div>
   <div className="text-center px-4">
     <p className="text-lg font-bold text-green-500">
@@ -719,6 +723,10 @@ const handleCreateWallet = async () => {
   <div className="text-center px-4">
     <p className="text-lg font-bold text-green-500">{Number(winRatio).toFixed(2)}%</p>
     <p className="text-xs text-gray-500">Win Rate</p>
+  </div>
+  <div className="text-center px-4">
+    <p className="text-lg font-bold text-green-500">6%</p>
+    <p className="text-xs text-gray-500">Funding Rate</p>
   </div>
 </div>
 </div>

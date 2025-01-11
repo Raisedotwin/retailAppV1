@@ -228,6 +228,19 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "currentAddressForShort",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -266,6 +279,19 @@
 			}
 		],
 		"name": "executeModule",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_shares",
+				"type": "uint256"
+			}
+		],
+		"name": "executeTokenMarketSale",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -566,6 +592,19 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "protcoolFeeDest",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -641,6 +680,19 @@
 		"outputs": [
 			{
 				"internalType": "contract ITokenMarket",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "tokenMarketDDr",
+		"outputs": [
+			{
+				"internalType": "address",
 				"name": "",
 				"type": "address"
 			}

@@ -25,7 +25,7 @@ const NavBar: React.FC = () => {
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
   
-  const whitelistAddr = '0xA8620885Cf92346878D6C7346E09784C52060253';
+  const whitelistAddr = '0x8eF8153635a09CC4C25BC1397E63cCdCA329E315';
   const whitelist = require("../abi/BETAWhitelist.json");
   const whitelistContract = useMemo(
     () => new ethers.Contract(whitelistAddr, whitelist, provider),
@@ -148,7 +148,7 @@ const NavBar: React.FC = () => {
               </Link>
               <div className="flex items-center space-x-2">
                 <Link href="/holdings">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Traders</div>
+                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Creators</div>
                 </Link>
               </div>
               <Link href="/swaps">
