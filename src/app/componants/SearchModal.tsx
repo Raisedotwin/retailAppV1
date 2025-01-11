@@ -117,9 +117,6 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
         {/* Search Header */}
         <div className="p-6 border-b border-gray-200">
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <SearchIcon />
-            </div>
             <input
               type="text"
               placeholder="Search by username (e.g., @username)"
@@ -128,7 +125,14 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
               onChange={e => handleSearchTermChange(e.target.value)}
               onKeyPress={e => e.key === 'Enter' && fetchProfile()}
             />
+            <button 
+              onClick={fetchProfile}
+              className="absolute inset-y-0 right-0 px-4 flex items-center hover:text-blue-500 transition-colors duration-200"
+            >
+              <SearchIcon />
+            </button>
           </div>
+
           <p className="text-sm text-gray-500 mt-2 px-1">
             <span className="inline-block mr-1">💡</span>
             Enter a username to search both on-chain profiles and Twitter
