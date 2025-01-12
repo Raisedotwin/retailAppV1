@@ -56,7 +56,7 @@ const WalletPage: React.FC = () => {
   const tokenPoolABI = require("../abi/traderPool");
   const traderPayoutsABI = require("../abi/traderPayouts");
 
-  const profileAddr = '0x961267738C8f615DcFc92bE1b90bd54Aa943a616';
+  const profileAddr = '0x0E4bCfe328645e1b63bc83296aeA799969bAde08';
   const profileABI = require("../abi/profile");
 
   const whitelist = require("../abi/BETAWhitelist.json");

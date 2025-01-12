@@ -31,22 +31,22 @@ const TraderPageContent: React.FC = () => {
 
   const tokenPoolABI = require("../abi/traderPool");
 
-  const tokenContractAddr = '0x869C70BD085Ca85E5bc30DC5941f37F253B2c496';
+  const tokenContractAddr = '0x5B1EC471C95AA146a634beD90704E61bA3f2eBeb';
   const tokenMarketABI = require('../abi/tokenMarket.json');
 
-  const marketDataAddr = '0xe897af009d435d62a35F3c29958A45243D221d83';
+  const marketDataAddr = '0x155BF18F10832d07e8d051ED5D23450205A02D88';
   const marketDataABI = require("../abi/marketdata.json");
 
-  const createAccountAddr = '0x62Bd981D39a2146AC662f0e9dA4DBeE1fF723D7B';
+  const createAccountAddr = '0x1514A4e6Ac33b4902772c3D2CC691f4E6Cde594F';
   const createAccountABI = require("../abi/createAccount.json");
 
-  const profileAddr = '0x961267738C8f615DcFc92bE1b90bd54Aa943a616';
+  const profileAddr = '0x0E4bCfe328645e1b63bc83296aeA799969bAde08';
   const profileABI = require("../abi/profile.json");
 
   const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('tradingActivity');
   const [traderProfileExists, setTraderProfileExists] = useState(false);
 
-  const optionsContractAddr = '0xd3E9b76044EECc73D1dC8c7fb7ec1328c61c0eF9'; // Update with your contract address
+  const optionsContractAddr = '0x21829361eF70D0410347bF063F462D98E49428aA'; // Update with your contract address
   const optionsABI = require("../abi/shorts");
 
   const whitelist = require("../abi/BETAWhitelist.json");
@@ -414,8 +414,10 @@ const handleCreateWallet = async () => {
     setModalMessage('Creating a wallet');
     setIsModalVisible(true);
 
+    const trimmedUsername = (username as string).slice(0, 11);
+
     const createTx = await createContract.createAccount(
-      username as string,
+      trimmedUsername,
       name as string,
       logo as string,
       "0x0000000000000000000000000000000000000000"
