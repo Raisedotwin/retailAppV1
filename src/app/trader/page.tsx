@@ -697,9 +697,9 @@ const handleCreateWallet = async () => {
     </div>
 
     {/* Stats Section */}
-<div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-5 gap-4">
+<div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-7 gap-4">
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-orange-500">{frequency}</p>
+    <p className="text-lg font-bold text-green-500">{frequency}</p>
     <p className="text-xs text-gray-500">Last Buyback</p>
   </div>
   <div className="text-center px-4">
