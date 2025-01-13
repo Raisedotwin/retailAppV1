@@ -60,7 +60,7 @@ const HoldingsPage = () => {
             account: name,
             balance: marketCapEth.toString(),
             profileName,
-            logo: link,
+            logo: link || `https://unavatar.io/twitter/${name}`, // Fallback to unavatar if no logo
             username: name,
           });
         }
@@ -99,8 +99,6 @@ const HoldingsPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-
-
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -117,6 +115,7 @@ const HoldingsPage = () => {
                 name: balance.profileName,
                 username: balance.username,
                 balance: balance.balance,
+                logo: balance.logo,
                 link: balance.profileName ? 
                   `/trader?name=${balance.profileName}&logo=${balance.logo}&username=${balance.username}` : 
                   '#',

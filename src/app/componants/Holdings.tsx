@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import NextLink from 'next/link';
+import Image from 'next/image';
 
 interface HoldingsEntry {
   token: number;
@@ -7,6 +8,7 @@ interface HoldingsEntry {
   username: string;
   balance: string;
   link: string;
+  logo?: string; // Added logo field for avatar
 }
 
 interface HoldingsProps {
@@ -44,7 +46,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data, itemsPerPage = 10 }) => {
           <thead>
             <tr className="bg-gray-100 text-left">
               <th className="px-6 py-4 text-sm font-semibold text-gray-700">Rank</th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700">Name</th>
+              <th className="px-6 py-4 text-sm font-semibold text-gray-700">Creator</th>
               <th className="px-6 py-4 text-sm font-semibold text-gray-700">Username</th>
               <th className="px-6 py-4 text-sm font-semibold text-gray-700">Market Cap</th>
               <th className="px-6 py-4 text-sm font-semibold text-gray-700">Profile</th>
@@ -57,7 +59,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data, itemsPerPage = 10 }) => {
                 className="hover:bg-gray-50/80 transition-colors duration-150"
               >
                 <td className="px-6 py-4">
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-3">
                     <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                       entry.token === 1 ? 'bg-yellow-100 text-yellow-700 ring-2 ring-yellow-200' :
                       entry.token === 2 ? 'bg-gray-200 text-gray-700 ring-2 ring-gray-300' :
@@ -69,8 +71,18 @@ const Holdings: React.FC<HoldingsProps> = ({ data, itemsPerPage = 10 }) => {
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="font-medium text-gray-900 hover:text-emerald-600 transition-colors">
-                    {entry.name}
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-gray-200">
+                      <Image
+                        src={entry.logo || `https://unavatar.io/twitter/${entry.username}`}
+                        alt={entry.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <span className="font-medium text-gray-900 hover:text-emerald-600 transition-colors">
+                      {entry.name}
+                    </span>
                   </div>
                 </td>
                 <td className="px-6 py-4">
