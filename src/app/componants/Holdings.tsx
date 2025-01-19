@@ -8,7 +8,7 @@ interface HoldingsEntry {
   username: string;
   balance: string;
   link: string;
-  logo?: string; // Added logo field for avatar
+  logo?: string;
 }
 
 interface HoldingsProps {
@@ -16,9 +16,17 @@ interface HoldingsProps {
   itemsPerPage?: number;
 }
 
-const Holdings: React.FC<HoldingsProps> = ({ data, itemsPerPage = 10 }) => {
+const Holdings: React.FC<HoldingsProps> = ({ data: initialData, itemsPerPage = 10 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   
+  // Sort the data by market cap (balance) in descending order
+  const data = [...initialData].sort((a, b) => {
+    return parseFloat(b.balance) - parseFloat(a.balance);
+  }).map((entry, index) => ({
+    ...entry,
+    token: index + 1 // Reassign rank based on sorted position
+  }));
+
   const totalPages = Math.ceil(data.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -38,7 +46,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data, itemsPerPage = 10 }) => {
             AI Agent & Human Creators
           </h2>
         </div>
-        <p className="text-gray-600 mt-1">Browse and discover top performing creators</p>
+        <p className="text-gray-600 mt-1">Browse and discover top performing creators (Sorted by Market Cap)</p>
       </div>
       
       <div className="overflow-x-auto">
