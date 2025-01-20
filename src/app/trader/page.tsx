@@ -727,7 +727,7 @@ const handleCreateWallet = async () => {
     <p className="text-xs text-gray-500">Win Rate</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">6%</p>
+    <p className="text-lg font-bold text-green-500">10%</p>
     <p className="text-xs text-gray-500">Funding Rate</p>
   </div>
 </div>
