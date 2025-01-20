@@ -66,14 +66,11 @@ const CommunityLinks: React.FC = () => {
     <section className="max-w-6xl mx-auto px-4 py-12">
       <div className="text-center mb-10">
         <div className="inline-block">
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            Join Our Community
-          </h2>
-          <div className="flex justify-center gap-2 mt-2">
-            <span className="animate-bounce text-2xl" style={{ animationDelay: '0.1s' }}>🚀</span>
-            <span className="animate-bounce text-2xl" style={{ animationDelay: '0.2s' }}>🌟</span>
-            <span className="animate-bounce text-2xl" style={{ animationDelay: '0.3s' }}>✨</span>
-          </div>
+
+        <h2 className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-yellow-500 to-black bg-clip-text text-transparent">
+  Join Our Community
+</h2>
+
         </div>
       </div>
 

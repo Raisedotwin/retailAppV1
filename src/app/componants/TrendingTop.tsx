@@ -47,7 +47,7 @@ const AnimatedHeader = () => (
           className="animate-pulse"
         />
       </div>
-      <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+      <h1 className="text-5xl font-bold text-black">
         Get Started
       </h1>
       <div className="transform hover:-rotate-12 transition-transform duration-300">
@@ -62,25 +62,26 @@ const AnimatedHeader = () => (
     </div>
     
     {/* Documentation Link */}
+    
     <a 
       href="https://docs.google.com/document/d/1OH1hj-01vZyqifnXKdaqFqg8WARIBXEhnXe7A81uN5w/edit?tab=t.6bncxdjw1hly"
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center gap-2 px-6 py-3 mb-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+      className="group flex items-center gap-2 px-6 py-3 mb-12 bg-black text-white rounded-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
     >
       <span className="font-semibold">View Full Documentation</span>
       <ExternalLinkIcon />
     </a>
 
     <div className="relative group">
-      <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-      <div className="relative px-8 py-6 bg-white rounded-2xl shadow-xl">
+      <div className="absolute -inset-0.5 bg-black rounded-2xl opacity-5 group-hover:opacity-10 transition-opacity duration-300"></div>
+      <div className="relative px-8 py-6 bg-white rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
         <p className="text-2xl font-medium text-center">
-          <span className="font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+          <span className="font-bold text-black">
             Find an X account, tokenize it, claim it to start trading
           </span>
           <br />
-          <span className="text-gray-600">
+          <span className="text-gray-600 mt-4 block">
             BUY $NUGGET for extra rewards{' '}
             <span className="animate-bounce inline-block">📈</span>
           </span>
@@ -92,17 +93,15 @@ const AnimatedHeader = () => (
 
 const FunIcon = ({ icon }: { icon: React.ReactNode }) => (
   <div className="relative group">
-    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-all duration-300"></div>
-    <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white transform group-hover:scale-110 transition-all duration-300 shadow-lg">
+    <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/20 to-black/20 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-all duration-300"></div>
+    <div className="relative w-20 h-20 bg-gradient-to-br from-yellow-400 to-black rounded-2xl flex items-center justify-center text-white transform group-hover:scale-110 transition-all duration-300 shadow-lg">
       {icon}
     </div>
   </div>
 );
 
-
 const HowItWorks = () => {
   const [selectedFaq, setSelectedFaq] = useState<number | null>(null);
-
 
   const steps = [
     {
@@ -141,6 +140,7 @@ const HowItWorks = () => {
     }
   ];
 
+
   const faqs = [
     {
       question: "What is the funding rate?",
@@ -170,7 +170,7 @@ const HowItWorks = () => {
             <div className="flex flex-col items-center text-center gap-8">
               <FunIcon icon={step.icon} />
               <div>
-                <span className="inline-block px-6 py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full text-sm font-bold text-blue-600 mb-3">
+                <span className="inline-block px-6 py-2 bg-gradient-to-r from-yellow-100 to-gray-100 rounded-full text-sm font-bold text-yellow-600 mb-3">
                   Step {step.number}
                 </span>
                 <h3 className="text-2xl font-bold mb-4">{step.title}</h3>
@@ -178,7 +178,7 @@ const HowItWorks = () => {
               </div>
             </div>
             {index < steps.length - 1 && (
-              <div className="hidden md:block absolute -right-6 top-1/2 transform -translate-y-1/2 text-purple-400">
+              <div className="hidden md:block absolute -right-6 top-1/2 transform -translate-y-1/2 text-yellow-400">
                 <svg className="w-8 h-8 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M5 12h14M15 5l7 7-7 7" />
                 </svg>
@@ -190,14 +190,14 @@ const HowItWorks = () => {
 
       {/* FAQ Section */}
       <div className="bg-white rounded-3xl p-12 shadow-xl">
-        <h3 className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        <h3 className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-yellow-500 to-black bg-clip-text text-transparent">
           Frequently Asked Questions
         </h3>
         <div className="space-y-6 max-w-3xl mx-auto">
           {faqs.map((faq, index) => (
             <div
               key={index}
-              className="border border-gray-100 rounded-2xl hover:border-purple-200 transition-colors duration-300"
+              className="border border-gray-100 rounded-2xl hover:border-yellow-200 transition-colors duration-300"
             >
               <button
                 className="w-full px-8 py-6 text-left flex justify-between items-center"
