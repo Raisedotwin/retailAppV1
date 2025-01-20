@@ -34,7 +34,6 @@ const StakePage: React.FC = () => {
         <div className="max-w-7xl w-full mx-auto p-4">
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl">
             <div className="pt-2">
-              <FeaturedTrader />
               <TrendingTop />
               <Categories />
               <LatestActivity />

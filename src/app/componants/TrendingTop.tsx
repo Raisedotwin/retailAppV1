@@ -1,75 +1,127 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 
+const ExternalLinkIcon = () => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="16" 
+    height="16" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+    <polyline points="15 3 21 3 21 9"></polyline>
+    <line x1="10" y1="14" x2="21" y2="3"></line>
+  </svg>
+);
+
+const ChevronDownIcon = () => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="24" 
+    height="24" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round"
+  >
+    <polyline points="6 9 12 15 18 9"></polyline>
+  </svg>
+);
+
 const AnimatedHeader = () => (
-  <div className="relative flex flex-col items-center justify-center mb-16">
-    <div className="flex items-center justify-center gap-8 mb-6">
+  <div className="relative flex flex-col items-center justify-center mb-20">
+    <div className="flex items-center justify-center gap-8 mb-8">
       <div className="transform hover:rotate-12 transition-transform duration-300">
         <Image
           src="/icons/logo.png"
           alt="NFT Marketplace"
-          width={70}
-          height={70}
+          width={80}
+          height={80}
           className="animate-pulse"
         />
       </div>
-      <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-        Getting Started!
-      </h2>
+      <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+        Get Started
+      </h1>
       <div className="transform hover:-rotate-12 transition-transform duration-300">
         <Image
           src="/icons/logo.png"
           alt="NFT Marketplace"
-          width={70}
-          height={70}
+          width={80}
+          height={80}
           className="animate-pulse"
         />
       </div>
     </div>
+    
+    {/* Documentation Link */}
+    <a 
+      href="https://docs.google.com/document/d/1OH1hj-01vZyqifnXKdaqFqg8WARIBXEhnXe7A81uN5w/edit?tab=t.6bncxdjw1hly"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex items-center gap-2 px-6 py-3 mb-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+    >
+      <span className="font-semibold">View Full Documentation</span>
+      <ExternalLinkIcon />
+    </a>
+
     <div className="relative group">
-      <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg blur opacity-10 group-hover:opacity-20 transition duration-1000 group-hover:duration-200"></div>
-      <div className="relative px-8 py-4 bg-white bg-opacity-90 backdrop-blur-sm rounded-lg shadow-xl">
-        <p className="text-xl font-medium bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          <span className="font-bold">Find an X account, tokenize it, claim it to start trading</span> BUY $NUGGET {' '}
-          for extra rewards{' '}
-          <span className="animate-pulse inline-block">📈</span>
+      <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+      <div className="relative px-8 py-6 bg-white rounded-2xl shadow-xl">
+        <p className="text-2xl font-medium text-center">
+          <span className="font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            Find an X account, tokenize it, claim it to start trading
+          </span>
+          <br />
+          <span className="text-gray-600">
+            BUY $NUGGET for extra rewards{' '}
+            <span className="animate-bounce inline-block">📈</span>
+          </span>
         </p>
       </div>
     </div>
   </div>
 );
 
-const FunIcon = ({ icon }: { icon: JSX.Element }) => (
-  <div className="relative">
-    <div className="absolute inset-0 bg-blue-400 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity"></div>
-    <div className="relative flex-shrink-0 w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center text-white transform group-hover:scale-110 transition-transform">
+const FunIcon = ({ icon }: { icon: React.ReactNode }) => (
+  <div className="relative group">
+    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-purple-500/20 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-all duration-300"></div>
+    <div className="relative w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center text-white transform group-hover:scale-110 transition-all duration-300 shadow-lg">
       {icon}
     </div>
   </div>
 );
 
+
 const HowItWorks = () => {
   const [selectedFaq, setSelectedFaq] = useState<number | null>(null);
+
 
   const steps = [
     {
       number: '01',
       title: 'Create Tokens',
-      description: "Look up an X account and create a token, if your the owner of the account 'claim' and start trading. You can also create accounts for other people and hope they claim",
+      description: "Look up an X account and create a token. If you're the owner, claim and start trading. Create accounts for others and await their claims.",
       icon: (
-        <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 6c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/>
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-          <path d="M12 6v12" strokeDasharray="2 2"/>
         </svg>
       )
     },
     {
       number: '02',
       title: 'Create Profit',
-      description: "There is a 6% funding rate on all token trading, this fluctuates with the token creator's performance in trading or generating revenue. The proceeds from the funding rate are used to fund a raise wallet, which the token creator can purchase perps and memes with.",
+      description: "6% funding rate on all token trading, fluctuating with creator's performance. Proceeds fund a raise wallet for perps and memes trading.",
       icon: (
-        <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
           <circle cx="12" cy="12" r="1"/>
           <path d="M17 12c0 2.76-2.24 5-5 5s-5-2.24-5-5"/>
@@ -79,14 +131,11 @@ const HowItWorks = () => {
     {
       number: '03',
       title: 'Create Pumps',
-      description: "Revenue generated by the token creator is used to automatically buyback their own token. If the creator underperforms the protocol will sell the creator's tokens in a sellback and distribute the profits from that back to the users.",
+      description: "Revenue automatically buys back creator tokens. Underperformance triggers sellbacks, distributing profits to users.",
       icon: (
-        <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M18 8c2 2.5 2 6.5 0 9M6 8c-2 2.5-2 6.5 0 9"/>
-          <path d="M12 8v8"/>
-          <path d="M12 3v3"/>
-          <path d="M12 18v3"/>
-          <path d="M15 5l-3-3-3 3"/>
+          <path d="M12 8v8M12 3v3M12 18v3M15 5l-3-3-3 3"/>
         </svg>
       )
     }
@@ -94,41 +143,42 @@ const HowItWorks = () => {
 
   const faqs = [
     {
-      question: 'What is the funding rate?',
-      answer: 'The funding rate is the rate at which Raise taxes each transaction on creator tokens, the rate can either be stable or fluctuate based on creator revenue generating performance. For week 1 everyone will start out with 6% percent funding rate.'
+      question: "What is the funding rate?",
+      answer: "The funding rate is Raise's transaction tax on creator tokens. It can be stable or fluctuate based on creator revenue performance. Week 1 starts with a 6% funding rate for all."
     },
     {
-      question: 'What are buybacks and sellbacks?',
-      answer: 'Raise uses buybacks to and sellbacks to soft peg the tokens value to the ongoing performance of an AI agent or human creator.'
+      question: "What are buybacks and sellbacks?",
+      answer: "Raise uses buybacks and sellbacks to soft peg token value to the ongoing performance of an AI agent or human creator."
     },
     {
-      question: 'How do I buy trader tokens, what happens if a creator has not claimed their account?',
-      answer: 'Go to the "Creators" tab and click on already created accounts & navigate to the buy and sell buttons. Look up a creator by typing in their X username and create an account for them. If you see "Inactive" next to the name of a creator it means the account has not been claimed by that creator. Any fees generated by the token trading activity pre-creator claim will be escrowed in a safe wallet and distributed to them upon their claim.'
+      question: 'How do I buy trader tokens?',
+      answer: "Visit the 'Creators' tab to browse existing accounts or create new ones by entering an X username. 'Inactive' status means the creator hasn't claimed their account yet. Pre-claim trading fees are held in escrow until claimed."
     }
   ];
 
   return (
-    <section className="max-w-6xl mx-auto px-4 py-16">
+    <section className="max-w-7xl mx-auto px-6 py-20 bg-gray-50">
       <AnimatedHeader />
+      
       {/* Steps */}
-      <div className="grid gap-8 md:grid-cols-3 mb-16">
+      <div className="grid gap-8 lg:gap-12 md:grid-cols-3 mb-24">
         {steps.map((step, index) => (
           <div 
             key={step.number}
-            className="group relative p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+            className="group relative p-8 bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2"
           >
-            <div className="flex flex-col items-center text-center gap-6 mb-4">
+            <div className="flex flex-col items-center text-center gap-8">
               <FunIcon icon={step.icon} />
               <div>
-                <span className="inline-block px-4 py-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full text-sm font-semibold text-blue-600 mb-2">
+                <span className="inline-block px-6 py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full text-sm font-bold text-blue-600 mb-3">
                   Step {step.number}
                 </span>
-                <h3 className="text-xl font-bold">{step.title}</h3>
+                <h3 className="text-2xl font-bold mb-4">{step.title}</h3>
+                <p className="text-gray-600 leading-relaxed">{step.description}</p>
               </div>
             </div>
-            <p className="text-gray-600 text-center">{step.description}</p>
             {index < steps.length - 1 && (
-              <div className="hidden md:block absolute -right-12 top-1/2 transform -translate-y-1/2 text-purple-300">
+              <div className="hidden md:block absolute -right-6 top-1/2 transform -translate-y-1/2 text-purple-400">
                 <svg className="w-8 h-8 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M5 12h14M15 5l7 7-7 7" />
                 </svg>
@@ -139,37 +189,29 @@ const HowItWorks = () => {
       </div>
 
       {/* FAQ Section */}
-      <div className="bg-gray-50 rounded-3xl p-8">
-        <h3 className="text-2xl font-bold mb-6 text-center">Frequently Asked Questions</h3>
-        <div className="space-y-4 max-w-3xl mx-auto">
+      <div className="bg-white rounded-3xl p-12 shadow-xl">
+        <h3 className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Frequently Asked Questions
+        </h3>
+        <div className="space-y-6 max-w-3xl mx-auto">
           {faqs.map((faq, index) => (
             <div
               key={index}
-              className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300"
+              className="border border-gray-100 rounded-2xl hover:border-purple-200 transition-colors duration-300"
             >
               <button
-                className="w-full px-6 py-4 text-left flex justify-between items-center"
+                className="w-full px-8 py-6 text-left flex justify-between items-center"
                 onClick={() => setSelectedFaq(selectedFaq === index ? null : index)}
               >
-                <span className="font-semibold">{faq.question}</span>
-                <svg
-                  className={`w-5 h-5 transform transition-transform ${
-                    selectedFaq === index ? 'rotate-180' : ''
-                  }`}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M19 9l-7 7-7-7" />
-                </svg>
+                <span className="text-lg font-semibold">{faq.question}</span>
+                <ChevronDownIcon />
               </button>
               <div
-                className={`px-6 pb-4 transition-all duration-300 ${
-                  selectedFaq === index ? 'block' : 'hidden'
+                className={`px-8 transition-all duration-300 overflow-hidden ${
+                  selectedFaq === index ? 'max-h-48 pb-6' : 'max-h-0'
                 }`}
               >
-                <p className="text-gray-600">{faq.answer}</p>
+                <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
               </div>
             </div>
           ))}

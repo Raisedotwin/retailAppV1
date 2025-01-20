@@ -5,6 +5,7 @@ import Holdings from '../componants/Holdings';
 import { usePrivy } from '@privy-io/react-auth';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
 import { ethers } from 'ethers';
+import LogoLoader from '../componants/LogoLoader';
 
 type AccountBalance = {
   account: string;
@@ -97,35 +98,37 @@ const HoldingsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+    <>
+      {isLoading ? (
+        <LogoLoader />
+      ) : (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {error ? (
+              <div className="p-6 text-center text-red-600 bg-red-50 rounded-lg">
+                <p>{error}</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <Holdings
+                  data={accountBalances.map((balance, index) => ({
+                    token: index + 1,
+                    name: balance.profileName,
+                    username: balance.username,
+                    balance: balance.balance,
+                    logo: balance.logo,
+                    link: balance.profileName ? 
+                      `/trader?name=${balance.profileName}&logo=${balance.logo}&username=${balance.username}` : 
+                      '#',
+                  }))}
+                />
+              </div>
+            )}
           </div>
-        ) : error ? (
-          <div className="p-6 text-center text-red-600 bg-red-50 rounded-lg">
-            <p>{error}</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <Holdings
-              data={accountBalances.map((balance, index) => ({
-                token: index + 1,
-                name: balance.profileName,
-                username: balance.username,
-                balance: balance.balance,
-                logo: balance.logo,
-                link: balance.profileName ? 
-                  `/trader?name=${balance.profileName}&logo=${balance.logo}&username=${balance.username}` : 
-                  '#',
-              }))}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
-};
+}
 
 export default HoldingsPage;

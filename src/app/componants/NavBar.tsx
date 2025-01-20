@@ -143,14 +143,14 @@ const NavBar: React.FC = () => {
 
           {user && (
             <>
-              <Link href="/profile">
-                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Profile</div>
+              <Link href="/stake">
+                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">How It Works</div>
               </Link>
-              <div className="flex items-center space-x-2">
+              {/*<div className="flex items-center space-x-2">
                 <Link href="/holdings">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Traders</div>
+                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Wallet</div>
                 </Link>
-              </div>
+              </div>*/}
               <Link href="/swaps">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Swap</div>
               </Link>
