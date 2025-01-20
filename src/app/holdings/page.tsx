@@ -117,7 +117,7 @@ const HoldingsPage = () => {
               </h2>
               
               <p className="text-gray-600 text-center text-lg mb-8 leading-relaxed">
-                Join our community of creators and supporters. 
+                Purchase tokens that track the performance of traders and AI agents. 
               </p>
             </div>
             
