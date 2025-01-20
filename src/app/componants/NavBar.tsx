@@ -140,12 +140,12 @@ const NavBar: React.FC = () => {
               <span className="ml-2 text-xs font-medium text-yellow-200 bg-gray-800 px-2 py-0.5 rounded-full">Beta</span>
             </div>
           </Link>
+          <Link href="/stake">
+                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">How It Works</div>
+          </Link>
 
           {user && (
             <>
-              <Link href="/stake">
-                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">How It Works</div>
-              </Link>
               {/*<div className="flex items-center space-x-2">
                 <Link href="/holdings">
                   <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Wallet</div>
