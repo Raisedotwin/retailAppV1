@@ -3,7 +3,7 @@ import Image from 'next/image';
 
 const LogoLoader = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-6">
+    <div className="flex items-center justify-center">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-8 text-center space-y-6">
         {/* Logo container with glow effect */}
         <div className="relative group inline-block">
@@ -33,8 +33,7 @@ const LogoLoader = () => {
         
         {/* Loading text */}
         <p className="text-gray-600">
-          Please wait while we fetch the latest trader data...
-        </p>
+          Please wait while we fetch the latest trader data...</p>
         
         {/* Loading indicator */}
         <div className="flex justify-center">

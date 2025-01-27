@@ -151,11 +151,23 @@ const HoldingsPage = () => {
     );
   }
 
-
   return (
     <>
       {isLoading ? (
-        <LogoLoader />
+        <div className="min-h-screen relative">
+          {/* Loading Background Image */}
+          <div 
+            className="absolute inset-0 bg-cover bg-center z-0"
+            style={{ 
+              backgroundImage:"url('/icons/fb.png')",
+              filter: "brightness(0.9)"
+            }}
+          />
+          {/* Loading Spinner Overlay */}
+          <div className="relative z-10 min-h-screen flex items-center justify-center bg-black bg-opacity-30">
+            <LogoLoader />
+          </div>
+        </div>
       ) : (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
           <div className="max-w-7xl mx-auto space-y-6">
