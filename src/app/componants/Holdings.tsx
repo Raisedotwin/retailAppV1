@@ -38,7 +38,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data: initialData, itemsPerPage = 1
 
   return (
     <div className="space-y-4">
-      {/* Warning Banner */}
+      {/* Warning Banner 
       <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg shadow-md">
         <div className="flex items-start">
           <span className="text-xl mr-3">⚠️</span>
@@ -49,7 +49,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data: initialData, itemsPerPage = 1
             </p>
           </div>
         </div>
-      </div>
+      </div>*/}
 
       <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl shadow-lg overflow-hidden border border-gray-200">
         <div className="p-6 border-b border-gray-200 bg-gray-50">
