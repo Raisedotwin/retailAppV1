@@ -31,26 +31,26 @@ const TraderPageContent: React.FC = () => {
 
   const tokenPoolABI = require("../abi/traderPool");
 
-  const tokenContractAddr = '0x9641d68B8d47A0fa34eC63a7b4c9CedcE3222027';
+  const tokenContractAddr = '0xDF08Ffc3A51Fe6daB87b8106Db40CA6e2690e5DE';
   const tokenMarketABI = require('../abi/tokenMarket.json');
 
-  const marketDataAddr = '0xe3817De1F96e66b15B740558402B936F82987Ae0';
+  const marketDataAddr = '0xaf2503e412A08D365ECCc16036b9a372ac0e9B54';
   const marketDataABI = require("../abi/marketdata.json");
 
-  const createAccountAddr = '0xf4A04e6a10C3f929Aa8f1f14766D226CAf904140';
+  const createAccountAddr = '0x57B03bf4a6cCe7CDFe70253a1aAefCc7Bd20BC8e';
   const createAccountABI = require("../abi/createAccount.json");
 
-  const profileAddr = '0x1330DF62D4CA561B96C2F7B69fd1F490c654B690';
+  const profileAddr = '0x2332f93A8F76430078066F6C16FC4B7773580f30';
   const profileABI = require("../abi/profile.json");
 
   const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('tradingActivity');
   const [traderProfileExists, setTraderProfileExists] = useState(false);
 
-  const optionsContractAddr = '0x2cAeFAb9b961CD969bDEadDd4266D4787ede5Fd2'; // Update with your contract address
+  const optionsContractAddr = '0x0711333aa94E4f32B62C6dfD04c6E3CD79815883'; // Update with your contract address
   const optionsABI = require("../abi/shorts");
 
   const whitelist = require("../abi/BETAWhitelist.json");
-  const whitelistAddr = '0x0735b6E3b28A32423B6BaED39381866fDA5E6786';
+  const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
   
   const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
 
@@ -91,8 +91,9 @@ const TraderPageContent: React.FC = () => {
   const [optionsContract, setOptionsContract] = useState<any>(null);
   const [signer, setSigner] = useState<any>(null);
   const [inactiveTraderDisabled, setInactiveTraderDisabled] = useState(false);
+  const [buybackAmount, setBuybackAmount] = useState('0');
 
-  const [createUserWhitelistEnabled, setCreateUserWhitelistEnabled] = useState(true);
+  const [createUserWhitelistEnabled, setCreateUserWhitelistEnabled] = useState(false);
   const [isUserWhitelisted, setIsUserWhitelisted] = useState(false);
 
   const [disableOptionMarket] = useState(true); // Set to true to show placeholder, false to show options panel
@@ -319,6 +320,12 @@ useEffect(() => {
               const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, signer);
               const balance = await traderPoolInstance.getTotal();
               setBalance(ethers.formatEther(balance));
+
+              const buybackAmount = await traderPoolInstance.getBuybackRate();
+              const convertedBuyback = 10000 - Number(buybackAmount);
+              const finalMath = convertedBuyback / 100;
+              setBuybackAmount(finalMath.toString());
+              console.log('Buyback amount:', finalMath.toString());
             }
 
             // Get token details
@@ -414,9 +421,10 @@ const handleCreateWallet = async () => {
     setModalMessage('Creating a wallet');
     setIsModalVisible(true);
 
-    const trimmedUsername = (username as string).slice(0, 11);
+    const trimmedUsername = (username as string).slice(0, 3);
 
     const createTx = await createContract.createAccount(
+      username as string, //has to be username as unique differentiator
       trimmedUsername,
       name as string,
       logo as string,
@@ -704,11 +712,11 @@ const handleCreateWallet = async () => {
   </div>
   <div className="text-center px-4">
     <p className="text-lg font-bold text-green-500">{Number(lastBuybackValue).toFixed(3)}</p>
-    <p className="text-xs text-gray-500">Buyback #</p>
+    <p className="text-xs text-gray-500">Buyback Amount</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">0</p>
-    <p className="text-xs text-gray-500">Sellback #</p>
+    <p className="text-lg font-bold text-green-500">{buybackAmount}%</p>
+    <p className="text-xs text-gray-500">Buyback Ratio</p>
   </div>
   <div className="text-center px-4">
     <p className="text-lg font-bold text-green-500">

@@ -682,19 +682,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "getTraderFee",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "bytes32",
@@ -1040,19 +1027,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_feePercent",
-				"type": "uint256"
-			}
-		],
-		"name": "setTraderProfitFeePercent",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"inputs": [],
 		"name": "subjectFeePercent",
 		"outputs": [
@@ -1125,19 +1099,6 @@
 			}
 		],
 		"name": "tokenSupply",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "traderProfitFee",
 		"outputs": [
 			{
 				"internalType": "uint256",

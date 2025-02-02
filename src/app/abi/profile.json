@@ -39,19 +39,6 @@
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newAdminAddress",
-				"type": "address"
-			}
-		],
-		"name": "AdminAddressUpdated",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
 				"indexed": false,
 				"internalType": "uint64",
 				"name": "version",
@@ -260,31 +247,6 @@
 		"type": "event"
 	},
 	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "oldAddress",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newAddress",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "accountNumber",
-				"type": "uint256"
-			}
-		],
-		"name": "UserAddressUpdated",
-		"type": "event"
-	},
-	{
 		"inputs": [],
 		"name": "ADMIN",
 		"outputs": [
@@ -324,19 +286,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "approvalAuth",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -347,19 +296,6 @@
 		"name": "approveAddressForClaim",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "approveFeeAuth",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -395,6 +331,16 @@
 			{
 				"internalType": "string",
 				"name": "name",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "tokenName",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "tokenSymbol",
 				"type": "string"
 			},
 			{
@@ -750,6 +696,30 @@
 				"internalType": "bytes32",
 				"name": "",
 				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_accNum",
+				"type": "uint256"
+			}
+		],
+		"name": "getTokenSymbolName",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
 			}
 		],
 		"stateMutability": "view",

@@ -16,6 +16,9 @@ const WalletPage: React.FC = () => {
   const [profileAddress, setProfileAddress] = useState('');
   const [claimableBalance, setClaimableBalance] = useState('0.00');
   const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(true); // New state for whitelist toggle
+  const [profitTakePercentage, setProfitTakePercentage] = useState('');
+  const [isProfitTakeProcessing, setIsProfitTakeProcessing] = useState(false);
+
 
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
 
@@ -56,11 +59,11 @@ const WalletPage: React.FC = () => {
   const tokenPoolABI = require("../abi/traderPool");
   const traderPayoutsABI = require("../abi/traderPayouts");
 
-  const profileAddr = '0x1330DF62D4CA561B96C2F7B69fd1F490c654B690';
+  const profileAddr = '0x2332f93A8F76430078066F6C16FC4B7773580f30';
   const profileABI = require("../abi/profile");
 
   const whitelist = require("../abi/BETAWhitelist.json");
-  const whitelistAddr = '0x0735b6E3b28A32423B6BaED39381866fDA5E6786';
+  const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
   const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
@@ -74,6 +77,55 @@ const WalletPage: React.FC = () => {
         return new ethers.Wallet('cac636e07dd1ec983b66c5693b97ac5150d9a0cc5db8dd39ddb58b2e142cb192', provider);
   }, [provider]);
 
+
+  // Add validation for profit take percentage
+  const validateProfitTakeInput = (value: string) => {
+    const num = parseFloat(value);
+    if (isNaN(num) || num < 1 || num > 100) return false;
+    return true;
+  };
+
+  // Add handler for profit take submission
+  const handleSetProfitTake = async () => {
+    if (!validateProfitTakeInput(profitTakePercentage)) {
+      setModalMessage('Please enter a valid percentage between 1 and 100');
+      setIsModalVisible(true);
+      setTimeout(() => setIsModalVisible(false), 2000);
+      return;
+    }
+
+    setIsProfitTakeProcessing(true);
+    setModalMessage('Setting profit take percentage...');
+    setIsModalVisible(true);
+
+    try {
+      const signer: any = await getSigner();
+      const currentWallet = await getWallet();
+      const walletAddress = currentWallet?.address || user?.wallet?.address;
+
+      const profile = await profileContract.getProfile(walletAddress);
+      const tokenPoolAddr = profile[5];
+
+      if (tokenPoolAddr && tokenPoolAddr !== "0x0000000000000000000000000000000000000000") {
+        const tokenPoolContract = new ethers.Contract(tokenPoolAddr, tokenPoolABI, signer);
+        const percentageValue = Number(profitTakePercentage) * 100; // Convert to basis points
+        console.log('Setting profit take percentage:', percentageValue);
+        const tx = await tokenPoolContract.setBuyBack(percentageValue);
+        //await tx.wait();
+
+        setModalMessage('Profit take percentage set successfully!');
+        setProfitTakePercentage('');
+      } else {
+        setModalMessage('No token pool contract found');
+      }
+    } catch (error) {
+      console.error('Error setting profit take:', error);
+      setModalMessage('Failed to set profit take percentage');
+    } finally {
+      setIsProfitTakeProcessing(false);
+      setTimeout(() => setIsModalVisible(false), 2000);
+    }
+  };
 
   const handleWithdrawRewards = async () => {
     if (!wallet) {
@@ -458,48 +510,48 @@ const checkProfileAssociation = useCallback(async () => {
         </div>
       ) : (
         <div className="max-w-3xl w-full mx-auto p-8 bg-gray-900 rounded-lg shadow-lg flex flex-col">
-        <div>
-          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <div className="flex items-center space-x-4">
-              <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Raise Wallet:</h2>
-              {profileExists && (
-                <div className="flex items-center space-x-4">
-                  <button
-                    type="button"
-                    onClick={handleWalletClaim}
-                    className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg hover:from-green-500 hover:to-blue-600 transition duration-300"
-                  >
-                    Claim
-                  </button>
-                  <div className="flex flex-col items-end">
-                    {isProfileAssociated ? (
-                      <button
-                        onClick={handleWithdrawRewards}
-                        className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
-                      >
-                        Get Rewards!
-                      </button>
-                    ) : (
-                      <span className="text-sm font-medium text-blue-400">Get Rewards!</span>
-                    )}
-                    <div className="bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">
-                      <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-                        {formatEthValue(claimableBalance)} ETH
-                      </span>
+          <div>
+            <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+              <div className="flex items-center space-x-4">
+                <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Raise Wallet:</h2>
+                {profileExists && (
+                  <div className="flex items-center space-x-4">
+                    <button
+                      type="button"
+                      onClick={handleWalletClaim}
+                      className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg hover:from-green-500 hover:to-blue-600 transition duration-300"
+                    >
+                      Claim
+                    </button>
+                    <div className="flex flex-col items-end">
+                      {isProfileAssociated ? (
+                        <button
+                          onClick={handleWithdrawRewards}
+                          className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                        >
+                          Get Rewards!
+                        </button>
+                      ) : (
+                        <span className="text-sm font-medium text-blue-400">Get Rewards!</span>
+                      )}
+                      <div className="bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">
+                        <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
+                          {formatEthValue(claimableBalance)} ETH
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+              <div>
+                <button
+                  onClick={() => setShowSwitchAddressModal(true)}
+                  className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300"
+                >
+                  Switch Address
+                </button>
+              </div>
             </div>
-            <div>
-              <button
-                onClick={() => setShowSwitchAddressModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300"
-              >
-                Switch Address
-              </button>
-            </div>
-          </div>
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-2">
                 <h3 className="text-lg font-semibold text-white">Connected Address:</h3>
@@ -512,9 +564,7 @@ const checkProfileAssociation = useCallback(async () => {
                     {isProfileAssociated ? 'Linked to Raise' : 'Not Linked to Raise'}
                   </span>
                 )}
-                
               </div>
-              
               <p className="text-gray-400 break-words">{nativeAddress || 'No Address Connected'}</p>
               <div className="mt-4">
                 <h3 className="text-lg font-semibold text-white mb-2">Raise Wallet:</h3>
@@ -532,6 +582,37 @@ const checkProfileAssociation = useCallback(async () => {
                 <p className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
                   {ethBalance} ETH
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* New Profit Take Section */}
+          <div className="mb-8">
+            <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
+              <h3 className="text-xl font-bold text-white mb-4">Set Profit Take for Trader</h3>
+              <div className="flex space-x-4">
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    min="1"
+                    max="9000"
+                    value={profitTakePercentage}
+                    onChange={(e) => setProfitTakePercentage(e.target.value)}
+                    placeholder="Enter percentage (1-90)"
+                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+                  />
+                </div>
+                <button
+                  onClick={handleSetProfitTake}
+                  disabled={isProfitTakeProcessing || !validateProfitTakeInput(profitTakePercentage)}
+                  className={`px-6 py-3 ${
+                    isProfitTakeProcessing || !validateProfitTakeInput(profitTakePercentage)
+                      ? 'bg-gray-600 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+                  } text-white rounded-lg transition duration-300`}
+                >
+                  {isProfitTakeProcessing ? 'Processing...' : 'Set Profit Take'}
+                </button>
               </div>
             </div>
           </div>

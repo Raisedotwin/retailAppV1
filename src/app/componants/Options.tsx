@@ -495,7 +495,7 @@ const Options: React.FC<OptionsProps> = ({ isEnabled = true, tokenAddress, optio
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
   
-  const optionsContractAddr = '0x2cAeFAb9b961CD969bDEadDd4266D4787ede5Fd2';
+  const optionsContractAddr = '0x0711333aa94E4f32B62C6dfD04c6E3CD79815883';
   const tokenABI = require("../abi/traderToken");
   const optionsABI = require("../abi/shorts");
 

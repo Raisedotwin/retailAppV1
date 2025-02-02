@@ -25,7 +25,7 @@ const SwapForm: React.FC<SwapFormProps>= () => {
   let wallet = wallets[0];
 
   const tokenPoolABI = require("../abi/traderPool");
-  const profileAddr = '0x1330DF62D4CA561B96C2F7B69fd1F490c654B690';
+  const profileAddr = '0x2332f93A8F76430078066F6C16FC4B7773580f30';
   const profileABI = require("../abi/profile");
   const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
 

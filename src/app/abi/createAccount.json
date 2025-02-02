@@ -452,6 +452,11 @@
 			},
 			{
 				"internalType": "string",
+				"name": "_tokenSymbol",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
 				"name": "_bio",
 				"type": "string"
 			},

@@ -29,12 +29,12 @@ const DashboardPage: React.FC = () => {
 
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const tokenContractAddr = '0x9641d68B8d47A0fa34eC63a7b4c9CedcE3222027';
+  const tokenContractAddr = '0xDF08Ffc3A51Fe6daB87b8106Db40CA6e2690e5DE';
   const tokenMarketABI = require("../abi/tokenMarket");
 
   const tokenPoolABI = require("../abi/traderPool");
 
-  const profileAddr = '0x1330DF62D4CA561B96C2F7B69fd1F490c654B690';
+  const profileAddr = '0x2332f93A8F76430078066F6C16FC4B7773580f30';
   const profileABI = require("../abi/profile");
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
