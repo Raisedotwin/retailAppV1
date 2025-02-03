@@ -15,7 +15,7 @@ const WalletPage: React.FC = () => {
   const [isProfileAssociated, setIsProfileAssociated] = useState(false);
   const [profileAddress, setProfileAddress] = useState('');
   const [claimableBalance, setClaimableBalance] = useState('0.00');
-  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(true); // New state for whitelist toggle
+  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(false); // New state for whitelist toggle
   const [profitTakePercentage, setProfitTakePercentage] = useState('');
   const [isProfitTakeProcessing, setIsProfitTakeProcessing] = useState(false);
 
