@@ -9,7 +9,7 @@ import { EIP155_CHAINS } from '@/data/EIP155Data';
 
 const ADMIN_ADDRESSES = [
   '0x42b93B8d07eee075B851F5b488Ef6B7db148F470',
-  '0x27539C9f05BeBf3bd96e8a216B63f23c75cAB89b'
+  '0x33DCCe8EbA08DF90047fB581a2A56548a0d697Ff'
 ];
 
 const NavBar: React.FC = () => {
