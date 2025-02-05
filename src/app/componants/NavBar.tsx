@@ -7,6 +7,11 @@ import SearchModal from './SearchModal';
 import { ethers } from 'ethers';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
 
+const ADMIN_ADDRESSES = [
+  '0x42b93B8d07eee075B851F5b488Ef6B7db148F470',
+  '0x27539C9f05BeBf3bd96e8a216B63f23c75cAB89b'
+];
+
 const NavBar: React.FC = () => {
   const { account } = useAccount();
   const { login, logout, user } = usePrivy();
@@ -31,6 +36,12 @@ const NavBar: React.FC = () => {
     () => new ethers.Contract(whitelistAddr, whitelist, provider),
     [provider]
   );
+
+  // Check if current user is an admin
+  const isAdmin = useMemo(() => {
+    if (!user?.wallet?.address) return false;
+    return ADMIN_ADDRESSES.includes(user.wallet.address);
+  }, [user?.wallet?.address]);
 
   const checkWhitelistStatus = async (address: string): Promise<boolean> => {
     try {
@@ -97,7 +108,7 @@ const NavBar: React.FC = () => {
   const logoutWithPrivy = async () => {
     try {
       await logout();
-      setShowWhitelistModal(false); // Clear modal when logging out
+      setShowWhitelistModal(false);
     } catch (error) {
       console.error('Error logging out with Privy:', error);
     }
@@ -146,11 +157,11 @@ const NavBar: React.FC = () => {
 
           {user && (
             <>
-              {/*<div className="flex items-center space-x-2">
-                <Link href="/holdings">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Wallet</div>
+              {isAdmin && (
+                <Link href="/admin">
+                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Admin Panel</div>
                 </Link>
-              </div>*/}
+              )}
               <Link href="/swaps">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Swap</div>
               </Link>

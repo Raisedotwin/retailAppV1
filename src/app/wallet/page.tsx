@@ -18,6 +18,8 @@ const WalletPage: React.FC = () => {
   const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(false); // New state for whitelist toggle
   const [profitTakePercentage, setProfitTakePercentage] = useState('');
   const [isProfitTakeProcessing, setIsProfitTakeProcessing] = useState(false);
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [isWithdrawalProcessing, setIsWithdrawalProcessing] = useState(false);
 
 
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
@@ -127,6 +129,34 @@ const WalletPage: React.FC = () => {
     }
   };
 
+    // Add handler for withdrawal request
+  const handleWithdrawalRequest = async () => {
+      if (!withdrawalAmount || parseFloat(withdrawalAmount) <= 0) {
+        setModalMessage('Please enter a valid withdrawal amount');
+        setIsModalVisible(true);
+        setTimeout(() => setIsModalVisible(false), 2000);
+        return;
+      }
+  
+      setIsWithdrawalProcessing(true);
+      setModalMessage('Processing withdrawal request...');
+      setIsModalVisible(true);
+  
+      try {
+        // TODO: Implement contract call here once available
+        console.log('Withdrawal amount:', withdrawalAmount);
+        
+        setModalMessage('Withdrawal request submitted successfully!');
+        setWithdrawalAmount('');
+      } catch (error) {
+        console.error('Error processing withdrawal:', error);
+        setModalMessage('Failed to process withdrawal request');
+      } finally {
+        setIsWithdrawalProcessing(false);
+        setTimeout(() => setIsModalVisible(false), 2000);
+      }
+    };
+  
   const handleWithdrawRewards = async () => {
     if (!wallet) {
       console.error("Wallet not available");
@@ -586,8 +616,8 @@ const checkProfileAssociation = useCallback(async () => {
             </div>
           </div>
 
-          {/* New Profit Take Section */}
-          <div className="mb-8">
+            {/* New Profit Take Section */}
+                    <div className="mb-8">
             <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
               <h3 className="text-xl font-bold text-white mb-4">Set Profit Take for Trader</h3>
               <div className="flex space-x-4">
@@ -616,6 +646,39 @@ const checkProfileAssociation = useCallback(async () => {
               </div>
             </div>
           </div>
+
+          {/* Withdrawal Request Section */}
+          <div className="mb-8">
+            <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
+              <h3 className="text-xl font-bold text-white mb-4">Withdrawal Request</h3>
+              <div className="flex space-x-4">
+                <div className="flex-1">
+                  <input
+                    type="number"
+                    min="0.000001"
+                    step="0.000001"
+                    value={withdrawalAmount}
+                    onChange={(e) => setWithdrawalAmount(e.target.value)}
+                    placeholder="Enter amount to withdraw"
+                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+                  />
+                </div>
+                <button
+                  onClick={handleWithdrawalRequest}
+                  disabled={isWithdrawalProcessing || !withdrawalAmount}
+                  className={`px-6 py-3 ${
+                    isWithdrawalProcessing || !withdrawalAmount
+                      ? 'bg-gray-600 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+                  } text-white rounded-lg transition duration-300`}
+                >
+                  {isWithdrawalProcessing ? 'Processing...' : 'Submit Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+
           
           <div>
             <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-4">
