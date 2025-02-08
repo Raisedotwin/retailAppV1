@@ -64,6 +64,9 @@ const WalletPage: React.FC = () => {
   const profileAddr = '0x2332f93A8F76430078066F6C16FC4B7773580f30';
   const profileABI = require("../abi/profile");
 
+  const withdrawAddr = '0x7a1Df7F34f8D8a27364BEa1708a6df902d225Bba';
+  const withdrawABI = require("../abi/withdraw");
+
   const whitelist = require("../abi/BETAWhitelist.json");
   const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
 
@@ -129,33 +132,59 @@ const WalletPage: React.FC = () => {
     }
   };
 
-    // Add handler for withdrawal request
   const handleWithdrawalRequest = async () => {
-      if (!withdrawalAmount || parseFloat(withdrawalAmount) <= 0) {
-        setModalMessage('Please enter a valid withdrawal amount');
-        setIsModalVisible(true);
-        setTimeout(() => setIsModalVisible(false), 2000);
-        return;
-      }
-  
-      setIsWithdrawalProcessing(true);
-      setModalMessage('Processing withdrawal request...');
+    if (!withdrawalAmount || parseFloat(withdrawalAmount) <= 0) {
+      setModalMessage('Please enter a valid withdrawal amount');
       setIsModalVisible(true);
-  
-      try {
-        // TODO: Implement contract call here once available
-        console.log('Withdrawal amount:', withdrawalAmount);
-        
-        setModalMessage('Withdrawal request submitted successfully!');
-        setWithdrawalAmount('');
-      } catch (error) {
-        console.error('Error processing withdrawal:', error);
-        setModalMessage('Failed to process withdrawal request');
-      } finally {
-        setIsWithdrawalProcessing(false);
-        setTimeout(() => setIsModalVisible(false), 2000);
+      setTimeout(() => setIsModalVisible(false), 2000);
+      return;
+    }
+
+    setIsWithdrawalProcessing(true);
+    setModalMessage('Processing withdrawal request...');
+    setIsModalVisible(true);
+
+    try {
+      const signer: any = await getSigner();
+      const currentWallet = await getWallet();
+      const walletAddress = currentWallet?.address || user?.wallet?.address;
+
+      // Get the profile to fetch the token pool address (raise wallet)
+      const profile = await profileContract.getProfile(walletAddress);
+      const raiseWalletAddress = profile[5]; // Token pool address from profile
+
+      if (!raiseWalletAddress || raiseWalletAddress === "0x0000000000000000000000000000000000000000") {
+        throw new Error("No raise wallet found for this profile");
       }
-    };
+
+      // Create contract instance
+      const withdrawContract = new ethers.Contract(withdrawAddr, withdrawABI, signer);
+
+      // Convert withdrawal amount to Wei
+      const amountInWei = ethers.parseEther(withdrawalAmount);
+
+      // For etherscan link, we'll use a placeholder since the transaction hasn't occurred yet
+      const placeholderTxLink = "";
+
+      // Call requestWithdrawal function
+      const tx = await withdrawContract.requestWithdrawal(
+        amountInWei,
+        placeholderTxLink,
+        raiseWalletAddress
+      );
+      
+      //await tx.wait();
+      
+      setModalMessage('Withdrawal request submitted successfully!');
+      setWithdrawalAmount('');
+    } catch (error) {
+      console.error('Error processing withdrawal:', error);
+      setModalMessage('Failed to process withdrawal request: ' + error);
+    } finally {
+      setIsWithdrawalProcessing(false);
+      setTimeout(() => setIsModalVisible(false), 2000);
+    }
+  };
   
   const handleWithdrawRewards = async () => {
     if (!wallet) {
