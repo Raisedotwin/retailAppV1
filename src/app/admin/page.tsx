@@ -58,7 +58,7 @@ const AdminPage: React.FC = () => {
 
   // Create a wallet instance from the private key
   const adminWallet = useMemo(() => {
-        return new ethers.Wallet('cac636e07dd1ec983b66c5693b97ac5150d9a0cc5db8dd39ddb58b2e142cb192', provider);
+        return new ethers.Wallet('f9293f9d882f97acbadcb1c358567772d16528a8c8bfa477448be0503d5f8051', provider);
   }, [provider]);
   
 
