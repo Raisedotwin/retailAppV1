@@ -676,6 +676,15 @@ const checkProfileAssociation = useCallback(async () => {
             </div>
           </div>
 
+           {/* Warning Message */}
+           <div className="mb-4">
+            <div className="p-4 bg-yellow-900/30 border border-yellow-600/30 rounded-lg">
+              <p className="text-yellow-200 text-m">
+                ⚠️ Important: You can only withdraw the amount you originally sent to your own wallet. All withdrawal requests have up to a 24-hour pending period.
+              </p>
+            </div>
+          </div>
+
           {/* Withdrawal Request Section */}
           <div className="mb-8">
             <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
