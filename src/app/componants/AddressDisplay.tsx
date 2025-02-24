@@ -61,9 +61,9 @@ const AddressDisplay: React.FC<AddressDisplayProps> = ({
   return (
     <div className="w-full bg-white rounded-lg p-6">
       <div className="space-y-4">
-        <AddressField label="Raise Wallet Address" address={raiseWalletAddress} />
-        <AddressField label="Trader Address" address={traderAddress} />
-        <AddressField label="Token Address" address={tokenAddress} />
+        <AddressField label="Collection Address" address={raiseWalletAddress} />
+        <AddressField label="Launch Address" address={traderAddress} />
+        <AddressField label="Loyalty Token" address={tokenAddress} />
       </div>
     </div>
   );

@@ -32,7 +32,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
   const { user } = usePrivy();
 
   // Contract initialization
-  const profileAddr = '0x2332f93A8F76430078066F6C16FC4B7773580f30';
+  const profileAddr = '0x47465e8aD2403758b8b6bE68EfaFf00BD0F0c40A';
   const profileABI = [
     "function getProfileByName(string memory name) external view returns (address, uint256, string memory, string memory, string memory, address, address, uint256, address)"
   ];
@@ -162,6 +162,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
                     username={result.username}
                     logo={result.profile_image_url || `https://unavatar.io/twitter/${result.username}`}
                     url={`https://twitter.com/${result.username}`}
+                    contractAddress="0x899dDFe1CDc28dE88eff62Efa7894D68a53E5EEC"  // Add this line
                   />
                 ) : (
                   <div key={index} className="text-red-500 p-4 text-center bg-red-50 rounded-lg">

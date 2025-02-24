@@ -6,6 +6,7 @@ import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/reac
 import { ethers } from 'ethers';
 import Image from 'next/image';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
+import EarningsManagement from '../componants/EarningsManagement';
 
 const WalletPage: React.FC = () => {
   const [profileExists, setProfileExists] = useState(false);
@@ -15,11 +16,18 @@ const WalletPage: React.FC = () => {
   const [isProfileAssociated, setIsProfileAssociated] = useState(false);
   const [profileAddress, setProfileAddress] = useState('');
   const [claimableBalance, setClaimableBalance] = useState('0.00');
-  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(false); // New state for whitelist toggle
-  const [profitTakePercentage, setProfitTakePercentage] = useState('');
-  const [isProfitTakeProcessing, setIsProfitTakeProcessing] = useState(false);
-  const [withdrawalAmount, setWithdrawalAmount] = useState('');
-  const [isWithdrawalProcessing, setIsWithdrawalProcessing] = useState(false);
+  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(true); // New state for whitelist toggle
+
+    // New store management state
+    const [activeTab, setActiveTab] = useState('dashboard');
+    const [newProduct, setNewProduct] = useState({
+      name: '',
+      price: '',
+      description: '',
+      images: []
+    });
+    const [editProductId, setEditProductId] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
 
 
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
@@ -59,16 +67,16 @@ const WalletPage: React.FC = () => {
   const nativeAddress = user?.wallet?.address;
 
   const tokenPoolABI = require("../abi/traderPool");
-  const traderPayoutsABI = require("../abi/traderPayouts");
+  const storePayoutsABI = require("../abi/traderPayouts");
 
-  const profileAddr = '0x2332f93A8F76430078066F6C16FC4B7773580f30';
+  const profileAddr = '0x47465e8aD2403758b8b6bE68EfaFf00BD0F0c40A';
   const profileABI = require("../abi/profile");
 
-  const withdrawAddr = '0x7a1Df7F34f8D8a27364BEa1708a6df902d225Bba';
-  const withdrawABI = require("../abi/withdraw");
-
   const whitelist = require("../abi/BETAWhitelist.json");
-  const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
+  const whitelistAddr = '0x0735b6E3b28A32423B6BaED39381866fDA5E6786';
+
+  const ordersAddr = "0x0A921B6D116bbF2cF2D5b0fC76f31BD95d840dE5";
+  const ordersABI = require("../abi/orders");
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
   const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
@@ -83,109 +91,6 @@ const WalletPage: React.FC = () => {
   }, [provider]);
 
 
-  // Add validation for profit take percentage
-  const validateProfitTakeInput = (value: string) => {
-    const num = parseFloat(value);
-    if (isNaN(num) || num < 1 || num > 100) return false;
-    return true;
-  };
-
-  // Add handler for profit take submission
-  const handleSetProfitTake = async () => {
-    if (!validateProfitTakeInput(profitTakePercentage)) {
-      setModalMessage('Please enter a valid percentage between 1 and 100');
-      setIsModalVisible(true);
-      setTimeout(() => setIsModalVisible(false), 2000);
-      return;
-    }
-
-    setIsProfitTakeProcessing(true);
-    setModalMessage('Setting profit take percentage...');
-    setIsModalVisible(true);
-
-    try {
-      const signer: any = await getSigner();
-      const currentWallet = await getWallet();
-      const walletAddress = currentWallet?.address || user?.wallet?.address;
-
-      const profile = await profileContract.getProfile(walletAddress);
-      const tokenPoolAddr = profile[5];
-
-      if (tokenPoolAddr && tokenPoolAddr !== "0x0000000000000000000000000000000000000000") {
-        const tokenPoolContract = new ethers.Contract(tokenPoolAddr, tokenPoolABI, signer);
-        const percentageValue = Number(profitTakePercentage) * 100; // Convert to basis points
-        console.log('Setting profit take percentage:', percentageValue);
-        const tx = await tokenPoolContract.setBuyBack(percentageValue);
-        //await tx.wait();
-
-        setModalMessage('Profit take percentage set successfully!');
-        setProfitTakePercentage('');
-      } else {
-        setModalMessage('No token pool contract found');
-      }
-    } catch (error) {
-      console.error('Error setting profit take:', error);
-      setModalMessage('Failed to set profit take percentage');
-    } finally {
-      setIsProfitTakeProcessing(false);
-      setTimeout(() => setIsModalVisible(false), 2000);
-    }
-  };
-
-  const handleWithdrawalRequest = async () => {
-    if (!withdrawalAmount || parseFloat(withdrawalAmount) <= 0) {
-      setModalMessage('Please enter a valid withdrawal amount');
-      setIsModalVisible(true);
-      setTimeout(() => setIsModalVisible(false), 2000);
-      return;
-    }
-
-    setIsWithdrawalProcessing(true);
-    setModalMessage('Processing withdrawal request...');
-    setIsModalVisible(true);
-
-    try {
-      const signer: any = await getSigner();
-      const currentWallet = await getWallet();
-      const walletAddress = currentWallet?.address || user?.wallet?.address;
-
-      // Get the profile to fetch the token pool address (raise wallet)
-      const profile = await profileContract.getProfile(walletAddress);
-      const raiseWalletAddress = profile[5]; // Token pool address from profile
-
-      if (!raiseWalletAddress || raiseWalletAddress === "0x0000000000000000000000000000000000000000") {
-        throw new Error("No raise wallet found for this profile");
-      }
-
-      // Create contract instance
-      const withdrawContract = new ethers.Contract(withdrawAddr, withdrawABI, signer);
-
-      // Convert withdrawal amount to Wei
-      const amountInWei = ethers.parseEther(withdrawalAmount);
-
-      // For etherscan link, we'll use a placeholder since the transaction hasn't occurred yet
-      const placeholderTxLink = "";
-
-      // Call requestWithdrawal function
-      const tx = await withdrawContract.requestWithdrawal(
-        amountInWei,
-        placeholderTxLink,
-        raiseWalletAddress
-      );
-      
-      //await tx.wait();
-      
-      setModalMessage('Withdrawal request submitted successfully!');
-      setWithdrawalAmount('');
-    } catch (error) {
-      console.error('Error processing withdrawal:', error);
-      setModalMessage('Failed to process withdrawal request: ' + error);
-    } finally {
-      setIsWithdrawalProcessing(false);
-      setTimeout(() => setIsModalVisible(false), 2000);
-    }
-  };
-  
   const handleWithdrawRewards = async () => {
     if (!wallet) {
       console.error("Wallet not available");
@@ -204,7 +109,7 @@ const WalletPage: React.FC = () => {
       const payoutsAddress = profile[6];
 
       if (payoutsAddress && payoutsAddress !== "0x0000000000000000000000000000000000000000") {
-        const traderPayoutsInstance = new ethers.Contract(payoutsAddress, traderPayoutsABI, signer);
+        const traderPayoutsInstance = new ethers.Contract(payoutsAddress, storePayoutsABI, signer);
         const tx = await traderPayoutsInstance.withdraw();
         //await tx.wait();
 
@@ -356,7 +261,7 @@ const checkProfileAssociation = useCallback(async () => {
 
       let payouts = profile[6];
       if (payouts !== "0x0000000000000000000000000000000000000000") {
-        const traderPayoutsInstance = new ethers.Contract(payouts, traderPayoutsABI, signer);
+        const traderPayoutsInstance = new ethers.Contract(payouts, storePayoutsABI, signer);
         const ethBalance = await provider.getBalance(payouts);
         const formattedBalance = ethers.formatEther(ethBalance);
         const amountMsg = formattedBalance.toString();
@@ -537,11 +442,61 @@ const checkProfileAssociation = useCallback(async () => {
     //setIsSwitching(false);
   };
 
-  // Add whitelist toggle to the admin section (if needed)
-  const toggleWhitelist = () => {
-      setIsWhitelistEnabled(!isWhitelistEnabled);
-  };
-  
+  // Mock products data
+  const [products] = useState([
+    { id: '1', name: 'Product 1', price: '0.1', description: 'Description 1' },
+    { id: '2', name: 'Product 2', price: '0.2', description: 'Description 2' },
+  ]);
+
+  const MyCurvesContent = () => (
+    <div className="bg-gray-800 p-6 rounded-lg">
+      <h2 className="text-xl font-bold text-white mb-6">My Curves</h2>
+      <div className="space-y-4">
+        {[
+          { address: '0x1234567890abcdef1234567890abcdef12345678', name: 'Cool Clothing' },
+          { address: '0xabcdef1234567890abcdef1234567890abcdef12', name: 'Premium Accessories' },
+          { address: '0x7890abcdef1234567890abcdef1234567890abcd', name: 'Limited Edition Sneakers' },
+          { address: '0xdef1234567890abcdef1234567890abcdef12345', name: 'Vintage Collection' }
+        ].map((curve) => (
+          <div key={curve.address} className="p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+            <a href="#" className="block">
+              <h3 className="text-lg font-medium text-white mb-2">{curve.name}</h3>
+              <p className="text-gray-400 font-mono text-sm break-all">{curve.address}</p>
+            </a>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const DashboardContent = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Analytics Cards */}
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <h3 className="text-gray-400 text-sm mb-2">Total Sales</h3>
+          <p className="text-3xl font-bold text-white">0.00 ETH</p>
+        </div>
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <h3 className="text-gray-400 text-sm mb-2">Active Products</h3>
+          <p className="text-3xl font-bold text-white">{products.length}</p>
+        </div>
+        <div className="bg-gray-800 p-6 rounded-lg">
+          <h3 className="text-gray-400 text-sm mb-2">Today's Revenue</h3>
+          <p className="text-3xl font-bold text-white">0.00 ETH</p>
+        </div>
+      </div>
+
+      {/* Sales Chart */}
+      <div className="bg-gray-800 p-6 rounded-lg">
+        <h3 className="text-xl font-bold text-white mb-4">Sales Overview</h3>
+        <div className="h-96">
+          {/* Add chart component here */}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-black flex flex-col p-6">
       {!isProfileAssociated && !user?.twitter?.username ? (
@@ -568,175 +523,146 @@ const checkProfileAssociation = useCallback(async () => {
           </div>
         </div>
       ) : (
-        <div className="max-w-3xl w-full mx-auto p-8 bg-gray-900 rounded-lg shadow-lg flex flex-col">
-          <div>
-            <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-              <div className="flex items-center space-x-4">
-                <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Raise Wallet:</h2>
-                {profileExists && (
+        <div className="max-w-6xl w-full mx-auto">
+          {/* Tab Navigation */}
+          <div className="flex space-x-2 mb-6 overflow-x-auto">
+            {['wallet', 'dashboard', 'earnings', 'my-curves'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-6 py-3 rounded-lg transition-colors whitespace-nowrap ${
+                  activeTab === tab
+                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                {tab.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              </button>
+            ))}
+            <button
+              onClick={() => window.location.href = '/positions'}
+              className="px-6 py-3 bg-gradient-to-r from-amber-500 to-red-600 text-white rounded-lg shadow-lg hover:from-amber-600 hover:to-red-700 transition duration-300 flex items-center space-x-2 relative"
+            >
+              <span>Orders</span>
+              <div className="absolute -top-0 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                3
+              </div>
+            </button>
+          </div>
+  
+          {/* Tab Content */}
+          <div className="bg-gray-900 rounded-lg shadow-lg">
+            {activeTab === 'wallet' && (
+              <div className="p-8">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+                  {/* Existing wallet content */}
                   <div className="flex items-center space-x-4">
-                    <button
-                      type="button"
-                      onClick={handleWalletClaim}
-                      className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg hover:from-green-500 hover:to-blue-600 transition duration-300"
-                    >
-                      Claim
-                    </button>
-                    <div className="flex flex-col items-end">
-                      {isProfileAssociated ? (
+                    <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Raise Wallet:</h2>
+                    {profileExists && (
+                      <div className="flex items-center space-x-4">
                         <button
-                          onClick={handleWithdrawRewards}
-                          className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                          type="button"
+                          onClick={handleWalletClaim}
+                          className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg hover:from-green-500 hover:to-blue-600 transition duration-300"
                         >
-                          Get Rewards!
+                          Claim
                         </button>
-                      ) : (
-                        <span className="text-sm font-medium text-blue-400">Get Rewards!</span>
-                      )}
-                      <div className="bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">
-                        <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-                          {formatEthValue(claimableBalance)} ETH
-                        </span>
+                        <div className="flex flex-col items-end">
+                          {isProfileAssociated ? (
+                            <button
+                              onClick={handleWithdrawRewards}
+                              className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
+                            >
+                              Get Rewards!
+                            </button>
+                          ) : (
+                            <span className="text-sm font-medium text-blue-400">Get Rewards!</span>
+                          )}
+                          <div className="bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">
+                            <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
+                              {formatEthValue(claimableBalance)} ETH
+                            </span>
+                          </div>
+                        </div>
                       </div>
+                    )}
+                  </div>
+                  <div>
+                    <button
+                      onClick={() => setShowSwitchAddressModal(true)}
+                      className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300"
+                    >
+                      Switch Address
+                    </button>
+                  </div>
+                </div>
+  
+                {/* Rest of the wallet content */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-lg font-semibold text-white">Connected Address:</h3>
+                    {nativeAddress && (
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        isProfileAssociated 
+                          ? 'bg-green-500/20 text-green-300 border border-green-500/30' 
+                          : 'bg-red-500/20 text-red-300 border border-red-500/30'
+                      }`}>
+                        {isProfileAssociated ? 'Linked to Raise' : 'Not Linked to Raise'}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <p className="text-gray-400 break-words">{nativeAddress || 'No Address Connected'}</p>
+                  <div className="mt-4">
+                    <h3 className="text-lg font-semibold text-white mb-2">Store Address:</h3>
+                    <p className="text-gray-400 break-words">
+                      {profileAddress || 'No Raise Wallet Connected'}
+                    </p>
+                  </div>
+                </div>
+  
+                <div className="mb-8">
+                  <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
+                    <div className="text-center">
+                      <p className="text-gray-400 text-sm mb-2">Store Profit</p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
+                        {ethBalance} ETH
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
-              <div>
-                <button
-                  onClick={() => setShowSwitchAddressModal(true)}
-                  className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300"
-                >
-                  Switch Address
-                </button>
-              </div>
-            </div>
-            <div className="mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-lg font-semibold text-white">Connected Address:</h3>
-                {nativeAddress && (
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    isProfileAssociated 
-                      ? 'bg-green-500/20 text-green-300 border border-green-500/30' 
-                      : 'bg-red-500/20 text-red-300 border border-red-500/30'
-                  }`}>
-                    {isProfileAssociated ? 'Linked to Raise' : 'Not Linked to Raise'}
-                  </span>
-                )}
-              </div>
-              <p className="text-gray-400 break-words">{nativeAddress || 'No Address Connected'}</p>
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold text-white mb-2">Raise Wallet:</h3>
-                <p className="text-gray-400 break-words">
-                  {profileAddress || 'No Raise Wallet Connected'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
-              <div className="text-center">
-                <p className="text-gray-400 text-sm mb-2">Raise Wallet Balance</p>
-                <p className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-                  {ethBalance} ETH
-                </p>
-              </div>
-            </div>
-          </div>
-
-            {/* New Profit Take Section */}
-                    <div className="mb-8">
-            <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">Set Profit Take for Trader</h3>
-              <div className="flex space-x-4">
-                <div className="flex-1">
-                  <input
-                    type="number"
-                    min="1"
-                    max="9000"
-                    value={profitTakePercentage}
-                    onChange={(e) => setProfitTakePercentage(e.target.value)}
-                    placeholder="Enter percentage (1-90)"
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
-                  />
                 </div>
-                <button
-                  onClick={handleSetProfitTake}
-                  disabled={isProfitTakeProcessing || !validateProfitTakeInput(profitTakePercentage)}
-                  className={`px-6 py-3 ${
-                    isProfitTakeProcessing || !validateProfitTakeInput(profitTakePercentage)
-                      ? 'bg-gray-600 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
-                  } text-white rounded-lg transition duration-300`}
-                >
-                  {isProfitTakeProcessing ? 'Processing...' : 'Set Profit Take'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-           {/* Warning Message */}
-           <div className="mb-4">
-            <div className="p-4 bg-yellow-900/30 border border-yellow-600/30 rounded-lg">
-              <p className="text-yellow-200 text-m">
-                ⚠️ Important: You can only withdraw the amount you originally sent to your own wallet. All withdrawal requests have up to a 24-hour pending period.
-              </p>
-            </div>
-          </div>
-
-          {/* Withdrawal Request Section */}
-          <div className="mb-8">
-            <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
-              <h3 className="text-xl font-bold text-white mb-4">Withdrawal Request</h3>
-              <div className="flex space-x-4">
-                <div className="flex-1">
-                  <input
-                    type="number"
-                    min="0.000001"
-                    step="0.000001"
-                    value={withdrawalAmount}
-                    onChange={(e) => setWithdrawalAmount(e.target.value)}
-                    placeholder="Enter amount to withdraw"
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
-                  />
+  
+                <div>
+                  <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-4">
+                    How To Use Your Raise Wallet
+                  </h2>
+                  <div className="relative w-full aspect-video bg-gray-800 rounded-xl overflow-hidden shadow-xl">
+                    <iframe 
+                      className="absolute top-0 left-0 w-full h-full"
+                      src="https://www.youtube.com/embed/tJAeaTa1O3Q?si=frBVOd42kLHOEKSJ"
+                      title="YouTube video player"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allowFullScreen
+                    />
+                  </div>
                 </div>
-                <button
-                  onClick={handleWithdrawalRequest}
-                  disabled={isWithdrawalProcessing || !withdrawalAmount}
-                  className={`px-6 py-3 ${
-                    isWithdrawalProcessing || !withdrawalAmount
-                      ? 'bg-gray-600 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
-                  } text-white rounded-lg transition duration-300`}
-                >
-                  {isWithdrawalProcessing ? 'Processing...' : 'Submit Request'}
-                </button>
               </div>
-            </div>
-          </div>
-
-
-          
-          <div>
-            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-4">
-              How To Use Your Raise Wallet
-            </h2>
-            <div className="relative w-full aspect-video bg-gray-800 rounded-xl overflow-hidden shadow-xl">
-              <iframe 
-                className="absolute top-0 left-0 w-full h-full"
-                src="https://www.youtube.com/embed/tJAeaTa1O3Q?si=frBVOd42kLHOEKSJ"
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerPolicy="strict-origin-when-cross-origin"
-                allowFullScreen
-              />
-            </div>
+            )}
+            
+            {activeTab === 'dashboard' && <DashboardContent />}
+            {activeTab === 'earnings' && (
+              <div className="p-8">
+                <EarningsManagement />
+              </div>
+            )}
+            {activeTab === 'my-curves' && <MyCurvesContent />}
           </div>
         </div>
       )}
-
+  
+      {/* Modals */}
       {isModalVisible && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
           <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
@@ -751,7 +677,7 @@ const checkProfileAssociation = useCallback(async () => {
           </div>
         </div>
       )}
-
+  
       {showSwitchAddressModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
           <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">

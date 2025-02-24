@@ -12,18 +12,30 @@ import TopHolders from '../componants/TopHolders';
 import Options from '../componants/Options';
 import AddressDisplay from '../componants/AddressDisplay';
 import { formatBlockTimestamp } from '../utils/timestamp';
+import NFTMarketplace from '../componants/NFTMarketplace';
 import ActiveContracts from '../componants/ActiveContracts';
+import ShippingModal from '../componants/ShippingDetailsModal';
 
 const TraderPageContent: React.FC = () => {
   const searchParams = useSearchParams(); // Access the query parameters
   // Extracting the query parameters from the searchParams object
-  
+  const nftContractABI = [
+    "function balanceOf(address owner) view returns (uint256)",
+    "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
+    "function tokenURI(uint256 tokenId) view returns (string)",
+    "function ownerOf(uint256 tokenId) view returns (address)",
+    "function totalSupply() view returns (uint256)",
+    "function getOwner(uint256 _tokenId) external view returns (address)",
+    "function getBaseValue(uint256 tokenId) external view returns (uint256)"
+  ];
+
   // Extracting the query parameters from the searchParams object
   const name = searchParams.get('name');
   const logo = searchParams.get('logo');
   const username = searchParams.get('username');
+  const contractAddress = searchParams.get('contractAddress'); // Add this line
 
-  let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
+  let rpcURL = EIP155_CHAINS["eip155:84532"].rpc;
 
   const provider  = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
@@ -31,16 +43,16 @@ const TraderPageContent: React.FC = () => {
 
   const tokenPoolABI = require("../abi/traderPool");
 
-  const tokenContractAddr = '0xDF08Ffc3A51Fe6daB87b8106Db40CA6e2690e5DE';
+  const tokenContractAddr = '0x07956bC1dc5f353A9c985e6c01678B7A802beE88';
   const tokenMarketABI = require('../abi/tokenMarket.json');
 
-  const marketDataAddr = '0xaf2503e412A08D365ECCc16036b9a372ac0e9B54';
+  const marketDataAddr = '0x96Ab900a1B03B4AC0c03448e672a1971e5bF7E6D';
   const marketDataABI = require("../abi/marketdata.json");
 
-  const createAccountAddr = '0x57B03bf4a6cCe7CDFe70253a1aAefCc7Bd20BC8e';
+  const createAccountAddr = '0x602FC32c467211c4D4eC65a27Cc4B30b2747A5Ea';
   const createAccountABI = require("../abi/createAccount.json");
 
-  const profileAddr = '0x2332f93A8F76430078066F6C16FC4B7773580f30';
+  const profileAddr = '0x4bf4aF0cD435DacB8030B03509e19B80AB371cD5';
   const profileABI = require("../abi/profile.json");
 
   const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('tradingActivity');
@@ -51,15 +63,25 @@ const TraderPageContent: React.FC = () => {
 
   const whitelist = require("../abi/BETAWhitelist.json");
   const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
+
+  const launchABI = require("../abi/launch");
+  const openABI = require("../abi/open");
   
   const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
 
   // Setting default values or using the query parameters
-  const [params] = useState({
-    name: name ? name : 'Trader',
-    logo: logo ? logo : 'https://via.placeholder.com/150',
-    username: username ? username : 'username',
-  });
+  // Setting default values or using the query parameters
+const [params] = useState({
+  name: name ? name : 'Trader',
+  logo: logo ? logo : 'https://via.placeholder.com/150',
+  username: username ? username : 'username',
+  contractAddress: contractAddress ? contractAddress : '0x899dDFe1CDc28dE88eff62Efa7894D68a53E5EEC', // Add this line
+});
+
+// Add the pageLink here
+const pageLink = useMemo(() => {
+  return `http://localhost:3000//trader?name=${params.name}&logo=${params.logo}&username=${params.username}&contractAddress=${params.contractAddress}`;
+}, [params.name, params.logo, params.username, params.contractAddress]);
 
   // State for active tab
   const [activeTab, setActiveTab] = useState('buy');
@@ -72,7 +94,8 @@ const TraderPageContent: React.FC = () => {
   const [createContract, setCreateContract] = useState<Contract | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState(''); 
-  const [showCreateWalletModal, setShowCreateWalletModal] = useState(false);
+  const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
+
   const [marketDataContract, setMarketDataContract] = useState<Contract | null>(null);
   const [lastBuybackValue, setLastBuybackValue] = useState('0');
   const [winRatio, setWinRatio] = useState('0');
@@ -92,73 +115,41 @@ const TraderPageContent: React.FC = () => {
   const [signer, setSigner] = useState<any>(null);
   const [inactiveTraderDisabled, setInactiveTraderDisabled] = useState(false);
   const [buybackAmount, setBuybackAmount] = useState('0');
-
+  const [curveContract, setCurveContract] = useState<Contract | null>(null);
   const [createUserWhitelistEnabled, setCreateUserWhitelistEnabled] = useState(false);
   const [isUserWhitelisted, setIsUserWhitelisted] = useState(false);
-
+  const [curveType, setCurveType] = useState<number | null>(null);
+  const [activeContract, setActiveContract] = useState<Contract | null>(null);
+  const [expiryTime, setExpiryTime] = useState<string>('');
+  const [redeemTime, setRedeemTime] = useState<string>('');
+  const [isListNFTModalOpen, setIsListNFTModalOpen] = useState(false);
+  const [itemsOnCurve, setItemsOnCurve] = useState<string>('');
+  const [nftFormData, setNftFormData] = useState({
+    amount: '',
+    name: '',
+    description: '',
+    itemPhoto: '',
+    weightClass: '',
+    category: '',
+    size: '',
+    link: '',
+    baseValue: '',
+    baseRedeem: '' // Only used for open curve
+  });
+  const [nftTokenAddress, setNftTokenAddress] = useState<string>('');
   const [disableOptionMarket] = useState(true); // Set to true to show placeholder, false to show options panel
 
-  
+  //const nftContractAddr = '0x...'; // Add your NFT contract address
+  //const nftABI = require("../abi/shorts.json");
+  //const curveContractAddr = '0x...'; // Add your curve contract address
+  //const curveABI = require("../abi/shorts.json");
+
+  //const nftContractInstance = new ethers.Contract(nftContractAddr, nftABI, signer);
+  //setNftContract(whitelistContract);
+  //const curveContractInstance = new ethers.Contract(curveContractAddr, curveABI, signer);
+  //setCurveContract(whitelistContract);
 
   let wallet: any = wallets[0] // Get the first connected wallet privy wallet specifiy privy wallet
-
-  // Mock data for stats, you can replace this with actual dynamic data
-  const stats = {
-    holders: 120,
-    buybacks: 50,
-    marketCap: "$10,000",
-    price: "368",
-    winRate: "75%"
-  };
-
-  // Add this new initialization function
-const handleInitialize = async () => {
-  if (!contract || !profileContract) {
-    alert('Contracts not initialized');
-    return;
-  }
-
-  try {
-    setModalMessage('Initializing token...');
-    setIsModalVisible(true);
-
-    // Get the account number from the profile
-    const profile = await profileContract.getProfileByName(username as string);
-    if (!profile || !profile[1]) {
-      throw new Error('Profile not found');
-    }
-    const accNum = profile[1];
-
-    // Buy 1 token to initialize
-    const amountInWei = ethers.parseEther('1');
-    const paymentInWei = ethers.parseEther('0.0000000000000116');
-    const tx = await contract.buyShares(accNum, amountInWei, { value: paymentInWei });
-
-    setModalMessage('Waiting for initialization confirmation...');
-    const receipt = await provider.waitForTransaction(tx.hash, 1);
-
-    if (receipt?.status === 1) {
-      // Check if token address is now available
-      const tokenAddr = await contract.getTokenAddressByAccount(accNum.toString());
-      if (tokenAddr && tokenAddr !== "0x0000000000000000000000000000000000000000") {
-        setTokenAddress(tokenAddr);
-        setNeedsInitialization(false);
-        setModalMessage('Token initialized successfully');
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      }
-    } else {
-      setModalMessage('Initialization failed');
-    }
-
-    setTimeout(() => setIsModalVisible(false), 2000);
-  } catch (error) {
-    console.error('Error in initialization:', error);
-    setModalMessage(`Initialization error: ${error || 'Unknown error'}`);
-    setTimeout(() => setIsModalVisible(false), 2000);
-  }
-};
 
 // Add new whitelist checking function
 const checkTraderWhitelist = async (username: string | undefined): Promise<boolean> => {
@@ -169,6 +160,31 @@ const checkTraderWhitelist = async (username: string | undefined): Promise<boole
   } catch (error) {
     console.error('Error checking trader whitelist status:', error);
     return false;
+  }
+};
+
+const fetchNFTTokenAddress = async () => {
+  try {
+    const contract = curveType === 1 ? launchContract : openContract;
+    if (!contract) {
+      console.error('Contract not initialized');
+      return;
+    }
+
+    const tokenAddress = await contract.getTokenAddress();
+    console.log('NFT Token Address:', tokenAddress);
+    setNftTokenAddress(tokenAddress);
+
+    const contractNFT = new ethers.Contract(tokenAddress, nftContractABI, signer);
+            
+    //this needs to be the total amouunt of nfts rather then the balance of the user
+    const balance = await contractNFT.balanceOf('0x899dDFe1CDc28dE88eff62Efa7894D68a53E5EEC');
+    setItemsOnCurve(balance.toString());
+    console.log('NFT Balance:', balance.toString());
+    
+
+  } catch (error) {
+    console.error('Error fetching NFT token address:', error);
   }
 };
 
@@ -247,6 +263,57 @@ const updatePrices = async () => {
       }
     }
   };
+
+// Add near the other contract declarations
+const openContract = useMemo(() => {
+  if (params.contractAddress) {
+    return new ethers.Contract(params.contractAddress, openABI, provider);
+  }
+  return null;
+}, [params.contractAddress, openABI, provider]);
+
+const launchContract = useMemo(() => {
+  if (params.contractAddress) {
+    return new ethers.Contract(params.contractAddress, launchABI, provider);
+  }
+  return null;
+}, [params.contractAddress, launchABI, provider]);
+
+const checkCurveType = async () => {
+  try {
+    // Try open contract first
+    try {
+      const type = await openContract?.getCurveType();
+      if (type) {
+        console.log('Open contract curve type:', type);
+        setCurveType(Number(type));
+        setActiveContract(openContract);
+        return;
+      }
+    } catch (error) {
+      console.log('Not an open contract, trying launch contract');
+    }
+
+    // Try launch contract if open contract fails
+    try {
+      const type = await launchContract?.getCurveType();
+      if (type) {
+        console.log('Launch contract curve type:', type);
+        setCurveType(Number(type));
+        setActiveContract(launchContract);
+        return;
+      }
+    } catch (error) {
+      console.log('Not a launch contract either');
+    }
+
+    console.log('Could not determine curve type');
+    setCurveType(null);
+  } catch (error) {
+    console.error('Error checking curve type:', error);
+    setCurveType(null);
+  }
+};
   
 useEffect(() => {
   if (amount && !isNaN(Number(amount))) {
@@ -259,6 +326,39 @@ const [isPriceLoading, setIsPriceLoading] = useState(false);
 useEffect(() => {
   const initContract = async () => {
     try {
+
+      await checkCurveType();
+      console.log('Curve type:', curveType);
+
+      if (activeContract) {
+        try {
+          console.log('active contract:', activeContract);  
+
+          const expiry = await activeContract.getExpireyTime();
+          const formattedExpiry = formatBlockTimestamp(expiry.toString());
+          setExpiryTime(formattedExpiry);
+          console.log('Expiry time:', expiry);
+
+          // For open curves, get separate redeem time
+          if (curveType === 2) { // Open curve
+            const redeem = await activeContract.getRedeemTime();
+            const formattedRedeem = formatBlockTimestamp(redeem.toString());
+            setRedeemTime(formattedRedeem);
+            console.log('Redeem time:', formattedRedeem);
+          } else { // For closed curves, use expiry time for both
+            setRedeemTime(formattedExpiry);
+            console.log('Redeem time:', formattedExpiry);
+          }
+        } catch (error) {
+          console.error('Error fetching time data:', error);
+          setExpiryTime('N/A');
+          setRedeemTime('N/A');
+        }
+      }
+
+      await fetchNFTTokenAddress();
+      console.log('NFT Token Address:', nftTokenAddress);
+
       // Wallet setup
       if(user?.twitter?.username) {
         let embeddedWallet = getEmbeddedConnectedWallet(wallets);
@@ -267,7 +367,7 @@ useEffect(() => {
       }
 
       // Provider and contract setup
-      await getPrivyProvider("base");
+      await getPrivyProvider("base-sepolia");
       const privyProvider = await wallet?.getEthersProvider();
       const signer: any = privyProvider?.getSigner();
       setSigner(signer);
@@ -367,6 +467,7 @@ useEffect(() => {
   initContract();
 }, [user, username, wallets, whitelistContract, createUserWhitelistEnabled]);
 
+
   const getPrivyProvider = async (chainName: string) => {
     if (!wallet) {
       console.error("Wallet not initialized");
@@ -382,6 +483,9 @@ useEffect(() => {
       case "base":
         chainId = 8453;  // Hypothetical chain ID for Base, adjust accordingly
         break;
+      case "base-sepolia":
+          chainId = 84532;
+          break;
       default:
         console.error("Unsupported chain name");
         return null;
@@ -407,177 +511,6 @@ useEffect(() => {
       }
     }
     return null;
-  };
-
-  // Update the handleCreateWallet function to set needsInitialization if the token creation fails
-const handleCreateWallet = async () => {
-  if (!createContract || !contract) {
-    alert('Contracts not initialized');
-    return;
-  }
-
-  setShowCreateWalletModal(false);
-  try {
-    setModalMessage('Creating a wallet');
-    setIsModalVisible(true);
-
-    const trimmedUsername = (username as string).slice(0, 3);
-
-    const createTx = await createContract.createAccount(
-      username as string, //has to be username as unique differentiator
-      trimmedUsername,
-      name as string,
-      logo as string,
-      "0x0000000000000000000000000000000000000000"
-    );
-
-    setModalMessage('Waiting for wallet creation confirmation...');
-    const createReceipt = await provider.waitForTransaction(createTx.hash, 1);
-
-    if (createReceipt?.status === 1) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const accountCounter = await fetchAccountCounter();
-      
-      if (!accountCounter) {
-        throw new Error('Failed to fetch account counter');
-      }
-
-      try {
-        setModalMessage('Minting first trader share');
-        const amountInWei = ethers.parseEther('1');
-        const paymentInWei = ethers.parseEther('0.0000000000000116');
-        const tx = await contract.buyShares(accountCounter, amountInWei, { value: paymentInWei });
-
-        setModalMessage('Waiting for share minting confirmation...');
-        const buyReceipt = await provider.waitForTransaction(tx.hash, 1);
-
-        if (buyReceipt?.status === 1) {
-          // Check if token address is available
-          const tokenAddr = await contract.getTokenAddressByAccount(accountCounter.toString());
-          if (!tokenAddr || tokenAddr === "0x0000000000000000000000000000000000000000") {
-            setNeedsInitialization(true);
-            setModalMessage('Wallet created but needs initialization');
-            setTimeout(() => {
-              window.location.reload();
-            }, 2000);
-          } else {
-            setModalMessage('Wallet created and shares minted successfully');
-            setTimeout(() => {
-              window.location.reload();
-            }, 2000);
-          }
-        } else {
-          setNeedsInitialization(true);
-          setModalMessage('Share minting failed - initialization needed');
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        }
-      } catch (buyError) {
-        console.error('Error in buyShares:', buyError);
-        setNeedsInitialization(true);
-        setModalMessage('Failed to mint initial shares - initialization needed');
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      }
-    } else {
-      setModalMessage('Wallet creation failed');
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-    }
-
-    setTimeout(() => setIsModalVisible(false), 2000);
-  } catch (error) {
-    console.error('Error in wallet creation:', error);
-    setModalMessage(`Wallet creation error: ${error || 'Unknown error'}`);
-    setTimeout(() => setIsModalVisible(false), 2000);
-    setTimeout(() => {
-      window.location.reload();
-    }, 2000);
-  }
-};
-
-
-  const handleBuyShares = async () => {
-    if (contract && profileContract) {
-      let accNum;
-      let tokenAddress;
-      try {
-        const profile = await profileContract.getProfileByName(username as string);
-        if (profile.accountNumber != 0 && profile.userAddress !== "0x0000000000000000000000000000000000000000") {
-          accNum = profile[1];
-          try {
-            tokenAddress = await contract.getTokenAddressByAccount(accNum.toString());
-          } catch (error) {
-            console.error('Error fetching token address:', error);
-            return;
-          }
-        } else {
-          alert('Account does not exist');
-          return;
-        }
-  
-        try {
-          setModalMessage('Preparing purchase');
-          setIsModalVisible(true);
-  
-          // Calculate amounts and price
-          const amountInWei = ethers.parseEther(amount);
-          const amountInTokens = await contract.getNumberOfTokensForAmount(accNum, amountInWei);
-          const price = await contract.getBuyPriceAfterFee(tokenAddress, amountInTokens);
-          setPrice(ethers.formatEther(price));
-  
-          // Execute buy transaction
-          setModalMessage('Initiating purchase...');
-          const tx = await contract.buyShares(accNum, amountInTokens, { value: price });
-          
-          setModalMessage('Waiting for transaction confirmation...');
-          const receipt = await provider.waitForTransaction(tx.hash, 1); // Wait for 1 confirmation
-  
-          if (receipt?.status === 1) {
-            setModalMessage('Purchase completed successfully');
-            // Update any necessary state here (e.g., balances)
-            
-            // Keep the success message visible for a moment
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            setIsModalVisible(false);
-          } else {
-            setModalMessage('Purchase failed - Transaction reverted');
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            setIsModalVisible(false);
-          }
-  
-        } catch (error) {
-          console.error('Error buying shares:', error);
-          // Provide more specific error messages based on the error type
-          let errorMessage = 'Purchase failed';
-          if (error === 'ACTION_REJECTED') {
-            errorMessage = 'Transaction was rejected by user';
-          } else if (error === 'INSUFFICIENT_FUNDS') {
-            errorMessage = 'Insufficient funds for purchase';
-          } else if (error) {
-            errorMessage = `Purchase failed: ${error}`;
-          }
-          
-          setModalMessage(errorMessage);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          setIsModalVisible(false);
-        }
-      } catch (error: any) {
-        console.error('Error fetching profile:', error);
-        if (error?.errorArgs === "Profile with this name does not exist.") {
-          setModalMessage('Account does not exist');
-        } else {
-          setModalMessage('Error fetching profile');
-        }
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        setIsModalVisible(false);
-      }
-    } else {
-      alert('Contract not initialized');
-    }
   };
 
   const handleSellShares = async () => {
@@ -656,6 +589,14 @@ const handleCreateWallet = async () => {
     }
   };
 
+  const handleShippingSubmit = async (shippingDetails: any, isExpedited: boolean) => {
+    setIsShippingModalOpen(false);
+    // Store shipping details or process them as needed
+    console.log('Shipping Details:', shippingDetails);
+    console.log('Expedited:', isExpedited);
+    // Proceed with the blockchain transaction
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-6xl w-full mx-auto">
@@ -704,46 +645,59 @@ const handleCreateWallet = async () => {
       </div>
     </div>
 
-    {/* Stats Section */}
+ {/* Stats Section */}
 <div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-7 gap-4">
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">{frequency}</p>
-    <p className="text-xs text-gray-500">Last Buyback</p>
+    <p className="text-lg font-bold text-green-500">{expiryTime}</p>
+    <p className="text-xs text-gray-500">Time Until Expiry</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">{Number(lastBuybackValue).toFixed(3)}</p>
-    <p className="text-xs text-gray-500">Buyback Amount</p>
+    <p className="text-lg font-bold text-green-500">{redeemTime}</p>
+    <p className="text-xs text-gray-500">Time Until Redeem</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">{buybackAmount}%</p>
-    <p className="text-xs text-gray-500">Buyback Ratio</p>
+    <p className="text-lg font-bold text-green-500">{curveType === 1 ? "Closed" : curveType === 2 ? "Open" : ""}</p>
+    <p className="text-xs text-gray-500">Curve Type</p>
   </div>
   <div className="text-center px-4">
     <p className="text-lg font-bold text-green-500">
       {Number(marketCap).toFixed(3)} ETH
     </p>
-    <p className="text-xs text-gray-500">Marketcap</p>
+    <p className="text-xs text-gray-500">Curve Marketcap</p>
   </div>
   <div className="text-center px-4">
     <p className="text-lg font-bold text-green-500">
       {Number(balance).toFixed(3)} ETH
     </p>
-    <p className="text-xs text-gray-500">AUM</p>
+    <p className="text-xs text-gray-500">Loyalty Marketcap</p>
   </div>
   <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">{Number(winRatio).toFixed(2)}%</p>
-    <p className="text-xs text-gray-500">Win Rate</p>
-  </div>
-  <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">10%</p>
-    <p className="text-xs text-gray-500">Funding Rate</p>
+    <p className="text-lg font-bold text-green-500">{itemsOnCurve}</p>
+    <p className="text-xs text-gray-500">Items On Curve</p>
   </div>
 </div>
 </div>
 </div>
 
+{/* NFT Marketplace Section */}
+<NFTMarketplace 
+  nftContract={nftTokenAddress} //possibly just put the entire nft contract in here instead 
+  curveContract={contractAddress}
+  userAddress={walletAddress}
+  useContractData={false}
+  activeContract={activeContract}
+  launchContract={launchContract}
+  openContract={openContract}
+  curveType={curveType}
+  signer={signer}
+  pageLink={pageLink}
+/>
+
+<br />
+
 {/* Main Content Grid */}
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    
       {/* Trading Panel */}
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div className="p-6">
@@ -757,7 +711,7 @@ const handleCreateWallet = async () => {
                   }`}
                 onClick={() => setActiveTab('buy')}
               >
-              Buy
+            Redeem
             </button>
             <button
               className={`flex-1 py-3 text-lg font-medium transition-all duration-200 mx-2 ${
@@ -770,7 +724,7 @@ const handleCreateWallet = async () => {
           Sell
           </button>
         </div>
-{activeTab === 'buy' && (
+  {activeTab === 'buy' && (
   <div className="space-y-6">
     <h3 className="text-xl font-semibold text-gray-800">
       {traderProfileExists ? `Buy $${params.username}` : 'Create Token'}
@@ -797,14 +751,6 @@ const handleCreateWallet = async () => {
         {traderProfileExists ? `${Number(buyPrice).toFixed(4)} $${username}` : '1.0 tokens'}
       </span>
     </div>
-    {needsInitialization ? (
-      <button 
-        className="w-full py-4 bg-yellow-500 hover:bg-yellow-600 text-white text-lg font-medium rounded-lg transition-colors duration-200 shadow-lg"
-        onClick={handleInitialize}
-      >
-        Initialize Token
-      </button>
-    ) : (
       <>
         <button 
           className={`w-full py-4 text-white text-lg font-medium rounded-lg transition-colors duration-200 shadow-lg ${
@@ -814,12 +760,12 @@ const handleCreateWallet = async () => {
                 ? 'bg-blue-500 hover:bg-blue-600'
                 : 'bg-gray-400 cursor-not-allowed'
           }`}
-          onClick={traderProfileExists ? handleBuyShares : handleCreateWallet}
+          onClick={() => setIsShippingModalOpen(true)}
           disabled={traderProfileExists 
             ? (inactiveTraderDisabled && !isActive)
             : (createUserWhitelistEnabled && !isUserWhitelisted)}
         >
-          {traderProfileExists ? 'Buy Now' : 'Create Token'}
+          {traderProfileExists ? 'Redeem Now' : 'Create Token'}
         </button>
         {createUserWhitelistEnabled && !isUserWhitelisted && !traderProfileExists && (
           <div className="mt-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
@@ -829,7 +775,6 @@ const handleCreateWallet = async () => {
           </div>
         )}
       </>
-    )}
   </div>
 )}
         
@@ -893,34 +838,15 @@ const handleCreateWallet = async () => {
 )}
 
 
-              {/* Warning Box */}
-              <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-yellow-700">
-                      <strong>Warning:</strong> Trader tokens do not guarantee profits and carry a significant level of risk, including total loss.  It’s essential to practice risk management and invest within your means.{' '}
-                      {/*<a href="#" className="font-medium underline hover:text-yellow-600">
-                        these addresses
-                      </a> */}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              
             </div>
           </div>
 
-          {/* Chart Panel */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <AddressDisplay raiseWalletAddress={raiseWalletAddress} traderAddress={traderAddress} tokenAddress={tokenAddress} />
-          </div>
+    {/* Chart Panel */}
+      <div className="bg-white rounded-2xl shadow-lg p-6">
+          <AddressDisplay raiseWalletAddress={raiseWalletAddress} traderAddress={traderAddress} tokenAddress={tokenAddress} />
         </div>
-
-        {/* Activity Tabs Section */}
+      </div>
     {/* Activity Tabs Section */}
     <div className="bg-white rounded-2xl shadow-lg mt-8 p-6">
         <div className="flex space-x-8 mb-6 border-b">
@@ -928,7 +854,7 @@ const handleCreateWallet = async () => {
             active={activeModalTab === 'tradingActivity'} 
             onClick={() => setActiveModalTab('tradingActivity')}
           >
-            Trading Activity
+            Admin Panel
           </TabButton>
           <TabButton 
             active={activeModalTab === 'shorts'} 
@@ -975,6 +901,12 @@ const handleCreateWallet = async () => {
       </div>
       </div>
 
+      <ShippingModal 
+        isOpen={isShippingModalOpen}
+        onClose={() => setIsShippingModalOpen(false)}
+        onSubmit={handleShippingSubmit}
+      />
+
       {/* Processing Modal */}
       {isModalVisible && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -982,30 +914,6 @@ const handleCreateWallet = async () => {
             <div className="flex flex-col items-center">
               <Image src="/icons/waitlogo.png" alt="Processing" width={120} height={120} />
               <p className="mt-4 text-lg font-medium text-gray-700">{modalMessage}...</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create Wallet Modal */}
-      {showCreateWalletModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <h3 className="text-2xl font-bold text-gray-800 mb-4">Create Wallet</h3>
-            <p className="text-gray-600 mb-6">Would you like to create a wallet for this trader?</p>
-            <div className="flex justify-end gap-4">
-              <button
-                className="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                onClick={() => setShowCreateWalletModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                onClick={handleCreateWallet}
-              >
-                Create Wallet
-              </button>
             </div>
           </div>
         </div>

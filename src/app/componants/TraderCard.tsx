@@ -8,11 +8,24 @@ interface IProps {
   name?: string;
   username?: string;
   url?: string;
+  contractAddress?: string;
 }
 
-const TraderCard: React.FC<IProps> = ({ logo, name, username, topic }) => {
+const TraderCard: React.FC<IProps> = ({ 
+  logo, 
+  name, 
+  username, 
+  topic, 
+  contractAddress
+}) => {
   return (
-    <NextLink href={name ? `/trader?name=${name}&logo=${logo}&username=${username}` : '#'} passHref>
+    <NextLink 
+      href={name ? 
+        `/trader?name=${name}&logo=${logo}&username=${username}&contractAddress=${contractAddress}` 
+        : '#'
+      } 
+      passHref
+    >
       <Card
         isHoverable
         isPressable
@@ -23,7 +36,7 @@ const TraderCard: React.FC<IProps> = ({ logo, name, username, topic }) => {
           borderRadius: '12px', 
           padding: '12px', 
           boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)', 
-          width: '460px' // Adjust the width here, change to your preference
+          width: '460px'
         }}
         data-testid={`session-card`}
       >
@@ -42,7 +55,7 @@ const TraderCard: React.FC<IProps> = ({ logo, name, username, topic }) => {
               width: '48px',
               height: '48px',
               borderRadius: '50%',
-              backgroundColor: '#333', // Placeholder background
+              backgroundColor: '#333',
             }}
           />
 
@@ -75,4 +88,3 @@ const TraderCard: React.FC<IProps> = ({ logo, name, username, topic }) => {
 };
 
 export default TraderCard;
-

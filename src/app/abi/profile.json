@@ -39,6 +39,19 @@
 		"anonymous": false,
 		"inputs": [
 			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newAdminAddress",
+				"type": "address"
+			}
+		],
+		"name": "AdminAddressUpdated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
 				"indexed": false,
 				"internalType": "uint64",
 				"name": "version",
@@ -52,25 +65,75 @@
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
+				"indexed": false,
+				"internalType": "string",
+				"name": "launchId",
+				"type": "string"
+			},
+			{
+				"indexed": false,
 				"internalType": "address",
-				"name": "oldAddress",
+				"name": "launchAddress",
 				"type": "address"
 			},
 			{
-				"indexed": true,
+				"indexed": false,
 				"internalType": "address",
-				"name": "newAddress",
+				"name": "collectionAddr",
 				"type": "address"
 			},
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "accountNumber",
+				"name": "dateSinceExpiry",
 				"type": "uint256"
 			}
 		],
-		"name": "ProfileClaimed",
+		"name": "LaunchAdded",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "launchId",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "active",
+				"type": "bool"
+			}
+		],
+		"name": "LaunchStatusChanged",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "launchId",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "totalVolume",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "active",
+				"type": "bool"
+			}
+		],
+		"name": "LaunchUpdated",
 		"type": "event"
 	},
 	{
@@ -105,12 +168,6 @@
 				"internalType": "string",
 				"name": "avatarUrl",
 				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "pool",
-				"type": "address"
 			},
 			{
 				"indexed": false,
@@ -247,6 +304,31 @@
 		"type": "event"
 	},
 	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "oldAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "newAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "accountNumber",
+				"type": "uint256"
+			}
+		],
+		"name": "UserAddressUpdated",
+		"type": "event"
+	},
+	{
 		"inputs": [],
 		"name": "ADMIN",
 		"outputs": [
@@ -286,32 +368,50 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
+		"inputs": [],
+		"name": "LAUNCH_ROLE",
+		"outputs": [
 			{
-				"internalType": "address",
-				"name": "_address",
-				"type": "address"
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
 			}
 		],
-		"name": "approveAddressForClaim",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "MANAGER_ROLE",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
 		"inputs": [
 			{
-				"internalType": "string",
-				"name": "_name",
-				"type": "string"
+				"internalType": "address",
+				"name": "_storeOwner",
+				"type": "address"
 			},
 			{
-				"internalType": "bool",
-				"name": "approved",
-				"type": "bool"
+				"internalType": "address",
+				"name": "launchAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_recordedTime",
+				"type": "uint256"
 			}
 		],
-		"name": "claimProfile",
+		"name": "addLaunch",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -335,12 +435,12 @@
 			},
 			{
 				"internalType": "string",
-				"name": "tokenName",
+				"name": "_tokenName",
 				"type": "string"
 			},
 			{
 				"internalType": "string",
-				"name": "tokenSymbol",
+				"name": "_symbol",
 				"type": "string"
 			},
 			{
@@ -355,17 +455,7 @@
 			},
 			{
 				"internalType": "address",
-				"name": "pool",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
 				"name": "payouts",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_positionsAddress",
 				"type": "address"
 			}
 		],
@@ -388,44 +478,6 @@
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_accNum",
-				"type": "uint256"
-			}
-		],
-		"name": "get2AvatarLink",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_accNum",
-				"type": "uint256"
-			}
-		],
-		"name": "get2NameByAccount",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
 			}
 		],
 		"stateMutability": "view",
@@ -473,15 +525,49 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "_accNumber",
+				"name": "_accNum",
 				"type": "uint256"
 			}
 		],
-		"name": "getDynamicFees",
+		"name": "getAvatarLink",
 		"outputs": [
 			{
-				"internalType": "uint256",
+				"internalType": "string",
 				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "merchant",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "count",
+				"type": "uint256"
+			}
+		],
+		"name": "getLaunch",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "ownerAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "launchAddr",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "dateSinceExpiry",
 				"type": "uint256"
 			}
 		],
@@ -534,44 +620,6 @@
 				"type": "address"
 			}
 		],
-		"name": "getPool",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_accNum",
-				"type": "uint256"
-			}
-		],
-		"name": "getPositionsByAccount",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
 		"name": "getProfile",
 		"outputs": [
 			{
@@ -605,19 +653,9 @@
 				"type": "address"
 			},
 			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -664,19 +702,9 @@
 				"type": "address"
 			},
 			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -771,11 +799,35 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_address",
+				"name": "_launchAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_merchant",
 				"type": "address"
 			}
 		],
-		"name": "isAddressApproved",
+		"name": "isLaunchAssociatedWithStore",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "launchAddress",
+				"type": "address"
+			}
+		],
+		"name": "isLaunchRegistered",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -809,11 +861,64 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "user",
+				"name": "",
 				"type": "address"
 			}
 		],
-		"name": "isProfileClaimed",
+		"name": "launchCount",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "launchTracking",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "launch",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "recordedTime",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "reglaunch",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -838,19 +943,6 @@
 			}
 		],
 		"name": "renounceRole",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_address",
-				"type": "address"
-			}
-		],
-		"name": "revokeApproval",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -890,42 +982,11 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_address",
+				"name": "_launch",
 				"type": "address"
 			}
 		],
-		"name": "setApprovalAuthority",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_accNumber",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_fee",
-				"type": "uint256"
-			}
-		],
-		"name": "setDynamicFee",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_address",
-				"type": "address"
-			}
-		],
-		"name": "setFeeApprovalAuthority",
+		"name": "setLaunchesRole",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -968,19 +1029,6 @@
 			}
 		],
 		"name": "updateProfile",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newAddress",
-				"type": "address"
-			}
-		],
-		"name": "updateUserAddress",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

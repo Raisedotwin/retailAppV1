@@ -123,6 +123,14 @@ export const EIP155_TEST_CHAINS: Record<string, EIP155Chain> = {
     rgb: '242, 242, 242',
     rpc: 'https://testnet.era.zksync.dev/',
     namespace: 'eip155'
+  },
+  'eip155:84532': {
+    chainId: 84532,
+    name: 'Base Sepolia',
+    logo: '/chain-logos/base.svg',
+    rgb: '240, 185, 11',
+    rpc: 'https://sepolia.base.org',
+    namespace: 'eip155'
   }
 }
 

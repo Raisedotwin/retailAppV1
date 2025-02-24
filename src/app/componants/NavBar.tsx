@@ -162,20 +162,21 @@ const NavBar: React.FC = () => {
                   <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Admin Panel</div>
                 </Link>
               )}
-              <Link href="/swaps">
-                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Swap</div>
+              <Link href="/holdings">
+                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Curves</div>
               </Link>
-              <div className="flex items-center space-x-2">
-                <Link href="/perps">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Perps</div>
-                </Link>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Link href="/chat">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">NFT</div>
+              <Link href="/chat">
+                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Create</div>
+              </Link>
+              <Link href="/wallet">
+                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Dashboard</div>
+              </Link>
+               {/* <div className="flex items-center space-x-2">
+                <Link href="/swaps">
+                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Rewards</div>
                 </Link>
                 <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">Soon</span>
-              </div>
+              </div>*/}
             </>
           )}
         </div>
@@ -206,7 +207,7 @@ const NavBar: React.FC = () => {
             </div>
           )}
 
-          {user && (
+           {/*{user && (
             <>
               <Link href="/wallet">
                 <Image
@@ -218,7 +219,7 @@ const NavBar: React.FC = () => {
                 />
               </Link>
             </>
-          )}
+          )}*/}
 
           {user ? (
             <button

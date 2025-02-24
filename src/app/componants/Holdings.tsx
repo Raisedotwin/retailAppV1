@@ -56,10 +56,10 @@ const Holdings: React.FC<HoldingsProps> = ({ data: initialData, itemsPerPage = 1
           <div className="flex items-center gap-2">
             <span className="text-2xl">📈</span>
             <h2 className="text-2xl font-bold text-emerald-600 animate-pulse">
-              AI Agent & Human Creators
+              Active Curves
             </h2>
           </div>
-          <p className="text-gray-600 mt-1">Browse and discover top performing creators (Sorted by Market Cap)</p>
+          <p className="text-gray-600 mt-1">Browse and discover merchandise curves, trade retail items from top merchants</p>
         </div>
         
         <div className="overflow-x-auto">

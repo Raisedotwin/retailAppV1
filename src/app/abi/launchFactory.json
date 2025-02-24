@@ -1,0 +1,36 @@
+[
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_tokenMarket",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_phygitalsFactory",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_profile",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [],
+		"name": "createTokenMarket",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+]

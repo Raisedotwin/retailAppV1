@@ -1,15 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface TradingActivityProps {
   isEnabled?: boolean;
-}
-
-interface Activity {
-  address: string;
-  type: 'Purchase' | 'Sell';
-  amount: number;
-  price: number;
-  time: string;
 }
 
 const ComingSoonOverlay = () => (
@@ -28,13 +20,39 @@ const ComingSoonOverlay = () => (
   </div>
 );
 
+const Modal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  title: string;
+}> = ({ isOpen, onClose, children, title }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50">
+      <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md border border-gray-700">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold text-gray-200">{title}</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-200"
+          >
+            ✕
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 const TableHeader = () => (
   <div className="mb-6">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
         <span className="text-2xl">📈</span>
         <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-          Trading Activity
+          Admin Panel
         </h2>
         <span className="text-2xl">📊</span>
       </div>
@@ -46,90 +64,94 @@ const TableHeader = () => (
   </div>
 );
 
-const ActivityTable: React.FC<{ activities: Activity[] }> = ({ activities }) => (
-  <div className="bg-gray-800/50 rounded-xl overflow-hidden backdrop-blur-sm border border-gray-700">
-    <table className="w-full text-left">
-      <thead>
-        <tr className="border-b border-gray-700">
-          <th className="p-4 text-gray-400">Degen Address</th>
-          <th className="p-4 text-gray-400">Type</th>
-          <th className="p-4 text-gray-400">Amount 🪙</th>
-          <th className="p-4 text-gray-400">Price</th>
-          <th className="p-4 text-gray-400">Time</th>
-        </tr>
-      </thead>
-      <tbody>
-        {activities.map((activity, index) => (
-          <tr 
-            key={index} 
-            className="border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors"
+const LiquiditySection = () => {
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const totalLiquidity = 150000; // This would normally come from props or an API
+
+  const handleWithdraw = () => {
+    // Handle withdrawal logic
+    console.log('Withdrawing:', withdrawAmount);
+  };
+
+  return (
+    <div className="bg-gray-800/50 rounded-xl p-6 backdrop-blur-sm border border-gray-700 mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-xl text-gray-300">Total Liquidity</div>
+        <div className="text-2xl font-bold text-green-400">${totalLiquidity.toLocaleString()}</div>
+      </div>
+      <div className="flex gap-4">
+        <input 
+          type="number"
+          placeholder="Enter amount to withdraw"
+          value={withdrawAmount}
+          onChange={(e) => setWithdrawAmount(e.target.value)}
+          className="flex-1 px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button 
+          onClick={handleWithdraw}
+          className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all transform hover:scale-105"
+        >
+          Withdraw
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const EarlyWithdrawSection = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [reason, setReason] = useState('');
+
+  const handleSubmit = () => {
+    // Handle early withdrawal request submission
+    console.log('Early withdrawal reason:', reason);
+    setIsModalOpen(false);
+    setReason('');
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setIsModalOpen(true)}
+        className="px-6 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-200 hover:bg-gray-600/50 transition-colors"
+      >
+        Request Early Withdrawal
+      </button>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Request Early Withdrawal"
+      >
+        <textarea
+          placeholder="Please provide a reason for early withdrawal..."
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-32 mb-4"
+        />
+        <div className="flex justify-end">
+          <button
+            onClick={handleSubmit}
+            className="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg transition-all transform hover:scale-105"
           >
-            <td className="p-4 font-mono text-gray-300">
-              {activity.address}
-            </td>
-            <td className="p-4">
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                activity.type === 'Purchase' 
-                  ? 'bg-green-400/10 text-green-400' 
-                  : 'bg-red-400/10 text-red-400'
-              }`}>
-                {activity.type}
-              </span>
-            </td>
-            <td className="p-4">
-              <span className="bg-blue-400/10 text-blue-400 px-3 py-1 rounded-full">
-                {activity.amount}
-              </span>
-            </td>
-            <td className="p-4">
-              <span className="text-gray-300">
-                ${activity.price.toFixed(2)}
-              </span>
-            </td>
-            <td className="p-4">
-              <span className="text-gray-400 text-sm">
-                {activity.time}
-              </span>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
+            Submit Request
+          </button>
+        </div>
+      </Modal>
+    </>
+  );
+};
 
-const TradingActivity: React.FC<TradingActivityProps> = ({ isEnabled = false }) => {
-  const activities: Activity[] = [
-    {
-      address: '0x9401a ... b74e3fd98631',
-      type: 'Purchase',
-      amount: 10,
-      price: 1.53,
-      time: 'Just Now',
-    },
-    {
-      address: '0x23ee239 ... 00e2C6810f',
-      type: 'Sell',
-      amount: 15,
-      price: 1.80,
-      time: '5 min',
-    }
-  ];
-
+const TradingActivity: React.FC<TradingActivityProps> = ({ isEnabled = true }) => {
   return (
     <div className="relative">
       {!isEnabled && <ComingSoonOverlay />}
-
+      
       <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-8 rounded-2xl shadow-xl">
         <TableHeader />
-        <ActivityTable activities={activities} />
-
-        {/* View More Button */}
-        <div className="mt-4 text-center">
-          <button className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2 rounded-xl hover:from-blue-600 hover:to-purple-600 transition-all transform hover:scale-105 shadow-lg inline-flex items-center gap-2">
-            <span>View All Trades</span>
-            <span>→</span>
-          </button>
+        <LiquiditySection />
+        <div className="mb-6 flex justify-end">
+          <EarlyWithdrawSection />
         </div>
       </div>
     </div>
