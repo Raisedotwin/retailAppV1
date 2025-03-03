@@ -13,6 +13,9 @@ type AccountBalance = {
   profileName: string;
   logo: string;
   username: string;
+  launchAddress?: string;
+  collectionName?: string;
+  phygitalAddress?: string;
 };
 
 const HoldingsPage = () => {
@@ -20,22 +23,62 @@ const HoldingsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
+  let rpcURL = EIP155_CHAINS["eip155:84532"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const tokenContractAddr = '0xDF08Ffc3A51Fe6daB87b8106Db40CA6e2690e5DE';
-  const createAccountAddr = '0x57B03bf4a6cCe7CDFe70253a1aAefCc7Bd20BC8e';
-  const profileAddr = '0x2332f93A8F76430078066F6C16FC4B7773580f30';
+  const tokenContractAddr = '0xA832df5A5Ff0D436eCE19a38E84eB92faC380566';
+  const createAccountAddr = '0x828ba1E00bA1f774CB25943Ef4aAF4874D10D374';
+  const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
 
   const tokenMarketABI = require("../abi/tokenMarket");
   const createAccountABI = require("../abi/createAccount");
   const profileABI = require("../abi/profile");
+  const phygitABI = require("../abi/phygitals");
+  const launchABI = require("../abi/launch");
 
   const createProfile = useMemo(() => new ethers.Contract(createAccountAddr, createAccountABI, provider), [createAccountAddr, createAccountABI, provider]);
   const marketContract = useMemo(() => new ethers.Contract(tokenContractAddr, tokenMarketABI, provider), [tokenContractAddr, tokenMarketABI, provider]);
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
 
   const { login, logout, user } = usePrivy();
+
+  const getMostRecentLaunch = async (merchantAddress: string) => {
+    try {
+      // Get launch count for the merchant
+      const launchCount = await profileContract.launchCount(merchantAddress);
+      
+      if (launchCount.toString() === "0") {
+        return null;
+      }
+      
+      // Get the most recent launch (highest count)
+      const [ownerAddress, launchAddr, dateSinceExpiry] = await profileContract.getLaunch(
+        merchantAddress, 
+        launchCount
+      );
+      
+      // Create launch contract instance
+      const launchContract = new ethers.Contract(launchAddr, launchABI, provider);
+      
+      // Get NFT (phygital) address from launch contract
+      const phygitalAddress = await launchContract.getNFTAddress();
+      
+      // Create phygital contract instance
+      const phygitalContract = new ethers.Contract(phygitalAddress, phygitABI, provider);
+      
+      // Get collection name from phygital contract
+      const collectionName = await phygitalContract.getAddressName();
+      
+      return {
+        launchAddress: launchAddr,
+        phygitalAddress,
+        collectionName
+      };
+    } catch (error) {
+      console.error(`Error fetching launch for ${merchantAddress}:`, error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const initContract = async () => {
@@ -48,24 +91,40 @@ const HoldingsPage = () => {
 
         let balances: AccountBalance[] = [];
         for (let i = 1; i <= accountCounter; i++) {
+          // Get basic profile information
           const name = await profileContract.getNameByAccount(i);
           const marketCap = await marketContract.getMarketCap(i);
           const profileItem = await profileContract.getProfileByName(name);
-          const profileName = profileItem[3];
-          const link = profileItem[4];
+          const profileName = profileItem[3]; // Bio field contains display name
+          const link = profileItem[4]; // Avatar URL
+          const merchantAddress = profileItem[0]; // Address of the merchant
 
+          // Format market cap
           let marketCapEth = ethers.formatEther(marketCap);
-          console.log("market cap", marketCapEth);
           
-          balances.push({
+          // Create basic balance entry
+          let balanceEntry: AccountBalance = {
             account: name,
             balance: marketCapEth.toString(),
             profileName,
             logo: link || `https://unavatar.io/twitter/${name}`,
-            username: name,
-          });
+            username: name
+          };
+          
+          // Get launch information if available
+          const launchInfo = await getMostRecentLaunch(merchantAddress);
+          
+          if (launchInfo) {
+            balanceEntry.launchAddress = launchInfo.launchAddress;
+            balanceEntry.phygitalAddress = launchInfo.phygitalAddress;
+            balanceEntry.collectionName = launchInfo.collectionName;
+          }
+          
+          balances.push(balanceEntry);
         }
 
+        // Sort by market cap (highest first)
+        balances.sort((a, b) => parseFloat(b.balance) - parseFloat(a.balance));
         setAccountBalances(balances);
       } catch (error) {
         console.error('Error initializing contract:', error);
@@ -180,13 +239,17 @@ const HoldingsPage = () => {
                 <Holdings
                   data={accountBalances.map((balance, index) => ({
                     token: index + 1,
-                    name: balance.profileName,
+                    // Use collection name if available, otherwise use profile name
+                    name: balance.collectionName || balance.profileName,
                     username: balance.username,
                     balance: balance.balance,
                     logo: balance.logo,
-                    link: balance.profileName ? 
-                      `/trader?name=${balance.profileName}&logo=${balance.logo}&username=${balance.username}` : 
-                      '#',
+                    // Create link using collection name and launch address if available
+                    link: balance.launchAddress ? 
+                      `/trader?name=${balance.collectionName || balance.profileName}&logo=${balance.logo}&username=${balance.username}&contractAddress=${balance.launchAddress}` : 
+                      balance.profileName ? 
+                        `/trader?name=${balance.profileName}&logo=${balance.logo}&username=${balance.username}` : 
+                        '#',
                   }))}
                 />
               </div>

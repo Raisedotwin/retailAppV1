@@ -10,6 +10,21 @@
 				"internalType": "address",
 				"name": "_tokenFactoryAddr",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_bondingCurve",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_orders",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_marketData",
+				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
@@ -103,12 +118,6 @@
 				"indexed": false,
 				"internalType": "uint256",
 				"name": "price",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "marketCap",
 				"type": "uint256"
 			}
 		],
@@ -285,6 +294,45 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "MANAGER_ROLE",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "MODULE_ROLE",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "TRADER_ROLE",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -324,12 +372,12 @@
 	},
 	{
 		"inputs": [],
-		"name": "admin",
+		"name": "affiliateFeePercentage",
 		"outputs": [
 			{
-				"internalType": "address",
+				"internalType": "uint256",
 				"name": "",
-				"type": "address"
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -354,6 +402,45 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "bondingCurve",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "burnFee",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "buyOver",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -364,6 +451,11 @@
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_onBehalf",
+				"type": "address"
 			}
 		],
 		"name": "buyShares",
@@ -373,12 +465,93 @@
 	},
 	{
 		"inputs": [],
-		"name": "dynamicFundingRate",
+		"name": "buyersTake",
 		"outputs": [
 			{
-				"internalType": "bool",
+				"internalType": "uint256",
 				"name": "",
-				"type": "bool"
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address[]",
+				"name": "contracts",
+				"type": "address[]"
+			},
+			{
+				"internalType": "bytes[]",
+				"name": "data",
+				"type": "bytes[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "msgValues",
+				"type": "uint256[]"
+			}
+		],
+		"name": "execute",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			}
+		],
+		"name": "getAccountNumberWAddr",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getAffiliateFee",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getBondingCurve",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getBurnRate",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -452,6 +625,58 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "getEscrowAdmin",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getExternalAdmin",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getLoyaltyBuyOver",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getLoyaltyBuyerTake",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -465,6 +690,19 @@
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getMarketData",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -489,6 +727,19 @@
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getOrders",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",
@@ -539,6 +790,32 @@
 				"internalType": "address",
 				"name": "",
 				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getRedeemTime",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getReleaseRate",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -613,12 +890,25 @@
 	},
 	{
 		"inputs": [],
-		"name": "getShorts",
+		"name": "getSubjectLockedFee",
 		"outputs": [
 			{
-				"internalType": "address",
+				"internalType": "uint256",
 				"name": "",
-				"type": "address"
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getSubjectUpfrontFee",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -638,6 +928,25 @@
 				"internalType": "address",
 				"name": "",
 				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			}
+		],
+		"name": "getTokenLiquidity",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -737,6 +1046,32 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "isRestricted",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "marketData",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -756,10 +1091,36 @@
 	},
 	{
 		"inputs": [],
+		"name": "orders",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "profile",
 		"outputs": [
 			{
 				"internalType": "contract IProfile",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "profileAddress",
+		"outputs": [
+			{
+				"internalType": "address",
 				"name": "",
 				"type": "address"
 			}
@@ -782,7 +1143,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "protocolProfitFeePercent",
+		"name": "redeemTime",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -795,20 +1156,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "raiseFeePercent",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "raiseFeeSale",
+		"name": "releaseRate",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -833,6 +1181,19 @@
 			}
 		],
 		"name": "renounceRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bool",
+				"name": "_isRestricted",
+				"type": "bool"
+			}
+		],
+		"name": "restrictedBuying",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -866,6 +1227,11 @@
 				"internalType": "uint256",
 				"name": "amount",
 				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_onBehalf",
+				"type": "address"
 			}
 		],
 		"name": "sellShares",
@@ -877,34 +1243,24 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "accNum",
+				"name": "_percentage",
 				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "_behalfOf",
-				"type": "address"
 			}
 		],
-		"name": "sellSharesForSomebody",
+		"name": "setAffiliateFeePercentage",
 		"outputs": [],
-		"stateMutability": "payable",
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
 		"inputs": [
 			{
-				"internalType": "bool",
-				"name": "_onOrOff",
-				"type": "bool"
+				"internalType": "uint256",
+				"name": "_brun",
+				"type": "uint256"
 			}
 		],
-		"name": "setDynamicFundingRate",
+		"name": "setBurnRate",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -913,11 +1269,63 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_newAddress",
+				"name": "_admin",
 				"type": "address"
 			}
 		],
-		"name": "setNewAdmin",
+		"name": "setEscrowAdmin",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_admin",
+				"type": "address"
+			}
+		],
+		"name": "setExternalAdmin",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_buyOver",
+				"type": "uint256"
+			}
+		],
+		"name": "setLoyaltyBuyOver",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_buyersTake",
+				"type": "uint256"
+			}
+		],
+		"name": "setLoyaltyBuyersFee",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_takeFee",
+				"type": "uint256"
+			}
+		],
+		"name": "setMarketProtocolFee",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -965,11 +1373,11 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "_feePercent",
+				"name": "_redeemTime",
 				"type": "uint256"
 			}
 		],
-		"name": "setProtocolProfitFeePercent",
+		"name": "setRedeemTime",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -978,11 +1386,11 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "_feePercent",
+				"name": "_release",
 				"type": "uint256"
 			}
 		],
-		"name": "setRaiseBuyFee",
+		"name": "setReleaseRate",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -991,11 +1399,37 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "_feePercent",
+				"name": "_subjectLockedFee",
 				"type": "uint256"
 			}
 		],
-		"name": "setRaiseSaleFee",
+		"name": "setSubjectLockedFee",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_fee",
+				"type": "uint256"
+			}
+		],
+		"name": "setSubjectMarketFee",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_subjectUpFrontFee",
+				"type": "uint256"
+			}
+		],
+		"name": "setSubjectUpfrontFee",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -1004,31 +1438,31 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_vult",
+				"name": "_trader",
 				"type": "address"
 			}
 		],
-		"name": "setShorts",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_feePercent",
-				"type": "uint256"
-			}
-		],
-		"name": "setSubjectFeePercent",
+		"name": "setTrader",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
 		"inputs": [],
-		"name": "subjectFeePercent",
+		"name": "subjectLockedFee",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "subjectUpFrontFee",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -1091,6 +1525,19 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "tokenMarketFeeProto",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -1099,6 +1546,19 @@
 			}
 		],
 		"name": "tokenSupply",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "traderFee",
 		"outputs": [
 			{
 				"internalType": "uint256",

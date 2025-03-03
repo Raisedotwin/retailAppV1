@@ -43,16 +43,16 @@ const TraderPageContent: React.FC = () => {
 
   const tokenPoolABI = require("../abi/traderPool");
 
-  const tokenContractAddr = '0x07956bC1dc5f353A9c985e6c01678B7A802beE88';
+  const tokenContractAddr = '0xA832df5A5Ff0D436eCE19a38E84eB92faC380566';
   const tokenMarketABI = require('../abi/tokenMarket.json');
 
-  const marketDataAddr = '0x96Ab900a1B03B4AC0c03448e672a1971e5bF7E6D';
+  const marketDataAddr = '0x9baed514ed5AB1B13B6A4d05249C8F9f30EdF15E';
   const marketDataABI = require("../abi/marketdata.json");
 
-  const createAccountAddr = '0x602FC32c467211c4D4eC65a27Cc4B30b2747A5Ea';
+  const createAccountAddr = '0x828ba1E00bA1f774CB25943Ef4aAF4874D10D374';
   const createAccountABI = require("../abi/createAccount.json");
 
-  const profileAddr = '0x4bf4aF0cD435DacB8030B03509e19B80AB371cD5';
+  const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
   const profileABI = require("../abi/profile.json");
 
   const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('tradingActivity');

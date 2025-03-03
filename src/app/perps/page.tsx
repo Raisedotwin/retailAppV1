@@ -20,7 +20,7 @@ const PerpsPage: React.FC = () => {
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const profileAddr = '0x47465e8aD2403758b8b6bE68EfaFf00BD0F0c40A';
+  const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
   const profileABI = require("../abi/profile");
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
 

@@ -27,14 +27,13 @@ const SwapForm: React.FC<SwapFormProps>= ({ enableBuying = false }) => {
   let wallet = wallets[0];
 
   const tokenPoolABI = require("../abi/traderPool");
-  const profileAddr = '0x2332f93A8F76430078066F6C16FC4B7773580f30';
+  const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
   const profileABI = require("../abi/profile");
   const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
 
   const tokenMarketAbi = require("../abi/tokenMarket");
   const tokenMarketAddr = '0x07956bC1dc5f353A9c985e6c01678B7A802beE88';
   const erc20Abi = require("../abi/storetoken");
-
 
   const provider = useMemo(() => 
     new ethers.JsonRpcProvider(EIP155_CHAINS["eip155:84532"].rpc),
@@ -79,34 +78,65 @@ const SwapForm: React.FC<SwapFormProps>= ({ enableBuying = false }) => {
       const currentWallet = await getWallet();
       const walletAddress = currentWallet?.address || user?.wallet?.address;
       
+      if (!walletAddress) {
+        console.error("No wallet address available");
+        return;
+      }
+      
       // Fetch WETH balance
       const wethContract = new ethers.Contract(WETH_ADDRESS, erc20Abi, provider);
       const wethBalance = await wethContract.balanceOf(walletAddress);
       setBalanceWETH(ethers.formatEther(wethBalance));
 
       // Fetch token balance if token address is set
-      if (tokenAddress) {
+      if (tokenAddress && ethers.isAddress(tokenAddress)) {
         const tokenContract = new ethers.Contract(tokenAddress, erc20Abi, provider);
-        const balance = await tokenContract.balanceOf(walletAddress);
-        setTokenBalance(ethers.formatEther(balance));
         
-        // Get estimated receive amount
-        if (amount && amount !== '0') {
-          const amountWei = ethers.parseEther(amount);
-          const estimatedAmount = await tokenMarket.getSellPriceAfterFee(tokenAddress, amountWei);
-          setEstimatedReceiveAmount(ethers.formatEther(estimatedAmount));
+        try {
+          // Try to use checkBalance first (as specified)
+          const balance = await tokenContract.checkBalance(walletAddress);
+          setTokenBalance(ethers.formatEther(balance));
+        } catch (error) {
+          // Fallback to balanceOf if checkBalance fails
+          console.log("checkBalance failed, falling back to balanceOf");
+          const balance = await tokenContract.balanceOf(walletAddress);
+          setTokenBalance(ethers.formatEther(balance));
         }
+        
+        // Get estimated receive amount for selling tokens
+        updateEstimatedAmount();
       }
     } catch (error) {
       console.error("Error fetching balances:", error);
       setBalanceWETH('Error');
       setTokenBalance('Error');
     }
-  }, [getWallet, user, provider, tokenAddress, amount, tokenMarket]);
+  }, [getWallet, user, provider, tokenAddress]);
+
+  const updateEstimatedAmount = async () => {
+    if (!amount || parseFloat(amount) <= 0 || !tokenAddress || !ethers.isAddress(tokenAddress)) {
+      setEstimatedReceiveAmount('0');
+      return;
+    }
+    
+    try {
+      const amountWei = ethers.parseEther(amount);
+      const estimatedAmount = await tokenMarket.getSellPriceAfterFee(tokenAddress, amountWei);
+      setEstimatedReceiveAmount(ethers.formatEther(estimatedAmount));
+    } catch (error) {
+      console.error("Error estimating sell price:", error);
+      setEstimatedReceiveAmount('Error');
+    }
+  };
 
   const handleSwap = async () => {
     if (!amount || !tokenAddress) {
       alert('Please enter both amount and token address');
+      return;
+    }
+
+    if (!ethers.isAddress(tokenAddress)) {
+      alert('Please enter a valid token address');
       return;
     }
 
@@ -157,28 +187,15 @@ const SwapForm: React.FC<SwapFormProps>= ({ enableBuying = false }) => {
     }
   };
 
+  // Initial fetch on component mount and when token address changes
   useEffect(() => {
     fetchBalances();
-  }, [fetchBalances]);
+  }, [fetchBalances, tokenAddress]);
 
   // Update estimated amount when amount or token changes
   useEffect(() => {
-    if (amount && tokenAddress) {
-      const updateEstimate = async () => {
-        try {
-          const amountWei = ethers.parseEther(amount);
-          const estimatedAmount = await tokenMarket.getSellPriceAfterFee(tokenAddress, amountWei);
-          setEstimatedReceiveAmount(ethers.formatEther(estimatedAmount));
-        } catch (error) {
-          console.error("Error estimating price:", error);
-          setEstimatedReceiveAmount('Error');
-        }
-      };
-      updateEstimate();
-    } else {
-      setEstimatedReceiveAmount('0');
-    }
-  }, [amount, tokenAddress, tokenMarket]);
+    updateEstimatedAmount();
+  }, [amount, tokenAddress]);
 
   return (
     <div className="bg-gradient-to-br from-purple-900 via-indigo-800 to-blue-900 rounded-2xl border border-indigo-500/30 p-6 shadow-xl">
@@ -224,7 +241,9 @@ const SwapForm: React.FC<SwapFormProps>= ({ enableBuying = false }) => {
               <p className="text-indigo-200 text-sm mb-1">Available Balance</p>
               <div className="flex items-center justify-center">
                 <p className="text-3xl font-bold text-white">
-                  {activeTab === 'buy' ? `${balanceWETH} WETH` : `${tokenBalance} Token`}
+                  {activeTab === 'buy' 
+                    ? `${balanceWETH} WETH` 
+                    : `${parseFloat(tokenBalance).toLocaleString(undefined, {maximumFractionDigits: 4})} Token`}
                 </p>
                 <div className="ml-2 animate-bounce">
                   <span className="text-2xl">{activeTab === 'buy' ? '💎' : '🪙'}</span>
@@ -233,7 +252,7 @@ const SwapForm: React.FC<SwapFormProps>= ({ enableBuying = false }) => {
               <p className="text-indigo-200 text-sm mt-1">
                 {activeTab === 'buy' 
                   ? 'Available for purchasing loyalty points'
-                  : `You will receive approximately ${estimatedReceiveAmount} WETH`}
+                  : `You will receive approximately ${parseFloat(estimatedReceiveAmount).toLocaleString(undefined, {maximumFractionDigits: 8})} WETH`}
               </p>
             </div>
           </div>
@@ -252,7 +271,6 @@ const SwapForm: React.FC<SwapFormProps>= ({ enableBuying = false }) => {
                 onChange={(e) => setTokenAddress(e.target.value)}
                 placeholder="Enter loyalty token address"
                 className="w-full bg-black/50 text-white p-3 rounded-lg border border-indigo-500/30 focus:outline-none focus:ring-2 focus:ring-pink-500/50 placeholder-indigo-300/50"
-                onBlur={() => fetchBalances()}
               />
             </div>
 
@@ -277,11 +295,47 @@ const SwapForm: React.FC<SwapFormProps>= ({ enableBuying = false }) => {
                 placeholder="Enter amount to redeem"
                 className="w-full bg-black/50 text-white p-3 rounded-lg border border-indigo-500/30 focus:outline-none focus:ring-2 focus:ring-pink-500/50 placeholder-indigo-300/50"
               />
+              
+              {/* Quick Set buttons - new feature */}
+              {parseFloat(tokenBalance) > 0 && (
+                <div className="flex gap-2 mt-3">
+                  <button 
+                    onClick={() => setAmount((parseFloat(tokenBalance) * 0.25).toString())}
+                    className="bg-indigo-800/40 text-xs text-indigo-200 px-3 py-1 rounded-md hover:bg-indigo-700/60 transition-colors">
+                    25%
+                  </button>
+                  <button 
+                    onClick={() => setAmount((parseFloat(tokenBalance) * 0.5).toString())}
+                    className="bg-indigo-800/40 text-xs text-indigo-200 px-3 py-1 rounded-md hover:bg-indigo-700/60 transition-colors">
+                    50%
+                  </button>
+                  <button 
+                    onClick={() => setAmount((parseFloat(tokenBalance) * 0.75).toString())}
+                    className="bg-indigo-800/40 text-xs text-indigo-200 px-3 py-1 rounded-md hover:bg-indigo-700/60 transition-colors">
+                    75%
+                  </button>
+                  <button 
+                    onClick={() => setAmount(tokenBalance)}
+                    className="bg-indigo-800/40 text-xs text-indigo-200 px-3 py-1 rounded-md hover:bg-indigo-700/60 transition-colors">
+                    Max
+                  </button>
+                </div>
+              )}
             </div>
+
+            {estimatedReceiveAmount !== '0' && estimatedReceiveAmount !== 'Error' && (
+              <div className="bg-indigo-900/20 backdrop-blur-sm rounded-xl p-4 border border-indigo-500/10">
+                <div className="flex justify-between items-center">
+                  <span className="text-indigo-200">You will receive:</span>
+                  <span className="text-white font-bold">{parseFloat(estimatedReceiveAmount).toLocaleString(undefined, {maximumFractionDigits: 8})} WETH</span>
+                </div>
+              </div>
+            )}
 
             <button
               onClick={handleSwap}
-              className="w-full py-4 relative group"
+              disabled={!amount || parseFloat(amount) <= 0 || !tokenAddress}
+              className="w-full py-4 relative group disabled:opacity-50"
             >
               <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-70 group-hover:opacity-100 transition duration-200"></div>
               <div className={`relative rounded-xl px-6 py-4 transition-all duration-200 flex items-center justify-center

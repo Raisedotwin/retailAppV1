@@ -1,6 +1,42 @@
 [
 	{
-		"inputs": [],
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_merchant",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "orders",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_maxSupply",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "name",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "symbol",
+				"type": "string"
+			},
+			{
+				"internalType": "address",
+				"name": "_launch",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_timeTillExpiration",
+				"type": "uint256"
+			}
+		],
 		"stateMutability": "nonpayable",
 		"type": "constructor"
 	},
@@ -26,13 +62,106 @@
 		"type": "error"
 	},
 	{
-		"inputs": [],
-		"name": "InvalidInitialization",
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "ERC721IncorrectOwner",
 		"type": "error"
 	},
 	{
-		"inputs": [],
-		"name": "NotInitializing",
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "ERC721InsufficientApproval",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "approver",
+				"type": "address"
+			}
+		],
+		"name": "ERC721InvalidApprover",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			}
+		],
+		"name": "ERC721InvalidOperator",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "ERC721InvalidOwner",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "receiver",
+				"type": "address"
+			}
+		],
+		"name": "ERC721InvalidReceiver",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			}
+		],
+		"name": "ERC721InvalidSender",
+		"type": "error"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "ERC721NonexistentToken",
 		"type": "error"
 	},
 	{
@@ -41,74 +170,48 @@
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "newAdminAddress",
+				"name": "owner",
 				"type": "address"
-			}
-		],
-		"name": "AdminAddressUpdated",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint64",
-				"name": "version",
-				"type": "uint64"
-			}
-		],
-		"name": "Initialized",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "launchId",
-				"type": "string"
 			},
 			{
-				"indexed": false,
+				"indexed": true,
 				"internalType": "address",
-				"name": "launchAddress",
+				"name": "approved",
 				"type": "address"
 			},
 			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "collectionAddr",
-				"type": "address"
-			},
-			{
-				"indexed": false,
+				"indexed": true,
 				"internalType": "uint256",
-				"name": "dateSinceExpiry",
+				"name": "tokenId",
 				"type": "uint256"
 			}
 		],
-		"name": "LaunchAdded",
+		"name": "Approval",
 		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "launchId",
-				"type": "string"
+				"indexed": true,
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
 			},
 			{
 				"indexed": false,
 				"internalType": "bool",
-				"name": "active",
+				"name": "approved",
 				"type": "bool"
 			}
 		],
-		"name": "LaunchStatusChanged",
+		"name": "ApprovalForAll",
 		"type": "event"
 	},
 	{
@@ -116,116 +219,31 @@
 		"inputs": [
 			{
 				"indexed": false,
-				"internalType": "string",
-				"name": "launchId",
-				"type": "string"
-			},
-			{
-				"indexed": false,
 				"internalType": "uint256",
-				"name": "totalVolume",
+				"name": "_fromTokenId",
 				"type": "uint256"
 			},
 			{
 				"indexed": false,
-				"internalType": "bool",
-				"name": "active",
-				"type": "bool"
+				"internalType": "uint256",
+				"name": "_toTokenId",
+				"type": "uint256"
 			}
 		],
-		"name": "LaunchUpdated",
+		"name": "BatchMetadataUpdate",
 		"type": "event"
 	},
 	{
 		"anonymous": false,
 		"inputs": [
 			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "accountNumber",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "bio",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "avatarUrl",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "payouts",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "createdAt",
+				"name": "_tokenId",
 				"type": "uint256"
 			}
 		],
-		"name": "ProfileCreated",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "accountNumber",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "bio",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "avatarUrl",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "updatedAt",
-				"type": "uint256"
-			}
-		],
-		"name": "ProfileUpdated",
+		"name": "MetadataUpdate",
 		"type": "event"
 	},
 	{
@@ -309,50 +327,24 @@
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "oldAddress",
+				"name": "from",
 				"type": "address"
 			},
 			{
 				"indexed": true,
 				"internalType": "address",
-				"name": "newAddress",
+				"name": "to",
 				"type": "address"
 			},
 			{
-				"indexed": false,
+				"indexed": true,
 				"internalType": "uint256",
-				"name": "accountNumber",
+				"name": "tokenId",
 				"type": "uint256"
 			}
 		],
-		"name": "UserAddressUpdated",
+		"name": "Transfer",
 		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "ADMIN",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "APPROVER_ROLE",
-		"outputs": [
-			{
-				"internalType": "bytes32",
-				"name": "",
-				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
 	},
 	{
 		"inputs": [],
@@ -369,7 +361,7 @@
 	},
 	{
 		"inputs": [],
-		"name": "LAUNCH_ROLE",
+		"name": "MINTER_ROLE",
 		"outputs": [
 			{
 				"internalType": "bytes32",
@@ -382,7 +374,20 @@
 	},
 	{
 		"inputs": [],
-		"name": "MANAGER_ROLE",
+		"name": "ORDERS_ROLE",
+		"outputs": [
+			{
+				"internalType": "bytes32",
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "TRADER_ROLE",
 		"outputs": [
 			{
 				"internalType": "bytes32",
@@ -397,21 +402,16 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_storeOwner",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "launchAddress",
+				"name": "to",
 				"type": "address"
 			},
 			{
 				"internalType": "uint256",
-				"name": "_recordedTime",
+				"name": "tokenId",
 				"type": "uint256"
 			}
 		],
-		"name": "addLaunch",
+		"name": "approve",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -420,46 +420,80 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_userAddr",
+				"name": "owner",
+				"type": "address"
+			}
+		],
+		"name": "balanceOf",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_owner",
 				"type": "address"
 			},
 			{
 				"internalType": "uint256",
-				"name": "_accountNumber",
+				"name": "quantity",
 				"type": "uint256"
 			},
 			{
 				"internalType": "string",
-				"name": "name",
+				"name": "_link",
 				"type": "string"
 			},
 			{
-				"internalType": "string",
-				"name": "_tokenName",
-				"type": "string"
+				"internalType": "string[]",
+				"name": "_names",
+				"type": "string[]"
 			},
 			{
-				"internalType": "string",
-				"name": "_symbol",
-				"type": "string"
+				"internalType": "string[]",
+				"name": "_descriptions",
+				"type": "string[]"
 			},
 			{
-				"internalType": "string",
-				"name": "bio",
-				"type": "string"
+				"internalType": "string[]",
+				"name": "_itemPhotos",
+				"type": "string[]"
 			},
 			{
-				"internalType": "string",
-				"name": "avatarUrl",
-				"type": "string"
+				"internalType": "string[]",
+				"name": "_weightClasses",
+				"type": "string[]"
 			},
 			{
-				"internalType": "address",
-				"name": "payouts",
-				"type": "address"
+				"internalType": "string[]",
+				"name": "_category",
+				"type": "string[]"
+			},
+			{
+				"internalType": "string[]",
+				"name": "_size",
+				"type": "string[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "_baseValues",
+				"type": "uint256[]"
+			},
+			{
+				"internalType": "uint256[]",
+				"name": "_minRedeemValue",
+				"type": "uint256[]"
 			}
 		],
-		"name": "createProfile",
+		"name": "batchMint",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -468,11 +502,24 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "tokenId",
 				"type": "uint256"
 			}
 		],
-		"name": "dynamicPricingPerAccount",
+		"name": "burn",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "expirationDate",
 		"outputs": [
 			{
 				"internalType": "uint256",
@@ -484,33 +531,8 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "getAccountNumber",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_accNum",
-				"type": "uint256"
-			}
-		],
-		"name": "getAddressByNum",
+		"inputs": [],
+		"name": "getAddressLaunch",
 		"outputs": [
 			{
 				"internalType": "address",
@@ -522,14 +544,8 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_accNum",
-				"type": "uint256"
-			}
-		],
-		"name": "getAvatarLink",
+		"inputs": [],
+		"name": "getAddressName",
 		"outputs": [
 			{
 				"internalType": "string",
@@ -543,65 +559,12 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "merchant",
-				"type": "address"
-			},
-			{
 				"internalType": "uint256",
-				"name": "count",
+				"name": "tokenId",
 				"type": "uint256"
 			}
 		],
-		"name": "getLaunch",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "ownerAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "launchAddr",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "dateSinceExpiry",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_accNum",
-				"type": "uint256"
-			}
-		],
-		"name": "getNameByAccount",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "getPayouts",
+		"name": "getApproved",
 		"outputs": [
 			{
 				"internalType": "address",
@@ -615,43 +578,13 @@
 	{
 		"inputs": [
 			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
 			}
 		],
-		"name": "getProfile",
+		"name": "getBaseRedeemValue",
 		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
 			{
 				"internalType": "uint256",
 				"name": "",
@@ -664,47 +597,49 @@
 	{
 		"inputs": [
 			{
-				"internalType": "string",
-				"name": "name",
-				"type": "string"
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
 			}
 		],
-		"name": "getProfileByName",
+		"name": "getBaseValue",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getCirculatingSupply",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "getOwner",
 		"outputs": [
 			{
 				"internalType": "address",
 				"name": "",
 				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -724,59 +659,6 @@
 				"internalType": "bytes32",
 				"name": "",
 				"type": "bytes32"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_launchAddress",
-				"type": "address"
-			}
-		],
-		"name": "getStoreNameByLaunchAddress",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_accNum",
-				"type": "uint256"
-			}
-		],
-		"name": "getTokenSymbolName",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
 			}
 		],
 		"stateMutability": "view",
@@ -828,16 +710,16 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_launchAddress",
+				"name": "owner",
 				"type": "address"
 			},
 			{
 				"internalType": "address",
-				"name": "_merchant",
+				"name": "operator",
 				"type": "address"
 			}
 		],
-		"name": "isLaunchAssociatedWithStore",
+		"name": "isApprovedForAll",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -849,57 +731,13 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "launchAddress",
-				"type": "address"
-			}
-		],
-		"name": "isLaunchRegistered",
+		"inputs": [],
+		"name": "marketData",
 		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			}
-		],
-		"name": "isProfileAssociated",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
 			{
 				"internalType": "address",
 				"name": "",
 				"type": "address"
-			}
-		],
-		"name": "launchCount",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -911,28 +749,63 @@
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
 			}
 		],
-		"name": "launchTracking",
+		"name": "metadata",
 		"outputs": [
+			{
+				"internalType": "string",
+				"name": "name",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "description",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "itemPhoto",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "weightClass",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "dateUntilRedemption",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "launchDate",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "store",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "category",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "size",
+				"type": "string"
+			},
 			{
 				"internalType": "address",
 				"name": "owner",
 				"type": "address"
 			},
 			{
-				"internalType": "address",
-				"name": "launch",
-				"type": "address"
-			},
-			{
 				"internalType": "uint256",
-				"name": "recordedTime",
+				"name": "redeemValue",
 				"type": "uint256"
 			}
 		],
@@ -943,19 +816,113 @@
 		"inputs": [
 			{
 				"internalType": "address",
+				"name": "_owner",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "quantity",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_name",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_description",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_itemPhoto",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_weightClass",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_category",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_size",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_link",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_baseValue",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_minRedeemValue",
+				"type": "uint256"
+			}
+		],
+		"name": "mint",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "name",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "ownerOf",
+		"outputs": [
+			{
+				"internalType": "address",
 				"name": "",
 				"type": "address"
 			}
 		],
-		"name": "reglaunch",
-		"outputs": [
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
 			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "_burner",
+				"type": "address"
 			}
 		],
-		"stateMutability": "view",
+		"name": "redeem",
+		"outputs": [],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -998,11 +965,21 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "newAdmin",
+				"name": "from",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
 			}
 		],
-		"name": "setAdminAddress",
+		"name": "safeTransferFrom",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -1011,11 +988,57 @@
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_launch",
+				"name": "from",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes",
+				"name": "data",
+				"type": "bytes"
 			}
 		],
-		"name": "setLaunchesRole",
+		"name": "safeTransferFrom",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "operator",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "approved",
+				"type": "bool"
+			}
+		],
+		"name": "setApprovalForAll",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_maxSupply",
+				"type": "uint256"
+			}
+		],
+		"name": "setMaxSupply",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -1040,24 +1063,56 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
+		"inputs": [],
+		"name": "symbol",
+		"outputs": [
 			{
 				"internalType": "string",
-				"name": "name",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "bio",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "avatarUrl",
+				"name": "",
 				"type": "string"
 			}
 		],
-		"name": "updateProfile",
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "tokenURI",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "from",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "to",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "transferFrom",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

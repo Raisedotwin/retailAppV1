@@ -12,6 +12,15 @@ interface User {
   description: string;
 }
 
+interface PhygitalResult {
+  id: string;
+  name: string;
+  username: string;
+  profile_image_url: string;
+  description: string;
+  contractAddress: string;
+}
+
 interface SearchModalProps {
   visible: boolean;
   setVisible: React.Dispatch<React.SetStateAction<boolean>>;
@@ -26,15 +35,21 @@ const SearchIcon = () => (
 const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [results, setResults] = useState<User[]>([]);
+  const [results, setResults] = useState<(User | PhygitalResult)[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { wallets } = useWallets();
   const { user } = usePrivy();
 
-  // Contract initialization
-  const profileAddr = '0x47465e8aD2403758b8b6bE68EfaFf00BD0F0c40A';
+  // ABIs
+  const phygitalsABI = [
+    "function getAddressName() external view returns (string memory)",
+    "function getAddressLaunch() external view returns (address)"
+  ];
+
+  const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
   const profileABI = [
-    "function getProfileByName(string memory name) external view returns (address, uint256, string memory, string memory, string memory, address, address, uint256, address)"
+    "function getProfileByName(string memory name) external view returns (address, uint256, string memory, string memory, string memory, address, address, uint256, address)",
+    "function getStoreNameByLaunchAddress(address _launchAddress) external view returns (string memory, string memory, string memory)"
   ];
 
   const categories = [
@@ -49,12 +64,83 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
     setSearchTerm(value);
   };
 
+  const isEthereumAddress = (address: string): boolean => {
+    return /^0x[a-fA-F0-9]{40}$/.test(address);
+  };
+
+  const fetchPhygitalInfo = async (phygitalAddress: string) => {
+    try {
+      // Get the first wallet
+      const wallet = wallets[0];
+      if (!wallet) throw new Error('No wallet connected');
+
+      // Initialize provider and contract
+      const provider = await wallet.getEthersProvider();
+      const signer:any = await provider.getSigner();
+
+      console.log('Fetching phygital info for:', phygitalAddress);
+      console.log('Provider:', provider);
+      console.log('Signer:', signer);
+      
+      // Initialize phygital contract
+      const phygitalContract = new ethers.Contract(
+        phygitalAddress,
+        phygitalsABI,
+        signer
+      );
+      
+      // Get collection name and launch address
+      const collectionName = await phygitalContract.getAddressName();
+      const launchAddress = await phygitalContract.getAddressLaunch();
+      
+      console.log("Collection name:", collectionName);
+      console.log("Launch address:", launchAddress);
+      
+      // Initialize profile contract
+      const profileContract = new ethers.Contract(
+        profileAddr,
+        profileABI,
+        signer
+      );
+      
+      // Get store owner info using launch address
+      const [username, avatarUrl, bio] = await profileContract.getStoreNameByLaunchAddress(launchAddress);
+      
+      console.log("Username:", username);
+      console.log("Avatar URL:", avatarUrl);
+      console.log("Bio:", bio);
+      
+      // Format the result
+      setResults([{
+        id: phygitalAddress,
+        name: collectionName, // Collection name from phygitals
+        username: username, // Username from profile
+        profile_image_url: avatarUrl,
+        description: bio || 'Phygital Collection',
+        contractAddress: launchAddress // Store the launch address for linking
+      }]);
+      
+    } catch (error) {
+      console.error('Error fetching phygital info:', error);
+      setResults([]);
+    }
+  };
+
   const fetchProfile = async () => {
     const cleanedSearchTerm = searchTerm.replace(/^@/, '').trim();
     if (!cleanedSearchTerm) return;
     
     setIsLoading(true);
+    
     try {
+      // Check if the search term is an Ethereum address
+      if (isEthereumAddress(cleanedSearchTerm)) {
+        await fetchPhygitalInfo(cleanedSearchTerm);
+        setIsLoading(false);
+        return;
+      }
+      
+      // If not an address, proceed with name search as before
       // Get the first wallet (privy wallet)
       const wallet = wallets[0];
       if (!wallet) throw new Error('No wallet connected');
@@ -119,7 +205,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
           <div className="relative">
             <input
               type="text"
-              placeholder="Search by username (e.g., @username)"
+              placeholder="Search by username or contract address (0x...)"
               className="w-full pl-10 pr-4 py-3 bg-gray-100 border border-transparent rounded-xl focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 transition-all duration-200"
               value={searchTerm}
               onChange={e => handleSearchTermChange(e.target.value)}
@@ -135,11 +221,11 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
 
           <p className="text-sm text-gray-500 mt-2 px-1">
             <span className="inline-block mr-1">💡</span>
-            Enter a username to search both on-chain profiles and Twitter
+            Enter a username or paste a phygital contract address (0x...)
           </p>
           <p className="text-sm text-gray-500 mt-2 px-1">
             <span className="inline-block mr-1">⚠️</span>
-            Searches may be rate limited by  Twitter API
+            Username searches may be rate limited by Twitter API
           </p>
         </div>
 
@@ -158,11 +244,12 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
                 result?.name && result?.username && result?.id ? (
                   <TraderCard
                     key={index}
-                    name={result.name}
+                    name={'contractAddress' in result ? result.name : result.name}
                     username={result.username}
                     logo={result.profile_image_url || `https://unavatar.io/twitter/${result.username}`}
                     url={`https://twitter.com/${result.username}`}
-                    contractAddress="0x899dDFe1CDc28dE88eff62Efa7894D68a53E5EEC"  // Add this line
+                    // Use launch address from phygital if available, otherwise use default
+                    contractAddress={'contractAddress' in result ? result.contractAddress : "0x899dDFe1CDc28dE88eff62Efa7894D68a53E5EEC"}
                   />
                 ) : (
                   <div key={index} className="text-red-500 p-4 text-center bg-red-50 rounded-lg">

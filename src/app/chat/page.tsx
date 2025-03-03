@@ -83,18 +83,18 @@ const Chat: React.FC = () => {
   let wallet = wallets[0];
 
   // Contract addresses and ABIs
-  const createAddr = '0x602FC32c467211c4D4eC65a27Cc4B30b2747A5Ea';
+  const createAddr = '0x828ba1E00bA1f774CB25943Ef4aAF4874D10D374';
   const createABI = require("../abi/createAccount");
-  const launchFactory = '0xd3D26dF11dD5d5ad156CD06400658e8F23C26677';
+  const launchFactory = '0x4A1009bD578f6daF99096CF2a251c3711C701D15';
   const launchFactoryABI = require("../abi/launchFactory");
-  const openFactory = '0x0f3D9D2eD02DbE3b7Dd23C78079b0655AcD36b67';
+  const openFactory = '0x56Bf8A5DdA1BbbB5c1a1b622b2F3eF7fBf4d7d53';
   const openFactoryABI = require("../abi/openFactory");
-  const profileAddr = '0x4bf4aF0cD435DacB8030B03509e19B80AB371cD5';
+  const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
   const profileABI = require("../abi/profile");
   const launchABI = require("../abi/launch");
   const openABI = require("../abi/open");
 
-  const tokenMarketAddr = '0x07956bC1dc5f353A9c985e6c01678B7A802beE88';
+  const tokenMarketAddr = '0xA832df5A5Ff0D436eCE19a38E84eB92faC380566';
   const tokenMarketABI = require("../abi/tokenMarket");
 
   // Update store name when Twitter username changes
@@ -492,7 +492,41 @@ const Chat: React.FC = () => {
     }
   }, [wallet, activeTab]);
 
-  const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) => (
+  // Find the CurveModal component and replace it with this updated version
+
+const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) => {
+  // Create a local state for the form to prevent re-renders of the entire modal
+  const [localParams, setLocalParams] = useState<CurveParams>({
+    initialSupply: curveParams.initialSupply,
+    name: curveParams.name,
+    symbol: curveParams.symbol,
+    redeemTime: curveParams.redeemTime,
+    timeLimit: curveParams.timeLimit,
+    expiryTime: curveParams.expiryTime
+  });
+
+  // Initialize local state when modal opens
+  useEffect(() => {
+    setLocalParams({
+      initialSupply: curveParams.initialSupply,
+      name: curveParams.name,
+      symbol: curveParams.symbol,
+      redeemTime: curveParams.redeemTime,
+      timeLimit: curveParams.timeLimit,
+      expiryTime: curveParams.expiryTime
+    });
+  }, [isOpen]);
+
+  // Handle form submission
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Update the parent state with local values
+    setCurveParams(localParams);
+    // Then create the curve
+    handleCreateCurve(curveType === 'Open');
+  };
+
+  return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex justify-center items-center z-50">
       <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-purple-500/20 max-w-2xl w-full mx-4">
         <h3 className="text-2xl font-bold text-white mb-6">Create {curveType} Curve</h3>
@@ -522,15 +556,15 @@ const Chat: React.FC = () => {
         
         {/* Configure curve parameters section */}
         <h4 className="text-lg font-semibold text-white mb-4">Configure Curve Parameters</h4>
-        <form onSubmit={(e: React.FormEvent) => { e.preventDefault(); handleCreateCurve(curveType === 'Open'); }} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Token Details Row */}
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-gray-400 text-sm mb-2">Name</label>
               <input
                 type="text"
-                value={curveParams.name}
-                onChange={(e) => setCurveParams({...curveParams, name: e.target.value})}
+                value={localParams.name}
+                onChange={(e) => setLocalParams({...localParams, name: e.target.value})}
                 className="w-full bg-gray-700 text-white p-3 rounded-lg"
                 placeholder="Enter name"
                 required
@@ -540,8 +574,8 @@ const Chat: React.FC = () => {
               <label className="block text-gray-400 text-sm mb-2">Symbol</label>
               <input
                 type="text"
-                value={curveParams.symbol}
-                onChange={(e) => setCurveParams({...curveParams, symbol: e.target.value})}
+                value={localParams.symbol}
+                onChange={(e) => setLocalParams({...localParams, symbol: e.target.value})}
                 className="w-full bg-gray-700 text-white p-3 rounded-lg"
                 placeholder="Enter symbol"
                 required
@@ -551,8 +585,8 @@ const Chat: React.FC = () => {
               <label className="block text-gray-400 text-sm mb-2">Initial Supply</label>
               <input
                 type="number"
-                value={curveParams.initialSupply}
-                onChange={(e) => setCurveParams({...curveParams, initialSupply: e.target.value})}
+                value={localParams.initialSupply}
+                onChange={(e) => setLocalParams({...localParams, initialSupply: e.target.value})}
                 className="w-full bg-gray-700 text-white p-3 rounded-lg"
                 placeholder="Enter initial supply"
                 required
@@ -568,8 +602,8 @@ const Chat: React.FC = () => {
                   <label className="block text-gray-400 text-sm mb-2">Redeem Time</label>
                   <input
                     type="number"
-                    value={curveParams.redeemTime}
-                    onChange={(e) => setCurveParams({...curveParams, redeemTime: e.target.value})}
+                    value={localParams.redeemTime}
+                    onChange={(e) => setLocalParams({...localParams, redeemTime: e.target.value})}
                     className="w-full bg-gray-700 text-white p-3 rounded-lg"
                     placeholder="Enter redeem time"
                     required
@@ -582,8 +616,8 @@ const Chat: React.FC = () => {
                   <label className="block text-gray-400 text-sm mb-2">Trading Time</label>
                   <input
                     type="number"
-                    value={curveParams.timeLimit}
-                    onChange={(e) => setCurveParams({...curveParams, timeLimit: e.target.value})}
+                    value={localParams.timeLimit}
+                    onChange={(e) => setLocalParams({...localParams, timeLimit: e.target.value})}
                     className="w-full bg-gray-700 text-white p-3 rounded-lg"
                     placeholder="Enter time limit"
                     required
@@ -598,8 +632,8 @@ const Chat: React.FC = () => {
               <label className="block text-gray-400 text-sm mb-2">Curve Expiry</label>
               <input
                 type="number"
-                value={curveParams.expiryTime}
-                onChange={(e) => setCurveParams({...curveParams, expiryTime: e.target.value})}
+                value={localParams.expiryTime}
+                onChange={(e) => setLocalParams({...localParams, expiryTime: e.target.value})}
                 className="w-full bg-gray-700 text-white p-3 rounded-lg"
                 placeholder="Enter curve expiry"
                 required
@@ -628,7 +662,8 @@ const Chat: React.FC = () => {
         </form>
       </div>
     </div>
-  )
+  );
+};
 
   const renderContent = () => {
     if (activeTab === 'marketplace') {
@@ -809,7 +844,7 @@ const Chat: React.FC = () => {
                   className="w-full bg-gray-700 text-white p-3 rounded-lg"
                   placeholder="Enter ETH amount"
                   disabled={isMinting || isCalculating}
-                  step="0.0000000000000116"
+                  step="0.00000000000002"
                   min="0"
                   //max="0.2"
                 />
