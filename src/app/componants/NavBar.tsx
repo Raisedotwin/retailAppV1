@@ -163,7 +163,7 @@ const NavBar: React.FC = () => {
                 </Link>
               )}
               <Link href="/holdings">
-                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Curves</div>
+                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Best Sellers</div>
               </Link>
               <Link href="/chat">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Create</div>
@@ -171,12 +171,12 @@ const NavBar: React.FC = () => {
               <Link href="/wallet">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Dashboard</div>
               </Link>
-               {/* <div className="flex items-center space-x-2">
-                <Link href="/swaps">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Rewards</div>
+               <div className="flex items-center space-x-2">
+                <Link href="/profile">
+                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Profile</div>
                 </Link>
                 <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">Soon</span>
-              </div>*/}
+              </div>
             </>
           )}
         </div>
@@ -207,11 +207,11 @@ const NavBar: React.FC = () => {
             </div>
           )}
 
-           {/*{user && (
+           {user && (
             <>
               <Link href="/wallet">
                 <Image
-                  src="/icons/wallet-icons.svg"
+                  src="/icons/accounts-icon.svg"
                   alt="Wallet Icon"
                   width={30}
                   height={30}
@@ -219,7 +219,7 @@ const NavBar: React.FC = () => {
                 />
               </Link>
             </>
-          )}*/}
+          )}
 
           {user ? (
             <button

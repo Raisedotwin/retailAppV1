@@ -56,7 +56,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data: initialData, itemsPerPage = 1
           <div className="flex items-center gap-2">
             <span className="text-2xl">📈</span>
             <h2 className="text-2xl font-bold text-emerald-600 animate-pulse">
-              Active Curves
+              Top Launches
             </h2>
           </div>
           <p className="text-gray-600 mt-1">Browse and discover merchandise curves, trade retail items from top merchants</p>
@@ -67,10 +67,10 @@ const Holdings: React.FC<HoldingsProps> = ({ data: initialData, itemsPerPage = 1
             <thead>
               <tr className="bg-gray-100 text-left">
                 <th className="px-6 py-4 text-sm font-semibold text-gray-700">Rank</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-700">Creator</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-700">Username</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-700">Market Cap</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-700">Profile</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">Launch</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">Merchant</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">Loyalty Token</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">Launch Page</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -124,7 +124,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data: initialData, itemsPerPage = 1
                       href={entry.link} 
                       className="inline-flex items-center px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 rounded-full hover:bg-emerald-100 transition-all duration-150 hover:shadow-md"
                     >
-                      View Profile
+                      View Page
                     </NextLink>
                   </td>
                 </tr>

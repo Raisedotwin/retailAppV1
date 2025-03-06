@@ -8,13 +8,11 @@ import { Avatar } from '@nextui-org/react';
 import { getEmbeddedConnectedWallet, usePrivy,   useWallets  } from '@privy-io/react-auth'; 
 import Image from 'next/image';
 import TradingActivity from '../componants/TradingActivity';
-import TopHolders from '../componants/TopHolders';
-import Options from '../componants/Options';
 import AddressDisplay from '../componants/AddressDisplay';
 import { formatBlockTimestamp } from '../utils/timestamp';
 import NFTMarketplace from '../componants/NFTMarketplace';
-import ActiveContracts from '../componants/ActiveContracts';
 import ShippingModal from '../componants/ShippingDetailsModal';
+import AffiliateLink from '../componants/AffiliateLink';
 
 const TraderPageContent: React.FC = () => {
   const searchParams = useSearchParams(); // Access the query parameters
@@ -55,7 +53,7 @@ const TraderPageContent: React.FC = () => {
   const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
   const profileABI = require("../abi/profile.json");
 
-  const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts'>('tradingActivity');
+  const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts' | 'affiliate'>('tradingActivity');
   const [traderProfileExists, setTraderProfileExists] = useState(false);
 
   const optionsContractAddr = '0x0711333aa94E4f32B62C6dfD04c6E3CD79815883'; // Update with your contract address
@@ -97,11 +95,8 @@ const pageLink = useMemo(() => {
   const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
 
   const [marketDataContract, setMarketDataContract] = useState<Contract | null>(null);
-  const [lastBuybackValue, setLastBuybackValue] = useState('0');
-  const [winRatio, setWinRatio] = useState('0');
   const [price, setPrice] = useState<string | null>(null);
   const [balance, setBalance] = useState('0');
-  const [frequency, setFrequency] = useState('0');
   const [marketCap, setMarketCap] = useState('0');
   const [raiseWalletAddress, setRaiseWalletAddress] = useState('');
   const [tokenAddress, setTokenAddress] = useState('');
@@ -114,15 +109,12 @@ const pageLink = useMemo(() => {
   const [optionsContract, setOptionsContract] = useState<any>(null);
   const [signer, setSigner] = useState<any>(null);
   const [inactiveTraderDisabled, setInactiveTraderDisabled] = useState(false);
-  const [buybackAmount, setBuybackAmount] = useState('0');
-  const [curveContract, setCurveContract] = useState<Contract | null>(null);
   const [createUserWhitelistEnabled, setCreateUserWhitelistEnabled] = useState(false);
   const [isUserWhitelisted, setIsUserWhitelisted] = useState(false);
   const [curveType, setCurveType] = useState<number | null>(null);
   const [activeContract, setActiveContract] = useState<Contract | null>(null);
   const [expiryTime, setExpiryTime] = useState<string>('');
   const [redeemTime, setRedeemTime] = useState<string>('');
-  const [isListNFTModalOpen, setIsListNFTModalOpen] = useState(false);
   const [itemsOnCurve, setItemsOnCurve] = useState<string>('');
   const [nftFormData, setNftFormData] = useState({
     amount: '',
@@ -171,14 +163,13 @@ const fetchNFTTokenAddress = async () => {
       return;
     }
 
-    const tokenAddress = await contract.getTokenAddress();
+    const tokenAddress = await contract.getNFTAddress();
     console.log('NFT Token Address:', tokenAddress);
     setNftTokenAddress(tokenAddress);
 
     const contractNFT = new ethers.Contract(tokenAddress, nftContractABI, signer);
             
-    //this needs to be the total amouunt of nfts rather then the balance of the user
-    const balance = await contractNFT.balanceOf('0x899dDFe1CDc28dE88eff62Efa7894D68a53E5EEC');
+    const balance = await contractNFT.balanceOf(activeContract?.address);
     setItemsOnCurve(balance.toString());
     console.log('NFT Balance:', balance.toString());
     
@@ -329,8 +320,11 @@ useEffect(() => {
 
       await checkCurveType();
       console.log('Curve type:', curveType);
+      console.log('Active contract:', activeContract);
+      console.log('Active contract address:', activeContract?.address);
+      console.log('Active contract signer:', contractAddress);
 
-      if (activeContract) {
+      if (activeContract?.address) {
         try {
           console.log('active contract:', activeContract);  
 
@@ -402,7 +396,7 @@ useEffect(() => {
           
           console.log('Profile address:', nativeAddr);
 
-          const isClaimed = await profileContractInstance.isProfileClaimed(nativeAddr);
+          const isClaimed = await profileContractInstance.isLaunchRegistered(nativeAddr);
           setIsActive(isClaimed);
           
           // Check if trader profile exists
@@ -412,21 +406,6 @@ useEffect(() => {
 
           if (profileExists) {
             setProfile(profile);
-            const traderPoolAddr = profile[5];
-            setRaiseWalletAddress(traderPoolAddr);
-
-            // Get pool balance if exists
-            if (traderPoolAddr) {
-              const traderPoolInstance = new ethers.Contract(traderPoolAddr, tokenPoolABI, signer);
-              const balance = await traderPoolInstance.getTotal();
-              setBalance(ethers.formatEther(balance));
-
-              const buybackAmount = await traderPoolInstance.getBuybackRate();
-              const convertedBuyback = 10000 - Number(buybackAmount);
-              const finalMath = convertedBuyback / 100;
-              setBuybackAmount(finalMath.toString());
-              console.log('Buyback amount:', finalMath.toString());
-            }
 
             // Get token details
             const tokenAddress = await marketContractInstance.getTokenAddressByAccount(traderAcc.toString());
@@ -442,17 +421,6 @@ useEffect(() => {
             setMarketCap(ethers.formatEther(MCAP));
             //setMarketCap(ethers.formatUnits(MCAP, 6));
             //setMarketCap(MCAP.toString());
-
-            const lastBuyback = await marketDataContractInstance.getCumulativeBuybackValue(username as string);
-            let convertedValue = ethers.formatEther(lastBuyback);
-            setLastBuybackValue(convertedValue.toString());
-
-            const winRatio = await marketDataContractInstance.calculateWinRatio(username as string);
-            let convertedWinRatio = ethers.formatEther(winRatio);
-            setWinRatio(convertedWinRatio.toString());
-
-            const freq = await marketDataContractInstance.getLastBuybackTimestamp(username as string);
-            setFrequency(formatBlockTimestamp(freq.toString()));
 
           }
         } catch (error) {
@@ -498,19 +466,6 @@ useEffect(() => {
         console.error("Failed to switch chain or get provider:", error);
         return null;
       }
-  };
-
-  const fetchAccountCounter = async () => {
-    if (createContract) {
-      try {
-        const accCounter = await createContract.accountCounter();
-        return accCounter;
-      } catch (error) {
-        console.error('Error fetching account counter:', error);
-        return null;
-      }
-    }
-    return null;
   };
 
   const handleSellShares = async () => {
@@ -849,54 +804,32 @@ useEffect(() => {
       </div>
     {/* Activity Tabs Section */}
     <div className="bg-white rounded-2xl shadow-lg mt-8 p-6">
-        <div className="flex space-x-8 mb-6 border-b">
-          <TabButton 
-            active={activeModalTab === 'tradingActivity'} 
-            onClick={() => setActiveModalTab('tradingActivity')}
-          >
-            Admin Panel
-          </TabButton>
-          <TabButton 
-            active={activeModalTab === 'shorts'} 
-            onClick={() => setActiveModalTab('shorts')}
-          >
-            Options
-          </TabButton>
-          <TabButton 
-            active={activeModalTab === 'activity'} 
-            onClick={() => setActiveModalTab('activity')}
-          >
-            My Contracts
-          </TabButton>
-        </div>
+    <div className="flex space-x-8 mb-6 border-b">
+  <TabButton 
+    active={activeModalTab === 'tradingActivity'} 
+    onClick={() => setActiveModalTab('tradingActivity')}
+  >
+    Admin Panel
+  </TabButton>
+  {/* Add the new Affiliate tab button here */}
+  <TabButton 
+    active={activeModalTab === 'affiliate'} 
+    onClick={() => setActiveModalTab('affiliate')}
+  >
+    Affiliate
+  </TabButton>
+</div>
 
         <div className="mt-6">
-          {activeModalTab === 'topHolders' && <TopHolders />}
           {activeModalTab === 'tradingActivity' && <TradingActivity />}
-          {activeModalTab === 'shorts' && (
-            disableOptionMarket ? (
-              <div className="flex flex-col items-center justify-center p-12 bg-gray-50 rounded-lg">
-                <p className="text-xl font-medium text-gray-600">Options Coming Soon</p>
-                <p className="mt-2 text-gray-500">We're working hard to bring options trading to the platform.</p>
-              </div>
-            ) : (
-              <Options 
-                isEnabled={true}
-                tokenAddress={tokenAddress}
-                optionsContract={optionsContract}
-                signer={signer}
-                traderAddress={traderAddress}
-                marketContract={contract}
-              />
-            )
-          )}
-          {activeModalTab === 'activity' && 
-            <ActiveContracts
-              tokenAddress={tokenAddress}
-              optionsContract={optionsContract}
-              userAddress={walletAddress}
-            />
-          }
+ 
+
+           {activeModalTab === 'affiliate' && 
+    <AffiliateLink
+      pageLink={pageLink}
+      walletAddress={walletAddress}
+    />
+  }
         </div>
       </div>
       </div>

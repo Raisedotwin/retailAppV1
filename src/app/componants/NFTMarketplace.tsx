@@ -20,7 +20,7 @@ interface NFT {
     weightClass: string;
     category: string;
     size: string;
-    baseRedemptionValue?: string;  // Add this
+    baseRedemptionValue?: string;
   };
 }
 
@@ -32,11 +32,11 @@ interface NFTMarketplaceProps {
   activeContract?: any;
   isOpenForAll?: boolean;
   isWhitelistRequired?: boolean;
-  launchContract?: any;  // Add this
-  openContract?: any;    // Add this
-  curveType?: number | null; // Add this
-  signer?: any;  // Add this
-  pageLink?: string;  // Add this line
+  launchContract?: any;
+  openContract?: any;
+  curveType?: number | null;
+  signer?: any;
+  pageLink?: string;
   marketData?: any;
 }
 
@@ -48,7 +48,8 @@ interface ListingFormData {
   weightClass: string;
   category: string;
   size: string;
-  baseValue: string;
+  inputEthAmount: string; // New field for ETH input
+  baseValue: string;      // This will be calculated
   minRedeemValue: string;
 }
 
@@ -68,8 +69,6 @@ const formatPrice = (price: string): string => {
   }
 };
 
-
-
 const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   nftContract,
   curveContract,
@@ -78,12 +77,12 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   activeContract,
   isOpenForAll = true,
   isWhitelistRequired = false,
-  launchContract,    // Add this
-  openContract,      // Add this
+  launchContract,
+  openContract,
   curveType,
   signer,
   pageLink,
-  marketData         // Add this
+  marketData
 }) => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -100,9 +99,11 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
     weightClass: '',
     category: '',
     size: '',
+    inputEthAmount: '',  // New field for ETH input
     baseValue: '',
     minRedeemValue: ''
   });
+  const [isCalculatingBaseValue, setIsCalculatingBaseValue] = useState(false);
 
   const [modalState, setModalState] = useState<NFTModalState>({
     showPurchaseConfirm: false,
@@ -111,7 +112,6 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
     purchaseError: ''
   });
   
-
   const itemsPerPage = 4;
 
   useEffect(() => {
@@ -161,7 +161,7 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
         const contract = new ethers.Contract(nftContract, nftContractABI, signer);
         
         //this needs to be the total amouunt of nfts rather then the balance of the user
-        const balance = await contract.balanceOf('0x899dDFe1CDc28dE88eff62Efa7894D68a53E5EEC');
+        const balance = await contract.balanceOf(activeContract);
         console.log('NFT Balance:', balance.toString());
 
         //const totalSupply = await activeContract.totalSupply();
@@ -259,6 +259,61 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
     fetchNFTs();
   }, [nftContract, signer]);
 
+  // Calculate base value from ETH amount using getNumberOfTokensForAmount
+  const calculateBaseValue = async (ethAmount: string) => {
+    try {
+      setIsCalculatingBaseValue(true);
+      
+      if (!activeContract || !ethAmount || isNaN(parseFloat(ethAmount))) {
+        setListingForm(prev => ({
+          ...prev,
+          baseValue: ''
+        }));
+        return;
+      }
+      
+      // Convert ETH to Wei
+      const amountInWei = ethers.parseEther(ethAmount);
+      
+      // Call getNumberOfTokensForAmount
+      const baseValueBigInt = await activeContract.getNumberOfTokensForAmount(amountInWei);
+      
+      // Format the result
+      const baseValueFormatted = ethers.formatEther(baseValueBigInt.toString());
+      
+      // Update the form
+      setListingForm(prev => ({
+        ...prev,
+        baseValue: baseValueFormatted
+      }));
+      
+      console.log(`Calculated base value: ${baseValueFormatted} for ${ethAmount} ETH`);
+    } catch (error) {
+      console.error('Error calculating base value:', error);
+      setListingForm(prev => ({
+        ...prev,
+        baseValue: ''
+      }));
+    } finally {
+      setIsCalculatingBaseValue(false);
+    }
+  };
+
+  // Modified input change handler to calculate base value when ETH amount changes
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    setListingForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // If ethAmount is changing, calculate the base value
+    if (name === 'inputEthAmount') {
+      calculateBaseValue(value);
+    }
+  };
+
   const handleListingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -277,7 +332,9 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   
       // Convert values to appropriate types
       const quantity = parseInt(listingForm.quantity);
-      const baseValue = ethers.parseEther(listingForm.baseValue);
+      
+      // Use the calculated baseValue (already in correct format)
+      const baseValue = ethers.parseUnits(listingForm.baseValue, 0); // It's already in wei
       const baseRedeem = ethers.parseEther(listingForm.minRedeemValue);
   
       let tx;
@@ -324,14 +381,6 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   const handleNFTClick = (nft: NFT) => {
     setSelectedNFT(nft);
     setShowModal(true);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setListingForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   const handlePurchase = async (nft: NFT) => {
@@ -640,7 +689,7 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
         </div>
       )}
   
-  {/* New Listing Modal */}
+  {/* Modified Listing Modal with ETH input */}
   {showListingModal && (
         <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-gray-800 p-6 rounded-2xl shadow-2xl max-w-2xl w-full border border-gray-700">
@@ -710,8 +759,7 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
 
                 <div>
                   <label className="block text-gray-300 mb-2">Category</label>
-                  <input
-                    type="text"
+                  <input type="text"
                     name="category"
                     value={listingForm.category}
                     onChange={handleInputChange}
@@ -733,19 +781,43 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 mb-2">Base Value (ETH)</label>
+                  <label className="block text-gray-300 mb-2">Base Price (ETH)</label>
                   <input
                     type="text"
-                    name="baseValue"
-                    value={listingForm.baseValue}
+                    name="inputEthAmount"
+                    value={listingForm.inputEthAmount}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 bg-gray-700 rounded-lg text-white"
+                    placeholder="e.g. 0.1"
                     required
                   />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Enter amount in ETH, base value will be calculated automatically
+                  </p>
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 mb-2">Min Redeem Value (ETH)</label>
+                  <label className="block text-gray-300 mb-2">Calculated Base Token Value</label>
+                  <div className="flex items-center">
+                    <input
+                      type="text"
+                      name="baseValue"
+                      value={listingForm.baseValue}
+                      readOnly
+                      className="w-full px-4 py-2 bg-gray-600 rounded-lg text-white cursor-not-allowed"
+                      placeholder={isCalculatingBaseValue ? "Calculating..." : "Enter ETH amount first"}
+                    />
+                    {isCalculatingBaseValue && (
+                      <div className="animate-spin text-xl ml-2">🔄</div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    This value is automatically calculated from your ETH input and displayed in ETH format
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-gray-300 mb-2">Redeem Price (ETH)</label>
                   <input
                     type="text"
                     name="minRedeemValue"
@@ -755,6 +827,14 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
                     required
                   />
                 </div>
+              </div>
+
+              {/* Info section explaining the ETH to Base Value conversion */}
+              <div className="bg-gray-700/30 p-4 rounded-lg my-4 border border-purple-500/20">
+                <h4 className="text-purple-400 font-medium mb-2">How ETH Amount and Base Value Work</h4>
+                <p className="text-gray-300 text-sm">
+                  The ETH amount you enter is converted to a Base Value. This Base Value represents the token amount that corresponds to your ETH input based on the bonding curve.
+                </p>
               </div>
 
               <div className="flex justify-end gap-4 mt-6">
@@ -767,12 +847,12 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isProcessing}
+                  disabled={isProcessing || isCalculatingBaseValue || !listingForm.baseValue}
                   className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg
                            hover:from-purple-600 hover:to-pink-600 transition-all transform hover:scale-105
                            disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isProcessing ? 'Processing...' : 'List NFT'}
+                  {isProcessing ? 'Processing...' : isCalculatingBaseValue ? 'Calculating...' : 'List NFT'}
                 </button>
               </div>
             </form>
