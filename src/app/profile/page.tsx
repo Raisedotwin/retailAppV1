@@ -759,19 +759,6 @@ const ProfilePage: React.FC = () => {
               </div>
             </button>
             <button
-              onClick={() => setActiveTab('affiliate')}
-              className={`pb-3 px-4 text-sm font-medium ${
-                activeTab === 'affiliate'
-                  ? 'text-blue-400 border-b-2 border-blue-400'
-                  : 'text-gray-400 hover:text-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <AffiliateIcon />
-                <span>Affiliate</span>
-              </div>
-            </button>
-            <button
               onClick={() => setActiveTab('orders')}
               className={`pb-3 px-4 text-sm font-medium ${
                 activeTab === 'orders'

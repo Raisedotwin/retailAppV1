@@ -11,6 +11,8 @@ interface NFT {
   id: number;
   name: string;
   price: string;
+  priceEth: number;     // Raw ETH price value
+  priceUsd: number;     // Raw USD price value
   image: string;
   merchantImage: string;
   merchantName: string; // Added merchant name
@@ -36,6 +38,20 @@ const mockNFTs: NFT[] = [
 const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
   const timeUntilRedeemable = new Date(nft.redeemableAt).getTime() - new Date().getTime();
   const daysUntilRedeemable = Math.max(0, Math.floor(timeUntilRedeemable / (1000 * 60 * 60 * 24)));
+
+  // Function to format prices nicely
+  const formatPrice = () => {
+    if (nft.priceUsd) {
+      return (
+        <div className="flex flex-col items-end">
+          <span className="font-bold text-lg">${nft.priceUsd.toFixed(2)}</span>
+          <span className="text-xs text-gray-300">{nft.priceEth.toFixed(5)} ETH</span>
+        </div>
+      );
+    }
+    // Fallback to original price string if USD price isn't available
+    return <span className="font-bold">{nft.price}</span>;
+  };
 
   return (
     <Link href={nft.storeLink || "#"} passHref>
@@ -84,8 +100,8 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
               <h3 className="font-bold text-xl text-gray-900 mb-1 group-hover:text-purple-600 transition-colors duration-300">{nft.name}</h3>
             </div>
             <div className="flex items-center bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
-              <span className="mr-2">✨</span>
-              <span className="font-bold">{nft.price}</span>
+              <span className="mr-2">💰</span>
+              {formatPrice()}
             </div>
           </div>
 
@@ -114,6 +130,7 @@ const MarketplacePage: React.FC = () => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ethUsdPrice, setEthUsdPrice] = useState<number>(0);
 
   // Use Base network RPC URL
   let rpcURL = EIP155_CHAINS["eip155:84532"].rpc;
@@ -143,6 +160,29 @@ const MarketplacePage: React.FC = () => {
   const profileABI = [
     "function getStoreNameByLaunchAddress(address _launchAddress) view returns (string memory, string memory, string memory)"
   ];
+
+  // Add a new useEffect to fetch the ETH/USD price
+  useEffect(() => {
+    const fetchEthPrice = async () => {
+      try {
+        // Fetch ETH price from CoinGecko API
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+        const data = await response.json();
+        setEthUsdPrice(data.ethereum.usd);
+        console.log(`Fetched ETH price: $${data.ethereum.usd}`);
+      } catch (err) {
+        console.error("Failed to fetch ETH price:", err);
+        // Fallback price if the API fails
+        setEthUsdPrice(3000); // Use a reasonable default or last known price
+      }
+    };
+
+    fetchEthPrice();
+    // Refresh price every 5 minutes
+    const intervalId = setInterval(fetchEthPrice, 5 * 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const fetchNFTs = async () => {
@@ -232,6 +272,9 @@ const MarketplacePage: React.FC = () => {
         }
         
         let formattedPrice = "Price unavailable";
+        let ethPrice = 0;
+        let usdPrice = 0;
+        
         try {
           // Connect to the Launch contract
           const launchContract = new ethers.Contract(
@@ -247,16 +290,26 @@ const MarketplacePage: React.FC = () => {
           // Convert BigInt to string before formatting
           const priceInEth = parseFloat(ethers.formatEther(actualPrice.toString()));
           // Ensure minimum price display of 0.00001 ETH
-          const displayPrice = priceInEth < 0.00001 ? 0.00001 : priceInEth;
-          formattedPrice = displayPrice.toFixed(5) + " ETH";
+          ethPrice = priceInEth < 0.00001 ? 0.00001 : priceInEth;
+          
+          // Calculate USD price
+          usdPrice = ethPrice * ethUsdPrice;
+          
+          // Format price
+          formattedPrice = `${ethPrice.toFixed(5)} ETH ($${usdPrice.toFixed(2)})`;
           console.log(`Fetched price for token ${nftData.tokenId}: ${formattedPrice}`);
         } catch (priceErr) {
           console.error(`Error fetching price from launch contract for token ${nftData.tokenId}:`, priceErr);
           // Fallback to base value with a marker
           const fallbackPrice = parseFloat(ethers.formatEther(baseValue.toString()));
           // Ensure minimum price display of 0.00001 ETH
-          const displayFallbackPrice = fallbackPrice < 0.00001 ? 0.00001 : fallbackPrice;
-          formattedPrice = displayFallbackPrice.toFixed(5) + " ETH*";
+          ethPrice = fallbackPrice < 0.00001 ? 0.00001 : fallbackPrice;
+          
+          // Calculate USD price
+          usdPrice = ethPrice * ethUsdPrice;
+          
+          // Format price
+          formattedPrice = `${ethPrice.toFixed(5)} ETH* ($${usdPrice.toFixed(2)})`;
         }
 
         console.log(`dateUntilRedemption: ${metadata.dateUntilRedemption}`);
@@ -268,6 +321,8 @@ const MarketplacePage: React.FC = () => {
           collectionAddress: nftData.collectionAddress,
           name: metadata.name,
           price: formattedPrice,
+          priceEth: ethPrice,          // Add raw ETH price
+          priceUsd: usdPrice,          // Add raw USD price
           image: metadata.itemPhoto || "/api/placeholder/300/300",
           merchantImage: merchantImage,
           merchantName: collectionName,
@@ -275,7 +330,6 @@ const MarketplacePage: React.FC = () => {
           category: metadata.category,
           storeLink: nftData.storeLink,
           mintedAt: new Date(Number(nftData.timestamp.toString()) * 1000).toISOString(),
-          //redeemableAt: new Date(Number(metadata.dateUntilRedemption.toString()) * 1000).toISOString()
           redeemableAt: (Number(metadata.dateUntilRedemption.toString()) / 86400).toFixed(2).toString()
         };
       } catch (err) {
@@ -285,7 +339,7 @@ const MarketplacePage: React.FC = () => {
     };
     
     fetchNFTs();
-  }, [provider, marketDataContractAddr, profileAddr]);
+  }, [provider, marketDataContractAddr, profileAddr, ethUsdPrice]);
 
   // New component to render NFT card with special treatment for the first item
   const renderNFTCards = () => {
@@ -388,6 +442,25 @@ const MarketplacePage: React.FC = () => {
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Discover and collect unique physical items backed by blockchain technology ⚡️
             </p>
+            {/* ETH price indicator */}
+            {ethUsdPrice > 0 && (
+              <div className="mt-4 flex justify-center items-center">
+                <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-full shadow-md border border-gray-200 flex items-center">
+                  <span className="mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 417" preserveAspectRatio="xMidYMid" className="w-5 h-5">
+                      <path fill="#343434" d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z" />
+                      <path fill="#8C8C8C" d="M127.962 0L0 212.32l127.962 75.639V154.158z" />
+                      <path fill="#3C3C3B" d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.6L256 236.587z" />
+                      <path fill="#8C8C8C" d="M127.962 416.905v-104.72L0 236.585z" />
+                      <path fill="#141414" d="M127.961 287.958l127.96-75.637-127.96-58.162z" />
+                      <path fill="#393939" d="M0 212.32l127.96 75.638v-133.8z" />
+                    </svg>
+                  </span>
+                  <span className="font-medium text-gray-800">1 ETH = ${ethUsdPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                  <span className="ml-2 text-xs text-gray-500">(All prices shown in USD)</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Loading State */}
@@ -395,6 +468,14 @@ const MarketplacePage: React.FC = () => {
             <div className="flex flex-col items-center justify-center py-12">
               <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
               <p className="text-lg text-gray-600">Loading items from blockchain...</p>
+            </div>
+          )}
+
+          {/* Loading ETH Price State */}
+          {!loading && !error && ethUsdPrice === 0 && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700 p-4 rounded mb-8 mx-auto max-w-2xl">
+              <p className="font-bold">Loading price data</p>
+              <p>ETH to USD conversion rate is being fetched. Prices will update momentarily.</p>
             </div>
           )}
 

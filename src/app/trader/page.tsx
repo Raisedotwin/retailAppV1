@@ -7,16 +7,18 @@ import { ethers, Contract } from 'ethers';
 import { Avatar } from '@nextui-org/react';
 import { getEmbeddedConnectedWallet, usePrivy,   useWallets  } from '@privy-io/react-auth'; 
 import Image from 'next/image';
-import TradingActivity from '../componants/TradingActivity';
 import AddressDisplay from '../componants/AddressDisplay';
 import { formatBlockTimestamp } from '../utils/timestamp';
 import NFTMarketplace from '../componants/NFTMarketplace';
 import ShippingModal from '../componants/ShippingDetailsModal';
 import AffiliateLink from '../componants/AffiliateLink';
+import AffiliateDashboard from '../componants/AffiliateDashboard';
+import MyInventory from '../componants/MyInventory';
 
 const TraderPageContent: React.FC = () => {
   const searchParams = useSearchParams(); // Access the query parameters
   // Extracting the query parameters from the searchParams object
+
   const nftContractABI = [
     "function balanceOf(address owner) view returns (uint256)",
     "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
@@ -26,6 +28,9 @@ const TraderPageContent: React.FC = () => {
     "function getOwner(uint256 _tokenId) external view returns (address)",
     "function getBaseValue(uint256 tokenId) external view returns (uint256)"
   ];
+
+  const [isAffiliate, setIsAffiliate] = useState(false);
+  const [affiliateAddress, setAffiliateAddress] = useState<string | null>(null);
 
   // Extracting the query parameters from the searchParams object
   const name = searchParams.get('name');
@@ -53,7 +58,7 @@ const TraderPageContent: React.FC = () => {
   const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
   const profileABI = require("../abi/profile.json");
 
-  const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts' | 'affiliate'>('tradingActivity');
+  const [activeModalTab, setActiveModalTab] = useState<'activity' | 'topHolders' | 'tradingActivity' | 'shorts' | 'affiliate' | 'affiliateDashboard'>('affiliate');
   const [traderProfileExists, setTraderProfileExists] = useState(false);
 
   const optionsContractAddr = '0x0711333aa94E4f32B62C6dfD04c6E3CD79815883'; // Update with your contract address
@@ -75,6 +80,19 @@ const [params] = useState({
   username: username ? username : 'username',
   contractAddress: contractAddress ? contractAddress : '0x899dDFe1CDc28dE88eff62Efa7894D68a53E5EEC', // Add this line
 });
+
+const checkForAffiliateLink = (params: URLSearchParams): { isAffiliate: boolean; affiliateAddress: string | null } => {
+  // Check if the URL contains a ref parameter
+  const refAddress = params.get('ref');
+  
+  // Validate that it's a proper Ethereum address (basic check)
+  const isValidEthAddress = refAddress && /^0x[a-fA-F0-9]{40}$/.test(refAddress);
+  
+  return {
+    isAffiliate: !!isValidEthAddress,
+    affiliateAddress: isValidEthAddress ? refAddress : null
+  };
+};
 
 // Add the pageLink here
 const pageLink = useMemo(() => {
@@ -130,7 +148,8 @@ const pageLink = useMemo(() => {
   });
   const [nftTokenAddress, setNftTokenAddress] = useState<string>('');
   const [disableOptionMarket] = useState(true); // Set to true to show placeholder, false to show options panel
-
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   //const nftContractAddr = '0x...'; // Add your NFT contract address
   //const nftABI = require("../abi/shorts.json");
   //const curveContractAddr = '0x...'; // Add your curve contract address
@@ -435,7 +454,34 @@ useEffect(() => {
   initContract();
 }, [user, username, wallets, whitelistContract, createUserWhitelistEnabled]);
 
+  // Add this effect to check if user is logged in and show modal if needed
+  useEffect(() => {
+    // Check if wallet is connected
+    const checkWalletConnection = async () => {
+      if (user && wallets && wallets.length > 0) {
+        setIsLoggedIn(true);
+        console.log('User is logged in');
+      } else {
+        setIsLoggedIn(false);
+        setShowLoginModal(true);
+        console.log('User is not logged in');
+      }
+    };
+    
+    checkWalletConnection();
+  }, [user, wallets]);
 
+  useEffect(() => {
+    const { isAffiliate, affiliateAddress } = checkForAffiliateLink(searchParams);
+    setIsAffiliate(isAffiliate);
+    setAffiliateAddress(affiliateAddress);
+    
+    if (isAffiliate) {
+      console.log('Affiliate link detected!', { affiliateAddress });
+      // You could track this event for analytics purposes
+    }
+  }, [searchParams]);
+  
   const getPrivyProvider = async (chainName: string) => {
     if (!wallet) {
       console.error("Wallet not initialized");
@@ -553,300 +599,443 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
-      <div className="max-w-6xl w-full mx-auto">
-        {/* Profile Header Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-  <div className="flex flex-wrap items-start md:items-center gap-8">
-    {/* Avatar Section */}
-    <div className="relative flex-shrink-0">
-      <Avatar 
-        src={params.logo}
-        className="w-16 h-16 rounded-full shadow-lg"
-      />
-      <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-        isActive ? 'bg-green-500' : 'bg-red-500'
-      }`} />
-    </div>
-
-    {/* Name and Details Section */}
-    <div className="flex-grow min-w-0">
-      <div className="flex items-center gap-2 mb-1">
-        <h2 className="text-xl font-bold text-gray-800 truncate">{params.name}</h2>
-        <a 
-          href={`https://twitter.com/${params.username}`} 
-          target="_blank" 
-          className="flex-shrink-0 hover:opacity-80 transition-opacity"
-        >
-          <Image 
-            src="/icons/x-logo-2.png" 
-            alt="Twitter" 
-            width={20} 
-            height={20} 
-          />
-        </a>
+    <div className="min-h-screen p-6">
+      {/* Enhanced Background - Replacing the complex linear-gradient and SVG pattern */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-100 via-blue-50 to-pink-100" />
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute w-96 h-96 bg-purple-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob top-0 -left-4" />
+          <div className="absolute w-96 h-96 bg-blue-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000 top-0 -right-4" />
+          <div className="absolute w-96 h-96 bg-pink-300/30 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000 -bottom-8 left-1/2 transform -translate-x-1/2" />
+        </div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjIiIGZpbGw9ImN1cnJlbnRDb2xvciIvPjwvc3ZnPg==')] opacity-5" />
       </div>
-      <div className="flex items-center gap-4">
-        <p className="text-gray-500">@{params.username}</p>
-        <span className={`
-          text-sm font-medium px-2 py-0.5 rounded-full
-          ${isActive 
-            ? "text-green-700 bg-green-100" 
-            : "text-red-700 bg-red-100"
-          }
-        `}>
-          {isActive ? 'Active' : 'Inactive'}
-        </span>
-      </div>
-    </div>
-
- {/* Stats Section */}
-<div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-7 gap-4">
-  <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">{expiryTime}</p>
-    <p className="text-xs text-gray-500">Time Until Expiry</p>
-  </div>
-  <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">{redeemTime}</p>
-    <p className="text-xs text-gray-500">Time Until Redeem</p>
-  </div>
-  <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">{curveType === 1 ? "Closed" : curveType === 2 ? "Open" : ""}</p>
-    <p className="text-xs text-gray-500">Curve Type</p>
-  </div>
-  <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">
-      {Number(marketCap).toFixed(3)} ETH
-    </p>
-    <p className="text-xs text-gray-500">Curve Marketcap</p>
-  </div>
-  <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">
-      {Number(balance).toFixed(3)} ETH
-    </p>
-    <p className="text-xs text-gray-500">Loyalty Marketcap</p>
-  </div>
-  <div className="text-center px-4">
-    <p className="text-lg font-bold text-green-500">{itemsOnCurve}</p>
-    <p className="text-xs text-gray-500">Items On Curve</p>
-  </div>
-</div>
-</div>
-</div>
-
-{/* NFT Marketplace Section */}
-<NFTMarketplace 
-  nftContract={nftTokenAddress} //possibly just put the entire nft contract in here instead 
-  curveContract={contractAddress}
-  userAddress={walletAddress}
-  useContractData={false}
-  activeContract={activeContract}
-  launchContract={launchContract}
-  openContract={openContract}
-  curveType={curveType}
-  signer={signer}
-  pageLink={pageLink}
-/>
-
-<br />
-
-{/* Main Content Grid */}
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    
-      {/* Trading Panel */}
-          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div className="p-6">
-              {/* Trading Tabs */}
-              <div className="flex justify-between mb-6 px-4">
-                <button
-                  className={`flex-1 py-3 text-lg font-medium transition-all duration-200 mx-2 ${
-                  activeTab === 'buy'
-                    ? 'bg-green-500 text-white rounded-lg shadow-lg transform -translate-y-1'
-                    : 'text-gray-500 hover:text-green-500'
-                  }`}
-                onClick={() => setActiveTab('buy')}
+  
+      {/* Login Modal */}
+      {!user || !wallets || wallets.length === 0 ? (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-xl">
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-6">
+                <Image 
+                  src="/icons/waitlogo.png" 
+                  alt="Login Required" 
+                  width={120} 
+                  height={120} 
+                  className="mx-auto"
+                />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Wallet Connection Required</h2>
+              <p className="mb-6 text-gray-600">Please login with your wallet to view this page and access all features.</p>
+              <button 
+                className="w-full py-4 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-lg font-medium rounded-2xl hover:shadow-lg transition-all duration-200"
               >
-            Redeem
-            </button>
-            <button
-              className={`flex-1 py-3 text-lg font-medium transition-all duration-200 mx-2 ${
-              activeTab === 'sell'
-                ? 'bg-red-500 text-white rounded-lg shadow-lg transform -translate-y-1'
-                : 'text-gray-500 hover:text-red-500'
-              }`}
-              onClick={() => setActiveTab('sell')}
-            >
-          Sell
-          </button>
-        </div>
-  {activeTab === 'buy' && (
-  <div className="space-y-6">
-    <h3 className="text-xl font-semibold text-gray-800">
-      {traderProfileExists ? `Buy $${params.username}` : 'Create Token'}
-    </h3>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        {traderProfileExists ? 'Amount ETH' : 'Initial Token Creation'}
-      </label>
-      <input
-        type="number"
-        step="0.000000000000000001"
-        min="0"
-        className="w-full p-3 text-lg border-2 border-green-500 rounded-lg focus:ring-2 focus:ring-green-300 outline-none transition-all"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-        disabled={!traderProfileExists || needsInitialization || (inactiveTraderDisabled && !isActive)}
-      />
-    </div>
-    <div className="flex justify-between items-center py-4 px-6 bg-gray-50 rounded-lg">
-      <span className="text-gray-600">
-        {traderProfileExists ? 'Total Cost' : 'Initial Supply'}
-      </span>
-      <span className="text-lg font-semibold">
-        {traderProfileExists ? `${Number(buyPrice).toFixed(4)} $${username}` : '1.0 tokens'}
-      </span>
-    </div>
-      <>
-        <button 
-          className={`w-full py-4 text-white text-lg font-medium rounded-lg transition-colors duration-200 shadow-lg ${
-            traderProfileExists 
-              ? 'bg-green-500 hover:bg-green-600' 
-              : (!createUserWhitelistEnabled || isUserWhitelisted)
-                ? 'bg-blue-500 hover:bg-blue-600'
-                : 'bg-gray-400 cursor-not-allowed'
-          }`}
-          onClick={() => setIsShippingModalOpen(true)}
-          disabled={traderProfileExists 
-            ? (inactiveTraderDisabled && !isActive)
-            : (createUserWhitelistEnabled && !isUserWhitelisted)}
-        >
-          {traderProfileExists ? 'Redeem Now' : 'Create Token'}
-        </button>
-        {createUserWhitelistEnabled && !isUserWhitelisted && !traderProfileExists && (
-          <div className="mt-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600 text-center">
-              This trader is not whitelisted for token creation
-            </p>
-          </div>
-        )}
-      </>
-  </div>
-)}
-        
-{activeTab === 'sell' && (
-  <div className="space-y-6">
-    <h3 className="text-xl font-semibold text-gray-800">
-      {traderProfileExists ? `Sell $${params.username}` : 'Token Not Available'}
-    </h3>
-    
-    {traderProfileExists ? (
-      <>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Amount {params.username}
-          </label>
-          <input
-            type="number"
-            step="0.000000000000000001"
-            min="0"
-            className="w-full p-3 text-lg border-2 border-red-500 rounded-lg focus:ring-2 focus:ring-red-300 outline-none transition-all"
-            value={amount}
-            onChange={(e) => {
-              setAmount(e.target.value);
-              setIsPriceLoading(true);
-            }}
-          />
-        </div>
-        <div className="flex justify-between items-center py-4 px-6 bg-gray-50 rounded-lg">
-          <span className="text-gray-600">You'll Receive</span>
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold">
-              {Number(sellPrice).toFixed(16)} ETH
-            </span>
-          </div>
-        </div>
-        <button 
-          className="w-full py-4 bg-red-500 text-white text-lg font-medium rounded-lg hover:bg-red-600 transition-colors duration-200 shadow-lg"
-          onClick={handleSellShares}
-        >
-          Sell Now
-        </button>
-      </>
-    ) : (
-      <div className="text-center py-8 space-y-4">
-        <div className="bg-gray-50 rounded-lg p-6">
-          <div className="text-gray-400 mb-4">⚠️</div>
-          <p className="text-gray-600 mb-2">This token hasn't been created yet</p>
-          <p className="text-sm text-gray-500">
-            Switch to the buy tab to create this token
-          </p>
-        </div>
-        <button 
-          className="w-full py-4 bg-gray-300 text-gray-500 text-lg font-medium rounded-lg cursor-not-allowed"
-          disabled
-        >
-          Sell Now
-        </button>
-      </div>
-    )}
-  </div>
-)}
-
-
-              
+                Connect Wallet
+              </button>
             </div>
           </div>
+        </div>
+      ) : (
+      <div className="max-w-6xl w-full mx-auto">
+        {/* Enhanced Profile Header Card */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-md p-8 mb-8">
+          <div className="flex flex-wrap items-start md:items-center gap-8">
+            {/* Avatar Section - Enhanced with Square Design */}
+            <div className="relative flex-shrink-0">
+              <div className="absolute -inset-1 bg-gradient-to-r from-violet-400 to-fuchsia-400 rounded-lg opacity-50 blur-sm"></div>
+              <Avatar 
+                src={params.logo}
+                className="w-16 h-16 rounded-lg shadow-md border-4 border-white relative"
+              />
+              <span className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white ${
+                isActive ? 'bg-green-400' : 'bg-pink-400'
+              }`} />
+            </div>
+  
+            {/* Enhanced Name and Details Section */}
+            <div className="flex-grow min-w-0 bg-gradient-to-r from-violet-50 to-fuchsia-50 p-4 rounded-xl border border-violet-100">
+              <div className="flex items-center gap-3 mb-2">
+                <h2 className="text-xl font-bold text-violet-700 truncate">{params.name}</h2>
+                {/* Enhanced X Logo */}
+                <a 
+                  href={`https://twitter.com/${params.username}`} 
+                  target="_blank" 
+                  className="flex-shrink-0 hover:opacity-80 transition-opacity bg-black/10 p-1.5 rounded-full"
+                >
+                  <Image 
+                    src="/icons/x-logo-2.png" 
+                    alt="Twitter" 
+                    width={22} 
+                    height={22} 
+                  />
+                </a>
+              </div>
+              <div className="flex items-center gap-4">
+                <p className="text-gray-600 font-medium">@{params.username}</p>
+                <span className={`
+                  text-sm font-medium px-3 py-1 rounded-full
+                  ${isActive 
+                    ? "text-green-700 bg-green-100/80" 
+                    : "text-pink-700 bg-pink-100/80"
+                  }
+                `}>
+                  {isActive ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+  
+            {/* Enhanced Stats Section */}
+            <div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-7 gap-4 bg-gradient-to-r from-fuchsia-50 to-violet-50 p-4 rounded-xl border border-violet-100">
+              <div className="text-center px-4">
+                <p className="text-lg font-bold text-violet-700">{expiryTime}</p>
+                <p className="text-xs font-medium text-gray-600">Time Until Expiry</p>
+              </div>
+              <div className="text-center px-4">
+                <p className="text-lg font-bold text-violet-700">{redeemTime}</p>
+                <p className="text-xs font-medium text-gray-600">Time Until Redeem</p>
+              </div>
+              <div className="text-center px-4">
+                <p className="text-lg font-bold text-violet-700">{curveType === 1 ? "Closed" : curveType === 2 ? "Open" : ""}</p>
+                <p className="text-xs font-medium text-gray-600">Curve Type</p>
+              </div>
+              <div className="text-center px-4">
+                <p className="text-lg font-bold text-violet-700">
+                  {Number(marketCap).toFixed(3)} ETH
+                </p>
+                <p className="text-xs font-medium text-gray-600">Curve Marketcap</p>
+              </div>
+              <div className="text-center px-4">
+                <p className="text-lg font-bold text-violet-700">
+                  {Number(balance).toFixed(3)} ETH
+                </p>
+                <p className="text-xs font-medium text-gray-600">Loyalty Marketcap</p>
+              </div>
+              <div className="text-center px-4">
+                <p className="text-lg font-bold text-violet-700">{itemsOnCurve}</p>
+                <p className="text-xs font-medium text-gray-600">Items On Curve</p>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        {/* NFT Marketplace Section */}
+        <NFTMarketplace 
+          nftContract={nftTokenAddress}
+          curveContract={contractAddress}
+          userAddress={walletAddress}
+          useContractData={false}
+          activeContract={activeContract}
+          launchContract={launchContract}
+          openContract={openContract}
+          curveType={curveType}
+          signer={signer}
+          pageLink={pageLink}
+          isAffiliate={isAffiliate}
+          affiliateAddress={affiliateAddress}
+        />
 
-    {/* Chart Panel */}
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-          <AddressDisplay raiseWalletAddress={raiseWalletAddress} traderAddress={traderAddress} tokenAddress={tokenAddress} />
+        <br />
+
+
+
+        <MyInventory
+            nftContract={nftTokenAddress}
+            curveContract={contractAddress}
+            userAddress={walletAddress}
+            useContractData={false}
+            activeContract={activeContract}
+            signer={signer}
+            marketData={marketDataContract}
+        />
+  
+        <br />
+  
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* Trading Panel - Fun Modern Styling */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-md overflow-hidden">
+            <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 p-4">
+              <h2 className="text-xl font-bold text-white text-center">Shop Items</h2>
+            </div>
+            <div className="p-6">
+              {/* Trading Tabs - Enhanced */}
+              <div className="flex justify-between mb-6 bg-gray-100/70 rounded-2xl p-1">
+                <button
+                  className={`flex-1 py-3 text-lg font-medium rounded-xl transition-all duration-200 ${
+                  activeTab === 'buy'
+                    ? 'bg-white text-violet-600 shadow-sm'
+                    : 'text-gray-600 hover:text-violet-600'
+                  }`}
+                  onClick={() => setActiveTab('buy')}
+                >
+                  Redeem
+                </button>
+                <button
+                  className={`flex-1 py-3 text-lg font-medium rounded-xl transition-all duration-200 ${
+                  activeTab === 'sell'
+                    ? 'bg-white text-violet-600 shadow-sm'
+                    : 'text-gray-600 hover:text-violet-600'
+                  }`}
+                  onClick={() => setActiveTab('sell')}
+                >
+                  Sell
+                </button>
+              </div>
+              {activeTab === 'buy' && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-semibold text-gray-800">
+                    {traderProfileExists ? `Redeem ${params.username}` : 'Create New Item'}
+                  </h3>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {traderProfileExists ? 'Quantity' : 'Initial Creation Amount'}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.000000000000000001"
+                        min="0"
+                        className="w-full p-4 text-lg bg-gray-50 border border-violet-200 rounded-xl focus:ring-2 focus:ring-violet-300 focus:border-violet-400 outline-none transition-all pl-12"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        disabled={!traderProfileExists || needsInitialization || (inactiveTraderDisabled && !isActive)}
+                      />
+                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-violet-100 text-violet-600 rounded-lg p-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="12" y1="1" x2="12" y2="23"></line>
+                          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center py-4 px-6 bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-xl border border-violet-100">
+                    <span className="text-gray-700 font-medium">
+                      {traderProfileExists ? 'Total Price' : 'Initial Supply'}
+                    </span>
+                    <span className="text-lg font-bold text-violet-700">
+                      {traderProfileExists ? `${Number(buyPrice).toFixed(4)} $${username}` : '1.0 tokens'}
+                    </span>
+                  </div>
+                  {/* Fun badges */}
+                  <div className="flex justify-center space-x-4 py-2">
+                    <div className="flex items-center text-xs text-gray-600 bg-violet-50 px-3 py-1.5 rounded-full">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 text-violet-500">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      Secure Purchase
+                    </div>
+                    <div className="flex items-center text-xs text-gray-600 bg-pink-50 px-3 py-1.5 rounded-full">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 text-pink-500">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                      </svg>
+                      Protected Item
+                    </div>
+                  </div>
+                  <>
+                    <button 
+                      className={`w-full py-4 text-white text-lg font-medium rounded-xl transition-all duration-200 shadow-md flex items-center justify-center ${
+                        traderProfileExists 
+                          ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 transform hover:-translate-y-1' 
+                          : (!createUserWhitelistEnabled || isUserWhitelisted)
+                            ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 transform hover:-translate-y-1'
+                            : 'bg-gray-400 cursor-not-allowed'
+                      }`}
+                      onClick={() => setIsShippingModalOpen(true)}
+                      disabled={traderProfileExists 
+                        ? (inactiveTraderDisabled && !isActive)
+                        : (createUserWhitelistEnabled && !isUserWhitelisted)}
+                    >
+                      {traderProfileExists ? (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                            <path d="M9 11V6a3 3 0 0 1 3-3v0a3 3 0 0 1 3 3v5"></path>
+                            <path d="M9 12h6"></path>
+                            <rect x="5" y="12" width="14" height="8" rx="2"></rect>
+                          </svg>
+                          Submit Order
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="16"></line>
+                            <line x1="8" y1="12" x2="16" y2="12"></line>
+                          </svg>
+                          Create Item
+                        </>
+                      )}
+                    </button>
+                    {createUserWhitelistEnabled && !isUserWhitelisted && !traderProfileExists && (
+                      <div className="mt-2 px-4 py-2 bg-pink-50 border border-pink-200 rounded-xl">
+                        <p className="text-sm text-pink-600 text-center">
+                          This item requires whitelist access to create
+                        </p>
+                      </div>
+                    )}
+                  </>
+                </div>
+              )}
+              
+              {activeTab === 'sell' && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-semibold text-gray-800">
+                    {traderProfileExists ? `Sell Your ${params.username}` : 'Item Not Available'}
+                  </h3>
+                  
+                  {traderProfileExists ? (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Amount to Sell
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.000000000000000001"
+                            min="0"
+                            className="w-full p-4 text-lg bg-gray-50 border border-violet-200 rounded-xl focus:ring-2 focus:ring-violet-300 focus:border-violet-400 outline-none transition-all pl-12"
+                            value={amount}
+                            onChange={(e) => {
+                              setAmount(e.target.value);
+                              setIsPriceLoading(true);
+                            }}
+                          />
+                          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-violet-100 text-violet-600 rounded-lg p-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="12" y1="1" x2="12" y2="23"></line>
+                              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center py-4 px-6 bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-xl border border-violet-100">
+                        <span className="text-gray-700 font-medium">You'll Receive</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-violet-700">
+                            {Number(sellPrice).toFixed(6)} ETH
+                          </span>
+                        </div>
+                      </div>
+                      {/* Fun badges */}
+                      <div className="flex justify-center space-x-4 py-2">
+                        <div className="flex items-center text-xs text-gray-600 bg-violet-50 px-3 py-1.5 rounded-full">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 text-violet-500">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
+                          Secure Sale
+                        </div>
+                        <div className="flex items-center text-xs text-gray-600 bg-pink-50 px-3 py-1.5 rounded-full">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 text-pink-500">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                          </svg>
+                          Instant Payout
+                        </div>
+                      </div>
+                      <button 
+                        className="w-full py-4 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white text-lg font-medium rounded-xl transition-all duration-200 shadow-md transform hover:-translate-y-1 flex items-center justify-center"
+                        onClick={handleSellShares}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                          <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                          <line x1="6" y1="12" x2="18" y2="12"></line>
+                        </svg>
+                        Sell Now
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center py-8 space-y-4">
+                      <div className="bg-pink-50 rounded-xl p-6 border border-pink-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-4 text-pink-500">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="12" y1="8" x2="12" y2="12"></line>
+                          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <p className="text-gray-700 mb-2 font-medium">This item is not in your inventory</p>
+                        <p className="text-sm text-gray-600">
+                          You'll need to purchase this item first before you can sell it
+                        </p>
+                      </div>
+                      <button 
+                        className="w-full py-4 bg-gray-300 text-gray-500 text-lg font-medium rounded-xl cursor-not-allowed"
+                        disabled
+                      >
+                        Sell Now
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+  
+          {/* Chart Panel */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-md p-6">
+            <AddressDisplay raiseWalletAddress={raiseWalletAddress} traderAddress={traderAddress} tokenAddress={tokenAddress} />
+          </div>
+        </div>
+        
+        {/* Activity Tabs Section */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-md mt-8 p-6">
+          <div className="flex space-x-8 mb-6 border-b border-gray-200">
+            {/* Affiliate tab buttons */}
+            <TabButton 
+              active={activeModalTab === 'affiliate'} 
+              onClick={() => setActiveModalTab('affiliate')}
+            >
+              Affiliate Program
+            </TabButton>
+            <TabButton 
+              active={activeModalTab === 'affiliateDashboard'} 
+              onClick={() => setActiveModalTab('affiliateDashboard')}
+            >
+              Earnings Dashboard
+            </TabButton>
+          </div>
+  
+          <div className="mt-6">
+            {activeModalTab === 'affiliate' && 
+               <AffiliateLink
+               pageLink={pageLink}
+               walletAddress={walletAddress}
+               isAffiliate={isAffiliate}
+               affiliateAddress={affiliateAddress}
+             />
+            }
+            {activeModalTab === 'affiliateDashboard' && 
+            <AffiliateDashboard
+              walletAddress={walletAddress}
+              affiliateAddress={affiliateAddress}
+              contractAddress={params.contractAddress}
+              signer={signer}
+              activeContract={activeContract}
+            />
+          }
+          </div>
         </div>
       </div>
-    {/* Activity Tabs Section */}
-    <div className="bg-white rounded-2xl shadow-lg mt-8 p-6">
-    <div className="flex space-x-8 mb-6 border-b">
-  <TabButton 
-    active={activeModalTab === 'tradingActivity'} 
-    onClick={() => setActiveModalTab('tradingActivity')}
-  >
-    Admin Panel
-  </TabButton>
-  {/* Add the new Affiliate tab button here */}
-  <TabButton 
-    active={activeModalTab === 'affiliate'} 
-    onClick={() => setActiveModalTab('affiliate')}
-  >
-    Affiliate
-  </TabButton>
-</div>
-
-        <div className="mt-6">
-          {activeModalTab === 'tradingActivity' && <TradingActivity />}
- 
-
-           {activeModalTab === 'affiliate' && 
-    <AffiliateLink
-      pageLink={pageLink}
-      walletAddress={walletAddress}
-    />
-  }
-        </div>
-      </div>
-      </div>
-
+      )}
+  
       <ShippingModal 
         isOpen={isShippingModalOpen}
         onClose={() => setIsShippingModalOpen(false)}
         onSubmit={handleShippingSubmit}
       />
-
+  
       {/* Processing Modal */}
       {isModalVisible && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
+          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-xl">
             <div className="flex flex-col items-center">
-              <Image src="/icons/waitlogo.png" alt="Processing" width={120} height={120} />
-              <p className="mt-4 text-lg font-medium text-gray-700">{modalMessage}...</p>
+              <div className="mb-4 relative">
+                <Image src="/icons/waitlogo.png" alt="Processing" width={120} height={120} />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 border-4 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              </div>
+              <p className="mt-4 text-lg font-medium text-gray-700">{modalMessage}</p>
+              <p className="text-sm text-gray-500 mt-2">Please do not close this window</p>
             </div>
           </div>
         </div>

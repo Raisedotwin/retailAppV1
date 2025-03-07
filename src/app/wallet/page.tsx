@@ -16,19 +16,23 @@ const WalletPage: React.FC = () => {
   const [isProfileAssociated, setIsProfileAssociated] = useState(false);
   const [profileAddress, setProfileAddress] = useState('');
   const [claimableBalance, setClaimableBalance] = useState('0.00');
-  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(true); // New state for whitelist toggle
+  const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(true);
 
-    // New store management state
-    const [activeTab, setActiveTab] = useState('dashboard');
-    const [newProduct, setNewProduct] = useState({
-      name: '',
-      price: '',
-      description: '',
-      images: []
-    });
-    const [editProductId, setEditProductId] = useState('');
-    const [isEditing, setIsEditing] = useState(false);
+  // New store management state
+  const [activeTab, setActiveTab] = useState('wallet');
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    price: '',
+    description: '',
+    images: []
+  });
+  const [editProductId, setEditProductId] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
 
+  // Orders management state
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isOrderModalVisible, setIsOrderModalVisible] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState('');
 
   let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
 
@@ -90,6 +94,39 @@ const WalletPage: React.FC = () => {
         return new ethers.Wallet('cac636e07dd1ec983b66c5693b97ac5150d9a0cc5db8dd39ddb58b2e142cb192', provider);
   }, [provider]);
 
+  // Dummy orders data
+  const [orders] = useState([
+    { 
+      id: '1', 
+      tokenId: '2458', 
+      collection: '0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0',
+      collectionName: 'Azuki',
+      price: '0.45 ETH',
+      buyer: '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc',
+      status: 'Pending',
+      date: '2025-03-01'
+    },
+    { 
+      id: '2', 
+      tokenId: '1867', 
+      collection: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
+      collectionName: 'BAYC',
+      price: '2.1 ETH',
+      buyer: '0x8626f6940e2eb28930efb4cef49b2d1f2c9c1199',
+      status: 'Pending',
+      date: '2025-03-02'
+    },
+    { 
+      id: '3', 
+      tokenId: '9532', 
+      collection: '0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB',
+      collectionName: 'CryptoPunks',
+      price: '5.8 ETH',
+      buyer: '0x1cbd3b2770909d4e10f157cabc84c7264073c9ec',
+      status: 'Pending',
+      date: '2025-03-04'
+    }
+  ]);
 
   const handleWithdrawRewards = async () => {
     if (!wallet) {
@@ -442,11 +479,33 @@ const checkProfileAssociation = useCallback(async () => {
     //setIsSwitching(false);
   };
 
-  // Mock products data
-  const [products] = useState([
-    { id: '1', name: 'Product 1', price: '0.1', description: 'Description 1' },
-    { id: '2', name: 'Product 2', price: '0.2', description: 'Description 2' },
-  ]);
+  // Handler for viewing order details
+  const handleViewOrder = (order: any) => {
+    setSelectedOrder(order);
+    setIsOrderModalVisible(true);
+  };
+
+  // Handler for fulfilling order
+  const handleFulfillOrder = () => {
+    if (!trackingNumber.trim()) {
+      alert('Please enter a tracking number');
+      return;
+    }
+
+    setModalMessage('Processing order fulfillment...');
+    setIsModalVisible(true);
+
+    // Simulate order fulfillment
+    setTimeout(() => {
+      setModalMessage('Order fulfilled successfully!');
+      setTimeout(() => {
+        setIsModalVisible(false);
+        setIsOrderModalVisible(false);
+        setTrackingNumber('');
+        // In a real app, you would update the order status in your state here
+      }, 1500);
+    }, 1500);
+  };
 
   const MyCurvesContent = () => (
     <div className="bg-gray-800 p-6 rounded-lg">
@@ -469,30 +528,39 @@ const checkProfileAssociation = useCallback(async () => {
     </div>
   );
 
-  const DashboardContent = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Analytics Cards */}
-        <div className="bg-gray-800 p-6 rounded-lg">
-          <h3 className="text-gray-400 text-sm mb-2">Total Sales</h3>
-          <p className="text-3xl font-bold text-white">0.00 ETH</p>
-        </div>
-        <div className="bg-gray-800 p-6 rounded-lg">
-          <h3 className="text-gray-400 text-sm mb-2">Active Products</h3>
-          <p className="text-3xl font-bold text-white">{products.length}</p>
-        </div>
-        <div className="bg-gray-800 p-6 rounded-lg">
-          <h3 className="text-gray-400 text-sm mb-2">Today's Revenue</h3>
-          <p className="text-3xl font-bold text-white">0.00 ETH</p>
-        </div>
-      </div>
-
-      {/* Sales Chart */}
-      <div className="bg-gray-800 p-6 rounded-lg">
-        <h3 className="text-xl font-bold text-white mb-4">Sales Overview</h3>
-        <div className="h-96">
-          {/* Add chart component here */}
-        </div>
+  const OrdersContent = () => (
+    <div className="bg-gray-800 p-6 rounded-lg">
+      <h2 className="text-xl font-bold text-white mb-6">Orders</h2>
+      <div className="space-y-4">
+        {orders.map((order) => (
+          <div 
+            key={order.id} 
+            className="p-4 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors cursor-pointer"
+            onClick={() => handleViewOrder(order)}
+          >
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+              <div>
+                <h3 className="text-lg font-medium text-white mb-1">{order.collectionName} #{order.tokenId}</h3>
+                <p className="text-gray-400 font-mono text-xs mb-2 break-all">{order.collection}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-300">Price: <span className="text-blue-400">{order.price}</span></span>
+                  <span className="text-gray-400">|</span>
+                  <span className="text-gray-300">Date: {order.date}</span>
+                </div>
+              </div>
+              <div className="mt-4 md:mt-0">
+                <span className="px-3 py-1 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                  {order.status}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+        {orders.length === 0 && (
+          <div className="p-8 text-center">
+            <p className="text-gray-400">No orders to display</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -526,7 +594,7 @@ const checkProfileAssociation = useCallback(async () => {
         <div className="max-w-6xl w-full mx-auto">
           {/* Tab Navigation */}
           <div className="flex space-x-2 mb-6 overflow-x-auto">
-            {['wallet', 'dashboard', 'earnings', 'my-curves'].map((tab) => (
+            {['wallet', 'orders', 'earnings', 'my-curves'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -539,15 +607,19 @@ const checkProfileAssociation = useCallback(async () => {
                 {tab.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
               </button>
             ))}
-            <button
-              onClick={() => window.location.href = '/positions'}
-              className="px-6 py-3 bg-gradient-to-r from-amber-500 to-red-600 text-white rounded-lg shadow-lg hover:from-amber-600 hover:to-red-700 transition duration-300 flex items-center space-x-2 relative"
-            >
-              <span>Orders</span>
-              <div className="absolute -top-0 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                3
+            {activeTab !== 'orders' && (
+              <div className="relative">
+                <button
+                  onClick={() => setActiveTab('orders')}
+                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-red-600 text-white rounded-lg shadow-lg hover:from-amber-600 hover:to-red-700 transition duration-300 flex items-center space-x-2"
+                >
+                  <span>Orders</span>
+                  <div className="absolute -top-0 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                    {orders.length}
+                  </div>
+                </button>
               </div>
-            </button>
+            )}
           </div>
   
           {/* Tab Content */}
@@ -648,10 +720,10 @@ const checkProfileAssociation = useCallback(async () => {
                     />
                   </div>
                 </div>
-              </div>
+                </div>
             )}
             
-            {activeTab === 'dashboard' && <DashboardContent />}
+            {activeTab === 'orders' && <OrdersContent />}
             {activeTab === 'earnings' && (
               <div className="p-8">
                 <EarningsManagement />
@@ -717,8 +789,95 @@ const checkProfileAssociation = useCallback(async () => {
           </div>
         </div>
       )}
+      
+      {/* Order Details Modal */}
+      {isOrderModalVisible && selectedOrder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
+          <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-white">Order Details</h3>
+              <button 
+                onClick={() => {
+                  setIsOrderModalVisible(false);
+                  setSelectedOrder(null);
+                  setTrackingNumber('');
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4 mb-6">
+              <div>
+                <h4 className="text-gray-400 text-sm">Collection</h4>
+                <p className="text-white font-medium">{selectedOrder}</p>
+              </div>
+              
+              <div>
+                <h4 className="text-gray-400 text-sm">Token ID</h4>
+                <p className="text-white font-medium">#{selectedOrder}</p>
+              </div>
+              
+              <div>
+                <h4 className="text-gray-400 text-sm">Collection Address</h4>
+                <p className="text-gray-300 font-mono text-xs break-all">{selectedOrder}</p>
+              </div>
+              
+              <div>
+                <h4 className="text-gray-400 text-sm">Buyer</h4>
+                <p className="text-gray-300 font-mono text-xs break-all">{selectedOrder}</p>
+              </div>
+              
+              <div>
+                <h4 className="text-gray-400 text-sm">Price</h4>
+                <p className="text-blue-400 font-medium">{selectedOrder}</p>
+              </div>
+              
+              <div>
+                <h4 className="text-gray-400 text-sm">Date</h4>
+                <p className="text-white">{selectedOrder}</p>
+              </div>
+              
+              <div>
+                <h4 className="text-gray-400 text-sm">Status</h4>
+                <span className="px-3 py-1 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+                  {selectedOrder}
+                </span>
+              </div>
+            </div>
+            
+            <div className="pt-6 border-t border-gray-700">
+              <h4 className="text-lg font-medium text-white mb-3">Fulfill Order</h4>
+              <div className="mb-4">
+                <label className="block text-gray-300 text-sm mb-2">Tracking Number</label>
+                <input
+                  type="text"
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  placeholder="Enter tracking number"
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+                />
+              </div>
+              
+              <button
+                onClick={handleFulfillOrder}
+                disabled={!trackingNumber.trim()}
+                className={`w-full py-3 rounded-lg font-medium transition-all duration-200 ${
+                  !trackingNumber.trim()
+                    ? 'bg-gray-600 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700'
+                } text-white`}
+              >
+                Fulfill Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default WalletPage;
+              

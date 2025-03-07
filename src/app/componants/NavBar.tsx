@@ -173,7 +173,7 @@ const NavBar: React.FC = () => {
               </Link>
                <div className="flex items-center space-x-2">
                 <Link href="/profile">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Profile</div>
+                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Orders</div>
                 </Link>
                 <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">Soon</span>
               </div>

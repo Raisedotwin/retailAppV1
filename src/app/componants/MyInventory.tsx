@@ -1,0 +1,722 @@
+import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
+
+interface NFTModalState {
+  showSellConfirm: boolean;
+  showRedeemConfirm: boolean;
+  actualPrice: string;
+  actualPriceUsd: string;
+  isLoadingPrice: boolean;
+  transactionError: string;
+}
+
+interface NFT {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  price: string;
+  priceEth: number;
+  priceUsd: number;
+  tokenId: string;
+  creator: string;
+  attributes?: {
+    weightClass: string;
+    category: string;
+    size: string;
+    baseRedemptionValue?: string;
+  };
+}
+
+interface MyInventoryProps {
+  nftContract?: any;
+  curveContract?: any;
+  userAddress?: string;
+  useContractData?: boolean;
+  activeContract?: any;
+  signer?: any;
+  marketData?: any;
+}
+
+// Helper functions
+const formatPrice = (ethPrice: number, usdPrice: number): React.ReactNode => {
+  if (usdPrice > 0) {
+    return (
+      <div className="flex flex-col">
+        <span className="font-bold text-white">${usdPrice.toFixed(2)}</span>
+        <span className="text-xs text-gray-400">{ethPrice.toFixed(5)} ETH</span>
+      </div>
+    );
+  }
+  
+  // Fallback to just ETH
+  const numPrice = ethPrice;
+  if (numPrice < 0.00001) {
+    return `0.000008 ETH`;
+  } else if (numPrice < 1) {
+    return `${numPrice.toFixed(4)} ETH`;
+  } else {
+    return `${numPrice.toFixed(2)} ETH`;
+  }
+};
+
+const formatEthPrice = (price: string): string => {
+  const numPrice = parseFloat(price);
+  if (numPrice < 0.00001) {
+    return `0.000008 ETH`;
+  } else if (numPrice < 1) {
+    return `${numPrice.toFixed(4)} ETH`;
+  } else {
+    return `${numPrice.toFixed(2)} ETH`;
+  }
+};
+
+const MyInventory: React.FC<MyInventoryProps> = ({
+  nftContract,
+  curveContract,
+  userAddress,
+  useContractData = false,
+  activeContract,
+  signer,
+  marketData
+}) => {
+  const [nfts, setNfts] = useState<NFT[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [ethUsdPrice, setEthUsdPrice] = useState<number>(0);
+  const [isLoadingEthPrice, setIsLoadingEthPrice] = useState(false);
+
+  const [modalState, setModalState] = useState<NFTModalState>({
+    showSellConfirm: false,
+    showRedeemConfirm: false,
+    actualPrice: '',
+    actualPriceUsd: '',
+    isLoadingPrice: false,
+    transactionError: ''
+  });
+  
+  const itemsPerPage = 4;
+
+  // Fetch ETH price
+  useEffect(() => {
+    const fetchEthPrice = async () => {
+      try {
+        setIsLoadingEthPrice(true);
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+        const data = await response.json();
+        setEthUsdPrice(data.ethereum.usd);
+        console.log(`Fetched ETH price: $${data.ethereum.usd}`);
+      } catch (err) {
+        console.error("Failed to fetch ETH price:", err);
+        setEthUsdPrice(3000); // Fallback price
+      } finally {
+        setIsLoadingEthPrice(false);
+      }
+    };
+
+    fetchEthPrice();
+    const intervalId = setInterval(fetchEthPrice, 5 * 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Fetch user's NFTs
+  useEffect(() => {
+    const fetchUserNFTs = async () => {
+      console.log('Fetching user NFTs...');
+      setIsLoading(true);
+      
+      // Helper function to decode base64 data URI
+      const decodeTokenURI = (tokenURI: string) => {
+        try {
+          if (tokenURI.startsWith('data:application/json;base64,')) {
+            const base64Data = tokenURI.split(',')[1];
+            const decodedData = Buffer.from(base64Data, 'base64').toString('utf-8');
+            return JSON.parse(decodedData);
+          } else {
+            return JSON.parse(tokenURI);
+          }
+        } catch (error) {
+          console.error('Error decoding token URI:', error);
+          return null;
+        }
+      };
+  
+      try {
+        if (!nftContract || !signer || !userAddress) {
+          console.log('Missing required parameters');
+          setNfts([]);
+          setIsLoading(false);
+          return;
+        }
+  
+        const nftContractABI = [
+          "function balanceOf(address owner) view returns (uint256)",
+          "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
+          "function tokenURI(uint256 tokenId) view returns (string)",
+          "function ownerOf(uint256 tokenId) view returns (address)",
+          "function getOwner(uint256 _tokenId) external view returns (address)",
+          "function getBaseValue(uint256 tokenId) external view returns (uint256)"
+        ];
+  
+        const contract = new ethers.Contract(nftContract, nftContractABI, signer);
+        
+        // Get NFT balance of the user
+        const balance = await contract.balanceOf(userAddress);
+        console.log('User NFT Balance:', balance.toString());
+  
+        const fetchedNFTs = [];
+  
+        // Loop through each NFT
+        for (let i = 0; i < balance; i++) {
+          try {
+            // Get token ID owned by user at index i
+            const tokenId = await contract.tokenOfOwnerByIndex(userAddress, i);
+            console.log('Token ID:', tokenId.toString());
+            
+            // Get token URI
+            const tokenURI = await contract.tokenURI(tokenId);
+            console.log('Token URI:', tokenURI);
+  
+            // Decode and parse the metadata
+            const metadata = decodeTokenURI(tokenURI);
+            if (!metadata) continue;
+  
+            console.log('Decoded metadata:', metadata);
+  
+            // Get creator address (might be different from current owner)
+            const creator = await contract.getOwner(tokenId);
+            console.log('Creator:', creator);
+
+            // Get base value
+            const baseValue = await contract.getBaseValue(tokenId);
+            console.log('Base Value:', baseValue.toString());
+
+            // Get current sell price from the curve
+            const [price, , , ] = await activeContract.getSellRewardAfterFee(baseValue);
+            console.log('Sell Price:', ethers.formatEther(price));
+            const formattedPrice = ethers.formatEther(price);
+            
+            // Convert to ETH and USD
+            const priceInEth = parseFloat(formattedPrice);
+            const priceInUsd = priceInEth * ethUsdPrice;
+  
+            // Parse attributes
+            const attributes = metadata.attributes as Array<{trait_type: string, value: string | number}> || [];
+
+            const weightClass = attributes.find(attr => 
+              attr.trait_type === "Weight Class"
+            )?.value?.toString() || "";
+
+            const category = attributes.find(attr => 
+              attr.trait_type === "Category"
+            )?.value?.toString() || "";
+
+            const size = attributes.find(attr => 
+              attr.trait_type === "Size"
+            )?.value?.toString() || "";
+
+            const baseRedemptionValue = attributes.find(attr => 
+              attr.trait_type === "Required Base Value For Redemption"
+            )?.value?.toString() || "";
+
+            // Format the redemption value from wei to ETH
+            const formattedRedemptionValue = baseRedemptionValue ? 
+              ethers.formatEther(baseRedemptionValue) : "0";
+
+            fetchedNFTs.push({
+              id: i.toString(),
+              name: metadata.name || `NFT #${tokenId.toString()}`,
+              description: metadata.description || "No description available",
+              image: metadata.image || "/api/placeholder/400/400",
+              price: formattedPrice,
+              priceEth: priceInEth,
+              priceUsd: priceInUsd,
+              tokenId: tokenId.toString(),
+              creator,
+              attributes: {
+                weightClass,
+                category,
+                size,
+                baseRedemptionValue: formattedRedemptionValue
+              }
+            });
+          } catch (tokenError) {
+            console.error('Error fetching token:', tokenError);
+            continue;
+          }
+        }
+  
+        setNfts(fetchedNFTs);
+        console.log('Fetched User NFTs:', fetchedNFTs);
+      } catch (error) {
+        console.error('Error in fetchUserNFTs:', error);
+        setNfts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    fetchUserNFTs();
+  }, [nftContract, signer, userAddress, ethUsdPrice, activeContract]);
+
+  const handleNFTClick = (nft: NFT) => {
+    setSelectedNFT(nft);
+    setShowModal(true);
+  };
+
+  const handleSell = async (nft: NFT) => {
+    try {
+      if (!activeContract) {
+        throw new Error('Contract not initialized');
+      }
+  
+      // Get actual sell price
+      setModalState(prev => ({ ...prev, isLoadingPrice: true, transactionError: '' }));
+      
+      const baseValue = ethers.parseEther(nft.attributes?.baseRedemptionValue || "0");
+      const [actualPrice, , , ] = await activeContract.getSellRewardAfterFee(baseValue);
+      
+      // Convert price to ETH and USD
+      const actualPriceEth = ethers.formatEther(actualPrice);
+      const actualPriceUsd = (parseFloat(actualPriceEth) * ethUsdPrice).toFixed(2);
+      
+      // Show confirmation modal with actual price
+      setModalState(prev => ({
+        ...prev,
+        showSellConfirm: true,
+        showRedeemConfirm: false,
+        actualPrice: actualPriceEth,
+        actualPriceUsd: actualPriceUsd,
+        isLoadingPrice: false
+      }));
+    } catch (error) {
+      console.error('Error getting NFT sell price:', error);
+      setModalState(prev => ({
+        ...prev,
+        isLoadingPrice: false,
+        transactionError: 'Error calculating sell price. Please try again.'
+      }));
+    }
+  };
+  
+  const handleRedeem = async (nft: NFT) => {
+    // Set redeem confirmation state
+    setModalState(prev => ({
+      ...prev,
+      showSellConfirm: false,
+      showRedeemConfirm: true,
+      transactionError: ''
+    }));
+  };
+  
+  const confirmSell = async (nft: NFT) => {
+    try {
+      setIsProcessing(true);
+      setModalState(prev => ({ ...prev, transactionError: '' }));
+  
+      if (!activeContract) {
+        throw new Error('Contract not initialized');
+      }
+  
+      // First, approve the marketplace contract to transfer the NFT
+      const erc721ABI = [
+        "function approve(address to, uint256 tokenId) external",
+        "function getApproved(uint256 tokenId) external view returns (address)"
+      ];
+      
+      const nftContractWithSigner = new ethers.Contract(nftContract, erc721ABI, signer);
+      
+      // Check if already approved
+      const approved = await nftContractWithSigner.getApproved(nft.tokenId);
+      if (approved !== activeContract.address) {
+        console.log('Approving marketplace to transfer NFT...');
+        const approveTx = await nftContractWithSigner.approve(activeContract.address, nft.tokenId);
+        await approveTx.wait();
+        console.log('Approval successful');
+      }
+  
+      // Now sell the NFT
+      console.log('Selling NFT:', nft.tokenId);
+      const tx = await activeContract.sellNFT(nft.tokenId);
+      await tx.wait();
+      console.log('NFT sold successfully');
+  
+      // Reset states and close modals
+      setModalState(prev => ({
+        ...prev,
+        showSellConfirm: false,
+        actualPrice: '',
+        actualPriceUsd: ''
+      }));
+      setShowModal(false);
+      
+      // Refresh the page or NFT list
+      window.location.reload();
+  
+    } catch (error) {
+      console.error('Error selling NFT:', error);
+      setModalState(prev => ({
+        ...prev,
+        transactionError: 'Failed to sell NFT. Please try again.'
+      }));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const confirmRedeem = async (nft: NFT) => {
+    try {
+      setIsProcessing(true);
+      setModalState(prev => ({ ...prev, transactionError: '' }));
+  
+      if (!activeContract) {
+        throw new Error('Contract not initialized');
+      }
+  
+      // First, approve the marketplace contract to transfer the NFT
+      const erc721ABI = [
+        "function approve(address to, uint256 tokenId) external",
+        "function getApproved(uint256 tokenId) external view returns (address)"
+      ];
+      
+      const nftContractWithSigner = new ethers.Contract(nftContract, erc721ABI, signer);
+      
+      // Check if already approved
+      const approved = await nftContractWithSigner.getApproved(nft.tokenId);
+      if (approved !== activeContract.address) {
+        console.log('Approving marketplace to transfer NFT...');
+        const approveTx = await nftContractWithSigner.approve(activeContract.address, nft.tokenId);
+        await approveTx.wait();
+        console.log('Approval successful');
+      }
+  
+      // Now redeem the NFT
+      console.log('Redeeming NFT:', nft.tokenId);
+      const tx = await activeContract.redeemNFT(nft.tokenId);
+      await tx.wait();
+      console.log('NFT redeemed successfully');
+  
+      // Reset states and close modals
+      setModalState(prev => ({
+        ...prev,
+        showRedeemConfirm: false
+      }));
+      setShowModal(false);
+      
+      // Refresh the page or NFT list
+      window.location.reload();
+  
+    } catch (error) {
+      console.error('Error redeeming NFT:', error);
+      setModalState(prev => ({
+        ...prev,
+        transactionError: 'Failed to redeem NFT. Please try again.'
+      }));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Pagination
+  const totalPages = Math.ceil(nfts.length / itemsPerPage);
+  const currentNFTs = nfts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8 bg-white rounded-2xl shadow-lg">
+        <div className="animate-spin text-3xl mr-2">⏳</div>
+        <span className="text-gray-600 font-medium">Loading your NFT inventory...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden mt-8">
+      {/* Header section */}
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-700 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+              <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+            </svg>
+            <h2 className="text-2xl font-bold text-white">
+              My NFT Inventory
+            </h2>
+          </div>
+          <div className="flex items-center gap-4">
+            {/* ETH price indicator */}
+            {ethUsdPrice > 0 && (
+              <div className="bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg text-sm flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 417" preserveAspectRatio="xMidYMid" className="w-4 h-4 mr-1 text-white">
+                  <path fill="currentColor" d="M127.962 0L0 212.32l127.962 75.639V154.158z" />
+                  <path fill="currentColor" d="M127.962 416.905v-104.72L0 236.585z" />
+                  <path fill="currentColor" d="M0 212.32l127.96 75.638v-133.8z" />
+                </svg>
+                <span className="text-white">1 ETH = <span className="font-bold">${ethUsdPrice.toLocaleString()}</span></span>
+              </div>
+            )}
+            <div className="bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg text-sm">
+              <span className="text-white">Total Items: <span className="font-bold">{nfts.length}</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      {/* NFT Grid */}
+      <div className="p-6">
+        {currentNFTs.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-5xl mb-4">🖼️</div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">No NFTs in Your Inventory</h3>
+            <p className="text-gray-500">You don't own any NFTs from this collection yet.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {currentNFTs.map((nft) => (
+              <div
+                key={nft.id}
+                onClick={() => handleNFTClick(nft)}
+                className="bg-white rounded-xl overflow-hidden border border-gray-200 hover:border-purple-300
+                         shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-5px] cursor-pointer"
+              >
+                <div className="aspect-square overflow-hidden relative">
+                  <img
+                    src={nft.image}
+                    alt={nft.name}
+                    className="w-full h-full object-cover transform transition-transform hover:scale-110"
+                  />
+                  {/* Current value badge */}
+                  {nft.priceUsd > 0 && (
+                    <div className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full shadow-md">
+                      <span className="text-purple-600 font-bold">${nft.priceUsd.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">{nft.name}</h3>
+                  <div className="flex items-center justify-between">
+                    <div className="text-gray-500 text-sm">
+                      {nft.attributes?.category || ''} {nft.attributes?.size && `• ${nft.attributes.size}`}
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSell(nft);
+                        }}
+                        disabled={isProcessing || modalState.isLoadingPrice}
+                        className="px-3 py-1 bg-purple-500 text-white rounded-lg font-medium
+                                 hover:bg-purple-600 transition-all text-xs
+                                 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {modalState.isLoadingPrice ? 'Loading...' : 'Sell'}
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRedeem(nft);
+                        }}
+                        disabled={isProcessing}
+                        className="px-3 py-1 bg-green-500 text-white rounded-lg font-medium
+                                 hover:bg-green-600 transition-all text-xs
+                                 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Redeem
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+  
+      {/* Pagination Controls */}
+      {currentNFTs.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-4 p-6 border-t border-gray-200">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 
+                     disabled:cursor-not-allowed transition-colors"
+          >
+            <span className="text-gray-600">←</span>
+          </button>
+          
+          <span className="text-gray-600 font-medium">
+            Page {currentPage} of {totalPages}
+          </span>
+          
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 
+                     disabled:cursor-not-allowed transition-colors"
+          >
+            <span className="text-gray-600">→</span>
+          </button>
+        </div>
+      )}
+  
+      {/* NFT Detail Modal */}
+      {showModal && selectedNFT && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-2xl max-w-2xl w-full">
+            <div className="flex gap-6">
+              <div className="w-1/2">
+                <img
+                  src={selectedNFT.image}
+                  alt={selectedNFT.name}
+                  className="w-full rounded-lg object-cover h-[400px]"
+                />
+              </div>
+              <div className="w-1/2 space-y-4">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">{selectedNFT.name}</h2>
+                <p className="text-gray-600 mb-4">{selectedNFT.description}</p>
+                
+                {/* NFT Details */}
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Details</h3>
+                  <p className="text-gray-700">
+                    Current Value: 
+                    {selectedNFT.priceUsd > 0 ? (
+                      <span className="flex items-baseline gap-2">
+                        <span className="text-purple-600 font-bold">${selectedNFT.priceUsd.toFixed(2)}</span>
+                        <span className="text-gray-500 text-sm">({selectedNFT.priceEth.toFixed(5)} ETH)</span>
+                      </span>
+                    ) : (
+                      <span className="text-purple-600">{formatEthPrice(selectedNFT.price)}</span>
+                    )}
+                  </p>
+                  <p className="text-gray-700">
+                    Creator: <span className="text-purple-600 font-mono">
+                      {`${selectedNFT.creator.slice(0, 6)}...${selectedNFT.creator.slice(-4)}`}
+                    </span>
+                  </p>
+                  <p className="text-gray-700">
+                    Token ID: <span className="text-green-600">{selectedNFT.tokenId}</span>
+                  </p>
+                </div>
+  
+                {/* NFT Attributes */}
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Attributes</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white p-3 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-500">Size</p>
+                      <p className="text-gray-700 font-medium">{selectedNFT.attributes?.size || 'N/A'}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-500">Category</p>
+                      <p className="text-gray-700 font-medium">{selectedNFT.attributes?.category || 'N/A'}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-500">Weight Class</p>
+                      <p className="text-gray-700 font-medium">{selectedNFT.attributes?.weightClass || 'N/A'}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-gray-200">
+                      <p className="text-sm text-gray-500">Base Redemption Value</p>
+                      <p className="text-gray-700 font-medium">
+                        {selectedNFT.attributes?.baseRedemptionValue || 'N/A'} ETH
+                        {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
+                          <span className="block text-xs text-gray-500">
+                            (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+  
+                <div className="flex justify-between gap-4 mt-6">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium
+                             hover:bg-gray-200 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleSell(selectedNFT)}
+                      disabled={isProcessing || modalState.isLoadingPrice}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium
+                              hover:bg-purple-700 transition-all
+                              disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {modalState.isLoadingPrice ? 'Calculating...' : 
+                        isProcessing ? 'Processing...' : 'Sell'}
+                    </button>
+                    <button 
+                      onClick={() => handleRedeem(selectedNFT)}
+                      disabled={isProcessing}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium
+                              hover:bg-green-700 transition-all
+                              disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isProcessing ? 'Processing...' : 'Redeem'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+  
+      {/* Sell Confirmation Modal */}
+      {modalState.showSellConfirm && selectedNFT && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full border border-gray-200">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Sale</h3>
+            
+            <div className="bg-purple-50 p-4 rounded-lg mb-6 border border-purple-100">
+              <p className="text-gray-600 mb-2">You will receive:</p>
+              <p className="text-2xl font-bold text-purple-600 mb-1">
+                ${modalState.actualPriceUsd}
+              </p>
+              <p className="text-sm text-gray-500">
+                {modalState.actualPrice} ETH
+              </p>
+            </div>
+  
+            {modalState.transactionError && (
+              <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4">
+                {modalState.transactionError}
+              </div>
+            )}
+  
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalState(prev => ({ ...prev, showRedeemConfirm: false }))}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmRedeem(selectedNFT)}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg
+                        hover:bg-green-700 transition-all disabled:opacity-50 font-medium"
+              >
+                {isProcessing ? 'Processing...' : 'Confirm Redemption'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MyInventory;
