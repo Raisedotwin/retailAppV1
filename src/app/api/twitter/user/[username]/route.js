@@ -13,7 +13,17 @@ export async function GET(request, { params }) {
             accessSecret: process.env.TWITTER_ACCESS_SECRET,
         });
 
-        const user = await userClient.v2.userByUsername(username);
+        // Specify the fields you want to include in the response
+        const user = await userClient.v2.userByUsername(username, {
+            'user.fields': [
+                'profile_image_url',
+                'description',
+                'created_at',
+                'url',
+                'protected',
+                'verified'
+            ]
+        });
         
         return NextResponse.json(user);
     } catch (error) {

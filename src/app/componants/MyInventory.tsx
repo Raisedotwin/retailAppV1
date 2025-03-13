@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import ShippingModal from '../componants/ShippingDetailsModal';
 
 interface NFTModalState {
   showSellConfirm: boolean;
@@ -20,12 +21,24 @@ interface NFT {
   priceUsd: number;
   tokenId: string;
   creator: string;
+  isRedeemable?: boolean; // Added isRedeemable property
   attributes?: {
     weightClass: string;
     category: string;
     size: string;
     baseRedemptionValue?: string;
   };
+}
+
+interface ShippingDetails {
+  recipientName: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phoneNumber: string;
+  email: string;
 }
 
 interface MyInventoryProps {
@@ -36,6 +49,7 @@ interface MyInventoryProps {
   activeContract?: any;
   signer?: any;
   marketData?: any;
+  showRedeemableLabel?: boolean; // New prop to toggle the redeemable label
 }
 
 // Helper functions
@@ -75,10 +89,11 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   nftContract,
   curveContract,
   userAddress,
-  useContractData = false,
+  useContractData = true,
   activeContract,
   signer,
-  marketData
+  marketData,
+  showRedeemableLabel = true // Default to showing the label
 }) => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -86,8 +101,16 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [totalSupply, setTotalSupply] = useState<number>(0);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [fetchingPage, setFetchingPage] = useState<number>(1);
+  const [hasMoreTokens, setHasMoreTokens] = useState<boolean>(true);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(4);
   const [ethUsdPrice, setEthUsdPrice] = useState<number>(0);
   const [isLoadingEthPrice, setIsLoadingEthPrice] = useState(false);
+  
+  // New state for shipping modal
+  const [showShippingModal, setShowShippingModal] = useState(false);
 
   const [modalState, setModalState] = useState<NFTModalState>({
     showSellConfirm: false,
@@ -98,8 +121,6 @@ const MyInventory: React.FC<MyInventoryProps> = ({
     transactionError: ''
   });
   
-  const itemsPerPage = 4;
-
   // Fetch ETH price
   useEffect(() => {
     const fetchEthPrice = async () => {
@@ -124,69 +145,74 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   }, []);
 
   // Fetch user's NFTs
-  useEffect(() => {
-    const fetchUserNFTs = async () => {
-      console.log('Fetching user NFTs...');
-      setIsLoading(true);
-      
-      // Helper function to decode base64 data URI
-      const decodeTokenURI = (tokenURI: string) => {
-        try {
-          if (tokenURI.startsWith('data:application/json;base64,')) {
-            const base64Data = tokenURI.split(',')[1];
-            const decodedData = Buffer.from(base64Data, 'base64').toString('utf-8');
-            return JSON.parse(decodedData);
-          } else {
-            return JSON.parse(tokenURI);
-          }
-        } catch (error) {
-          console.error('Error decoding token URI:', error);
-          return null;
-        }
-      };
-  
+useEffect(() => {
+  const fetchUserNFTs = async () => {
+    console.log('Fetching user NFTs...');
+    setIsLoading(true);
+    
+    // Helper function to decode base64 data URI
+    const decodeTokenURI = (tokenURI: string) => {
       try {
-        if (!nftContract || !signer || !userAddress) {
-          console.log('Missing required parameters');
-          setNfts([]);
-          setIsLoading(false);
-          return;
+        if (tokenURI.startsWith('data:application/json;base64,')) {
+          const base64Data = tokenURI.split(',')[1];
+          const decodedData = Buffer.from(base64Data, 'base64').toString('utf-8');
+          return JSON.parse(decodedData);
+        } else {
+          return JSON.parse(tokenURI);
         }
-  
-        const nftContractABI = [
-          "function balanceOf(address owner) view returns (uint256)",
-          "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
-          "function tokenURI(uint256 tokenId) view returns (string)",
-          "function ownerOf(uint256 tokenId) view returns (address)",
-          "function getOwner(uint256 _tokenId) external view returns (address)",
-          "function getBaseValue(uint256 tokenId) external view returns (uint256)"
-        ];
-  
-        const contract = new ethers.Contract(nftContract, nftContractABI, signer);
-        
-        // Get NFT balance of the user
-        const balance = await contract.balanceOf(userAddress);
-        console.log('User NFT Balance:', balance.toString());
-  
-        const fetchedNFTs = [];
-  
-        // Loop through each NFT
-        for (let i = 0; i < balance; i++) {
-          try {
-            // Get token ID owned by user at index i
-            const tokenId = await contract.tokenOfOwnerByIndex(userAddress, i);
-            console.log('Token ID:', tokenId.toString());
+      } catch (error) {
+        console.error('Error decoding token URI:', error);
+        return null;
+      }
+    };
+
+    try {
+      if (!nftContract || !signer || !userAddress) {
+        console.log('Missing required parameters');
+        setNfts([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const nftContractABI = [
+        "function balanceOf(address owner) view returns (uint256)",
+        "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
+        "function tokenURI(uint256 tokenId) view returns (string)",
+        "function ownerOf(uint256 tokenId) view returns (address)",
+        "function getOwner(uint256 _tokenId) external view returns (address)",
+        "function getBaseValue(uint256 tokenId) external view returns (uint256)",
+        "function getCirculatingSupply() external view returns (uint256)",
+        "function isRedeemable(uint256 tokenId) external view returns (bool)" // Added contract function to check if NFT is redeemable
+      ];
+
+      const contract = new ethers.Contract(nftContract, nftContractABI, signer);
+      
+      // Get total supply instead of balance
+      const totalSupply = await contract.getCirculatingSupply();
+      console.log('Total Supply:', totalSupply.toString());
+
+      const fetchedNFTs = [];
+
+      // Loop through each NFT in the total supply
+      for (let tokenId = 0; tokenId < totalSupply; tokenId++) {
+        try {
+          // Check if the current user owns this token
+          const owner = await contract.ownerOf(tokenId);
+          
+          // Only process tokens owned by the current user
+          if (owner.toLowerCase() === userAddress.toLowerCase()) {
+            console.log(`User owns Token ID: ${tokenId}`);
             
             // Get token URI
             const tokenURI = await contract.tokenURI(tokenId);
             console.log('Token URI:', tokenURI);
-  
+
             // Decode and parse the metadata
             const metadata = decodeTokenURI(tokenURI);
             if (!metadata) continue;
-  
+
             console.log('Decoded metadata:', metadata);
-  
+
             // Get creator address (might be different from current owner)
             const creator = await contract.getOwner(tokenId);
             console.log('Creator:', creator);
@@ -195,15 +221,28 @@ const MyInventory: React.FC<MyInventoryProps> = ({
             const baseValue = await contract.getBaseValue(tokenId);
             console.log('Base Value:', baseValue.toString());
 
+            // Check if token is redeemable
+            // Note: This is a mock implementation, as your contract may not have this method
+            // In a real implementation, you'd check if the contract has this method first
+            let isRedeemable = true; // Default to true for this example
+            try {
+              isRedeemable = await contract.isRedeemable(tokenId);
+              console.log('Is Redeemable:', isRedeemable);
+            } catch (error) {
+              console.log('isRedeemable function not available, defaulting to true');
+              // If the method doesn't exist, we'll just use the default value
+              // You can also determine redeemability based on other criteria if needed
+            }
+
             // Get current sell price from the curve
-            const [price, , , ] = await activeContract.getSellRewardAfterFee(baseValue);
+            const [price, , , ] = await activeContract.getSellPriceAfterFee(baseValue);
             console.log('Sell Price:', ethers.formatEther(price));
             const formattedPrice = ethers.formatEther(price);
             
             // Convert to ETH and USD
             const priceInEth = parseFloat(formattedPrice);
             const priceInUsd = priceInEth * ethUsdPrice;
-  
+
             // Parse attributes
             const attributes = metadata.attributes as Array<{trait_type: string, value: string | number}> || [];
 
@@ -228,15 +267,16 @@ const MyInventory: React.FC<MyInventoryProps> = ({
               ethers.formatEther(baseRedemptionValue) : "0";
 
             fetchedNFTs.push({
-              id: i.toString(),
+              id: tokenId.toString(),
               name: metadata.name || `NFT #${tokenId.toString()}`,
               description: metadata.description || "No description available",
-              image: metadata.image || "/api/placeholder/400/400",
+              image: metadata.image,
               price: formattedPrice,
               priceEth: priceInEth,
               priceUsd: priceInUsd,
               tokenId: tokenId.toString(),
               creator,
+              isRedeemable, // Add the redeemable status
               attributes: {
                 weightClass,
                 category,
@@ -244,24 +284,25 @@ const MyInventory: React.FC<MyInventoryProps> = ({
                 baseRedemptionValue: formattedRedemptionValue
               }
             });
-          } catch (tokenError) {
-            console.error('Error fetching token:', tokenError);
-            continue;
           }
+        } catch (tokenError) {
+          console.error(`Error checking token ${tokenId}:`, tokenError);
+          continue;
         }
-  
-        setNfts(fetchedNFTs);
-        console.log('Fetched User NFTs:', fetchedNFTs);
-      } catch (error) {
-        console.error('Error in fetchUserNFTs:', error);
-        setNfts([]);
-      } finally {
-        setIsLoading(false);
       }
-    };
-  
-    fetchUserNFTs();
-  }, [nftContract, signer, userAddress, ethUsdPrice, activeContract]);
+
+      setNfts(fetchedNFTs);
+      console.log('Fetched User NFTs:', fetchedNFTs);
+    } catch (error) {
+      console.error('Error in fetchUserNFTs:', error);
+      setNfts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchUserNFTs();
+}, [nftContract, signer, userAddress, ethUsdPrice, activeContract]);
 
   const handleNFTClick = (nft: NFT) => {
     setSelectedNFT(nft);
@@ -273,12 +314,11 @@ const MyInventory: React.FC<MyInventoryProps> = ({
       if (!activeContract) {
         throw new Error('Contract not initialized');
       }
-  
-      // Get actual sell price
-      setModalState(prev => ({ ...prev, isLoadingPrice: true, transactionError: '' }));
       
+      setModalState(prev => ({ ...prev, isLoadingPrice: true, transactionError: '' }));
+
       const baseValue = ethers.parseEther(nft.attributes?.baseRedemptionValue || "0");
-      const [actualPrice, , , ] = await activeContract.getSellRewardAfterFee(baseValue);
+      const [actualPrice, , , ] = await activeContract.getSellPriceAfterFee(baseValue);
       
       // Convert price to ETH and USD
       const actualPriceEth = ethers.formatEther(actualPrice);
@@ -304,7 +344,31 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   };
   
   const handleRedeem = async (nft: NFT) => {
-    // Set redeem confirmation state
+    // Check if NFT is redeemable
+    if (!nft.isRedeemable) {
+      // Display error or notification that NFT is not redeemable
+      setModalState(prev => ({
+        ...prev,
+        transactionError: 'This NFT is not eligible for redemption.',
+        showSellConfirm: false,
+        showRedeemConfirm: false
+      }));
+      return;
+    }
+    
+    // Select NFT and open shipping modal instead of redeem confirmation
+    setSelectedNFT(nft);
+    setShowShippingModal(true);
+  };
+  
+  const handleShippingSubmit = (shippingDetails: ShippingDetails, isExpedited: boolean) => {
+    console.log("Shipping details:", shippingDetails);
+    console.log("Expedited shipping:", isExpedited);
+    
+    // Close shipping modal
+    setShowShippingModal(false);
+    
+    // Now proceed to redemption confirmation
     setModalState(prev => ({
       ...prev,
       showSellConfirm: false,
@@ -327,21 +391,27 @@ const MyInventory: React.FC<MyInventoryProps> = ({
         "function approve(address to, uint256 tokenId) external",
         "function getApproved(uint256 tokenId) external view returns (address)"
       ];
+
       
       const nftContractWithSigner = new ethers.Contract(nftContract, erc721ABI, signer);
       
       // Check if already approved
       const approved = await nftContractWithSigner.getApproved(nft.tokenId);
-      if (approved !== activeContract.address) {
+      if (approved !== activeContract.target) {
         console.log('Approving marketplace to transfer NFT...');
-        const approveTx = await nftContractWithSigner.approve(activeContract.address, nft.tokenId);
+        const approveTx = await nftContractWithSigner.approve(activeContract.target, nft.tokenId);
         await approveTx.wait();
         console.log('Approval successful');
       }
-  
+
+      const launchABI = [
+        "function sellNFT(uint256 tokenId) public payable",
+      ];
+
+      const createContractInstance = new ethers.Contract(activeContract.target, launchABI, signer);
       // Now sell the NFT
       console.log('Selling NFT:', nft.tokenId);
-      const tx = await activeContract.sellNFT(nft.tokenId);
+      const tx = await createContractInstance.sellNFT(nft.tokenId);
       await tx.wait();
       console.log('NFT sold successfully');
   
@@ -486,7 +556,8 @@ const MyInventory: React.FC<MyInventoryProps> = ({
                 key={nft.id}
                 onClick={() => handleNFTClick(nft)}
                 className="bg-white rounded-xl overflow-hidden border border-gray-200 hover:border-purple-300
-                         shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-5px] cursor-pointer"
+                         shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-5px] cursor-pointer
+                         relative" // Added relative positioning for absolute label
               >
                 <div className="aspect-square overflow-hidden relative">
                   <img
@@ -498,6 +569,17 @@ const MyInventory: React.FC<MyInventoryProps> = ({
                   {nft.priceUsd > 0 && (
                     <div className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full shadow-md">
                       <span className="text-purple-600 font-bold">${nft.priceUsd.toFixed(2)}</span>
+                    </div>
+                  )}
+                  
+                  {/* Redeemable badge - only show if showRedeemableLabel is true */}
+                  {showRedeemableLabel && (
+                    <div className={`absolute top-3 left-3 px-3 py-1 rounded-full shadow-md font-bold text-xs uppercase
+                                 ${nft.isRedeemable 
+                                    ? 'bg-green-500 text-white animate-pulse' 
+                                    : 'bg-red-500 text-white'}`}
+                    >
+                      {nft.isRedeemable ? 'Redeemable' : 'Not Redeemable'}
                     </div>
                   )}
                 </div>
@@ -525,10 +607,12 @@ const MyInventory: React.FC<MyInventoryProps> = ({
                           e.stopPropagation();
                           handleRedeem(nft);
                         }}
-                        disabled={isProcessing}
-                        className="px-3 py-1 bg-green-500 text-white rounded-lg font-medium
-                                 hover:bg-green-600 transition-all text-xs
-                                 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isProcessing || !nft.isRedeemable} // Disable if not redeemable
+                        className={`px-3 py-1 rounded-lg font-medium transition-all text-xs
+                                 disabled:opacity-50 disabled:cursor-not-allowed
+                                 ${nft.isRedeemable
+                                    ? 'bg-green-500 text-white hover:bg-green-600'
+                                    : 'bg-gray-400 text-white'}`}
                       >
                         Redeem
                       </button>
@@ -540,8 +624,34 @@ const MyInventory: React.FC<MyInventoryProps> = ({
           </div>
         )}
       </div>
+
+      {/* Load More Button */}
+      {nfts.length > 0 && hasMoreTokens && (
+        <div className="flex justify-center mt-2 mb-6">
+          <button
+            onClick={() => setFetchingPage(prev => prev + 1)}
+            disabled={isLoading}
+            className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg font-medium
+                      hover:bg-purple-200 transition-colors flex items-center gap-2"
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin text-lg">⏳</div>
+                <span>Loading more NFTs...</span>
+              </>
+            ) : (
+              <>
+                <span>Load More NFTs</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14"></path>
+                </svg>
+              </>
+            )}
+          </button>
+        </div>
+      )}
   
-      {/* Pagination Controls */}
+      {/* Enhanced Pagination Controls */}
       {currentNFTs.length > 0 && totalPages > 1 && (
         <div className="flex items-center justify-center gap-4 p-6 border-t border-gray-200">
           <button
@@ -553,9 +663,62 @@ const MyInventory: React.FC<MyInventoryProps> = ({
             <span className="text-gray-600">←</span>
           </button>
           
-          <span className="text-gray-600 font-medium">
-            Page {currentPage} of {totalPages}
-          </span>
+          {/* Page Numbers */}
+          <div className="flex items-center gap-1">
+            {/* Always show first page */}
+            {currentPage > 3 && (
+              <>
+                <button 
+                  onClick={() => setCurrentPage(1)}
+                  className={`h-8 w-8 flex items-center justify-center rounded-md
+                            ${currentPage === 1 ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  1
+                </button>
+                {currentPage > 4 && <span className="text-gray-400">...</span>}
+              </>
+            )}
+            
+            {/* Show pages around current page */}
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum;
+              if (currentPage <= 3) {
+                pageNum = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                pageNum = totalPages - 4 + i;
+              } else {
+                pageNum = currentPage - 2 + i;
+              }
+              
+              if (pageNum > 0 && pageNum <= totalPages) {
+                return (
+                  <button 
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`h-8 w-8 flex items-center justify-center rounded-md
+                              ${currentPage === pageNum ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              }
+              return null;
+            })}
+            
+            {/* Always show last page */}
+            {currentPage < totalPages - 2 && (
+              <>
+                {currentPage < totalPages - 3 && <span className="text-gray-400">...</span>}
+                <button 
+                  onClick={() => setCurrentPage(totalPages)}
+                  className={`h-8 w-8 flex items-center justify-center rounded-md
+                            ${currentPage === totalPages ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+          </div>
           
           <button
             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
@@ -565,6 +728,27 @@ const MyInventory: React.FC<MyInventoryProps> = ({
           >
             <span className="text-gray-600">→</span>
           </button>
+        </div>
+      )}
+
+      {/* Items per page selector */}
+      {nfts.length > 0 && (
+        <div className="flex justify-center items-center gap-2 pb-6 text-sm text-gray-600">
+          <span>Items per page:</span>
+          <select 
+            value={itemsPerPage}
+            onChange={(e) => {
+              const newItemsPerPage = parseInt(e.target.value);
+              setItemsPerPage(newItemsPerPage);
+              setCurrentPage(1); // Reset to first page when changing items per page
+            }}
+            className="bg-white border border-gray-300 rounded-md px-2 py-1 text-sm"
+          >
+            <option value="4">4</option>
+            <option value="8">8</option>
+            <option value="12">12</option>
+            <option value="16">16</option>
+          </select>
         </div>
       )}
   
@@ -605,6 +789,16 @@ const MyInventory: React.FC<MyInventoryProps> = ({
                   </p>
                   <p className="text-gray-700">
                     Token ID: <span className="text-green-600">{selectedNFT.tokenId}</span>
+                  </p>
+                  {/* Add redeemable status in details */}
+                  <p className="text-gray-700">
+                    Status: <span className={`font-medium px-2 py-1 rounded-full text-xs ${
+                      selectedNFT.isRedeemable 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedNFT.isRedeemable ? 'Redeemable' : 'Not Redeemable'}
+                    </span>
                   </p>
                 </div>
   
@@ -659,10 +853,12 @@ const MyInventory: React.FC<MyInventoryProps> = ({
                     </button>
                     <button 
                       onClick={() => handleRedeem(selectedNFT)}
-                      disabled={isProcessing}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium
-                              hover:bg-green-700 transition-all
-                              disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={isProcessing || !selectedNFT.isRedeemable}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all
+                              disabled:opacity-50 disabled:cursor-not-allowed
+                              ${selectedNFT.isRedeemable 
+                                ? 'bg-green-600 text-white hover:bg-green-700' 
+                                : 'bg-gray-400 text-white'}`}
                     >
                       {isProcessing ? 'Processing...' : 'Redeem'}
                     </button>
@@ -698,6 +894,58 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   
             <div className="flex gap-3">
               <button
+                onClick={() => setModalState(prev => ({ ...prev, showSellConfirm: false }))}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmSell(selectedNFT)}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg
+                        hover:bg-purple-700 transition-all disabled:opacity-50 font-medium"
+              >
+                {isProcessing ? 'Processing...' : 'Confirm Sale'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Redeem Confirmation Modal */}
+      {modalState.showRedeemConfirm && selectedNFT && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full border border-gray-200">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Redemption</h3>
+            
+            <div className="bg-green-50 p-4 rounded-lg mb-6 border border-green-100">
+              <p className="text-gray-600 mb-2">You are about to redeem this item:</p>
+              <p className="text-xl font-bold text-gray-800 mb-1">
+                {selectedNFT.name}
+              </p>
+              <p className="text-sm text-gray-500">
+                Token ID: {selectedNFT.tokenId}
+              </p>
+              <div className="mt-4 bg-yellow-50 p-3 rounded border border-yellow-100">
+                <p className="text-amber-700 text-sm font-medium">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                  Once redeemed, this NFT will be burned. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+  
+            {modalState.transactionError && (
+              <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4">
+                {modalState.transactionError}
+              </div>
+            )}
+  
+            <div className="flex gap-3">
+              <button
                 onClick={() => setModalState(prev => ({ ...prev, showRedeemConfirm: false }))}
                 className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
               >
@@ -714,6 +962,17 @@ const MyInventory: React.FC<MyInventoryProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Shipping Modal */}
+      {showShippingModal && selectedNFT && (
+        <ShippingModal
+          isOpen={showShippingModal}
+          onClose={() => setShowShippingModal(false)}
+          onSubmit={(shippingDetails, isExpedited) => {
+            handleShippingSubmit(shippingDetails, isExpedited);
+          }}
+        />
       )}
     </div>
   );

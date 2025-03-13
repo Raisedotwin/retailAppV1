@@ -1,8 +1,29 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    images: {
-        domains: ['unavatar.io'],
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pbs.twimg.com',
+        pathname: '**',
       },
+      {
+        protocol: 'https',
+        hostname: 'unavatar.io',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'abs.twimg.com',
+        pathname: '**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.pravatar.cc',
+        pathname: '**',
+      }
+    ],
+  },
 };
 
 export default nextConfig;

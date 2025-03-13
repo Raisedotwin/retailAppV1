@@ -1,4 +1,4 @@
-import { Avatar, Card } from '@nextui-org/react';
+import { Card } from '@nextui-org/react';
 import Image from 'next/image';
 import NextLink from 'next/link';
 
@@ -11,31 +11,31 @@ interface IProps {
   contractAddress?: string;
 }
 
-const TraderCard: React.FC<IProps> = ({ 
-  logo, 
-  name, 
-  username, 
-  topic, 
+const TraderCard: React.FC<IProps> = ({
+  logo,
+  name,
+  username,
+  topic,
   contractAddress
 }) => {
   return (
-    <NextLink 
-      href={name ? 
-        `/trader?name=${name}&logo=${logo}&username=${username}&contractAddress=${contractAddress}` 
+    <NextLink
+      href={name ?
+        `/trader?name=${name}&logo=${logo}&username=${username}&contractAddress=${contractAddress}`
         : '#'
-      } 
+      }
       passHref
     >
       <Card
         isHoverable
         isPressable
-        style={{ 
-          cursor: 'pointer', 
-          marginBottom: '16px', 
-          backgroundColor: '#1E1E1E', 
-          borderRadius: '12px', 
-          padding: '12px', 
-          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)', 
+        style={{
+          cursor: 'pointer',
+          marginBottom: '16px',
+          backgroundColor: '#1E1E1E',
+          borderRadius: '12px',
+          padding: '12px',
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
           width: '460px'
         }}
         data-testid={`session-card`}
@@ -48,16 +48,20 @@ const TraderCard: React.FC<IProps> = ({
             overflow: 'hidden',
           }}
         >
-          {/* Avatar Image */}
-          <Avatar 
-            src={logo} 
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '50%',
-              backgroundColor: '#333',
-            }}
-          />
+          {/* Profile Image - changed from Avatar to Image */}
+          <div style={{ position: 'relative', width: '48px', height: '48px' }}>
+            <Image
+              src={logo || '/icons/avatar.svg'}
+              className="rounded-full"
+              alt={name || "Trader profile"}
+              width={48}
+              height={48}
+              style={{
+                objectFit: 'cover',
+                borderRadius: '50%',
+              }}
+            />
+          </div>
 
           {/* Name, Username, and Arrow Icon */}
           <div style={{ flex: 1, marginLeft: '16px', color: '#FFF', display: 'flex', alignItems: 'center' }}>

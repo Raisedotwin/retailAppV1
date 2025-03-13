@@ -101,6 +101,8 @@ const HoldingsPage = () => {
 
           // Format market cap
           let marketCapEth = ethers.formatEther(marketCap);
+
+          console.log('logo', link);
           
           // Create basic balance entry
           let balanceEntry: AccountBalance = {

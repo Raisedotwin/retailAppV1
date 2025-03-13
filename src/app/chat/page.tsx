@@ -97,17 +97,37 @@ const Chat: React.FC = () => {
   const tokenMarketAddr = '0xA832df5A5Ff0D436eCE19a38E84eB92faC380566';
   const tokenMarketABI = require("../abi/tokenMarket");
 
-  // Update store name when Twitter username changes
-  useEffect(() => {
+  // Then update your useEffect for Twitter username changes:
+useEffect(() => {
+  const updateProfileImage = async () => {
     if (user?.twitter?.username) {
+      const twitterUsername = user.twitter.username;
+      
+      // First update the basic fields
       setStoreFormData(prev => ({
         ...prev,
-        userName: user?.twitter?.username || '',
-        name: user?.twitter?.username || '',
-        avatarURL: `https://unavatar.io/twitter/${user?.twitter?.username}`
+        userName: twitterUsername,
+        name: twitterUsername,
+        // Temporarily set unavatar as fallback while fetching
+        avatarURL: `https://unavatar.io/twitter/${twitterUsername}`
       }));
+      
+      // Then fetch the actual Twitter profile image
+      try {
+        const profileImageUrl = await fetchTwitterProfileImage(twitterUsername);
+        setStoreFormData(prev => ({
+          ...prev,
+          avatarURL: profileImageUrl
+        }));
+      } catch (error) {
+        console.error('Failed to fetch Twitter profile image:', error);
+        // Fallback is already set, so no need to update
+      }
     }
-  }, [user?.twitter?.username]);
+  };
+  
+  updateProfileImage();
+}, [user?.twitter?.username]);
 
   const getSigner = async () => {
     if (user?.twitter?.username) {
@@ -155,6 +175,32 @@ const Chat: React.FC = () => {
       return null;
     }
   };
+
+  // Add this function to your Chat component
+const fetchTwitterProfileImage = async (username: string): Promise<string> => {
+  try {
+    // Use the same Twitter API endpoint that SearchModal is using
+    const response = await fetch(`/api/twitter/user/${username}`);
+    if (!response.ok) {
+      console.error(`Error fetching Twitter profile: ${response.status}`);
+      // Fallback to unavatar if API fails
+      return `https://unavatar.io/twitter/${username}`;
+    }
+    
+    const userData = await response.json();
+    
+    if (userData.data && userData.data.profile_image_url) {
+      // Twitter API returns a low-res image by default, replace _normal with _400x400 for higher resolution
+      return userData.data.profile_image_url.replace('_normal', '_400x400');
+    } else {
+      return `https://unavatar.io/twitter/${username}`;
+    }
+  } catch (error) {
+    console.error('Error fetching Twitter profile image:', error);
+    // Fallback to unavatar if any error occurs
+    return `https://unavatar.io/twitter/${username}`;
+  }
+};
   
   const handleStoreSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

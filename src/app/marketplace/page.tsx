@@ -323,8 +323,9 @@ const MarketplacePage: React.FC = () => {
           price: formattedPrice,
           priceEth: ethPrice,          // Add raw ETH price
           priceUsd: usdPrice,          // Add raw USD price
-          image: metadata.itemPhoto || "/api/placeholder/300/300",
-          merchantImage: merchantImage,
+          image: metadata.itemPhoto,
+          //merchantImage: merchantImage,
+          merchantImage: "https://pbs.twimg.com/profile_images/1853556885850361856/fDeK9VyY_normal.jpg", // Placeholder for merchant image
           merchantName: collectionName,
           storeName: collectionName,
           category: metadata.category,

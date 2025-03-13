@@ -54,10 +54,10 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
 
   const categories = [
     { name: 'Trending', icon: '🔥' },
-    { name: 'Perps', icon: '📈' },
-    { name: 'Marketcap', icon: '💹' },
-    { name: 'NFT', icon: '🎨' },
-    { name: 'Swaps', icon: '🔄' }
+    { name: 'Collectibles', icon: '🏆' },
+    { name: 'Clothing', icon: '👕' },
+    { name: 'Antiques', icon: '🏺' },
+    { name: 'Household', icon: '🏠' }
   ];
 
   const handleSearchTermChange = (value: string) => {
@@ -205,7 +205,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
           <div className="relative">
             <input
               type="text"
-              placeholder="Search by username or contract address (0x...)"
+              placeholder="Search by NFT address (0x...)"
               className="w-full pl-10 pr-4 py-3 bg-gray-100 border border-transparent rounded-xl focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200 transition-all duration-200"
               value={searchTerm}
               onChange={e => handleSearchTermChange(e.target.value)}
@@ -221,11 +221,11 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
 
           <p className="text-sm text-gray-500 mt-2 px-1">
             <span className="inline-block mr-1">💡</span>
-            Enter a username or paste a phygital contract address (0x...)
+            Enter or paste a phygital contract address (0x...)
           </p>
           <p className="text-sm text-gray-500 mt-2 px-1">
             <span className="inline-block mr-1">⚠️</span>
-            Username searches may be rate limited by Twitter API
+            Searches may be rate limited by Twitter API
           </p>
         </div>
 
@@ -237,11 +237,13 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
             </div>
           )}
 
+
           {!isLoading && results.length > 0 && (
             <div className="p-4">
               <h3 className="text-sm font-semibold text-gray-500 mb-3 px-2">Search Results</h3>
               {results.map((result, index) => (
                 result?.name && result?.username && result?.id ? (
+                  console.log("profile_image_url", result.id, result.profile_image_url, result),
                   <TraderCard
                     key={index}
                     name={'contractAddress' in result ? result.name : result.name}

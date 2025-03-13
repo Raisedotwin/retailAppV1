@@ -172,90 +172,89 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
     return () => clearInterval(intervalId);
   }, []);
 
-  useEffect(() => {
-    const fetchNFTs = async () => {
-      console.log('Fetching NFTs...');
-      console.log('contract:', nftContract);
-      console.log('signer:', pageLink);
-      setIsLoading(true);
-      
-      // Helper function to decode base64 data URI
-      const decodeTokenURI = (tokenURI: string) => {
-        try {
-          // Check if it's a data URI
-          if (tokenURI.startsWith('data:application/json;base64,')) {
-            // Remove the prefix and decode
-            const base64Data = tokenURI.split(',')[1];
-            const decodedData = Buffer.from(base64Data, 'base64').toString('utf-8');
-            return JSON.parse(decodedData);
-          } else {
-            // If it's not base64 encoded, try parsing directly
-            return JSON.parse(tokenURI);
-          }
-        } catch (error) {
-          console.error('Error decoding token URI:', error);
-          return null;
-        }
-      };
-  
+  // Fetch NFTs for marketplace
+useEffect(() => {
+  const fetchNFTs = async () => {
+    console.log('Fetching NFTs...');
+    console.log('contract:', nftContract);
+    console.log('signer:', pageLink);
+    setIsLoading(true);
+    
+    // Helper function to decode base64 data URI
+    const decodeTokenURI = (tokenURI: string) => {
       try {
-        if (!nftContract || !signer) {
-          console.log('No NFT contract address or signer');
-          setNfts([]);
-          setIsLoading(false);
-          return;
+        // Check if it's a data URI
+        if (tokenURI.startsWith('data:application/json;base64,')) {
+          // Remove the prefix and decode
+          const base64Data = tokenURI.split(',')[1];
+          const decodedData = Buffer.from(base64Data, 'base64').toString('utf-8');
+          return JSON.parse(decodedData);
+        } else {
+          // If it's not base64 encoded, try parsing directly
+          return JSON.parse(tokenURI);
         }
-  
-        const nftContractABI = [
-          "function balanceOf(address owner) view returns (uint256)",
-          "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
-          "function tokenURI(uint256 tokenId) view returns (string)",
-          "function ownerOf(uint256 tokenId) view returns (address)",
-          "function totalSupply() view returns (uint256)",
-          "function getOwner(uint256 _tokenId) external view returns (address)",
-          "function getBaseValue(uint256 tokenId) external view returns (uint256)"
-        ];
-  
-        const contract = new ethers.Contract(nftContract, nftContractABI, signer);
-        
-        //this needs to be the total amouunt of nfts rather then the balance of the user
-        const balance = await contract.balanceOf(activeContract);
-        console.log('NFT Balance:', balance.toString());
+      } catch (error) {
+        console.error('Error decoding token URI:', error);
+        return null;
+      }
+    };
 
-        //const totalSupply = await activeContract.totalSupply();
-        //console.log('Total Supply:', totalSupply.toString());
+    try {
+      if (!nftContract || !signer) {
+        console.log('No NFT contract address or signer');
+        setNfts([]);
+        setIsLoading(false);
+        return;
+      }
 
-        //then in the curve contract we need ceck which ids they own currently 
-  
-        const fetchedNFTs = [];
-  
-        //for the entire supply of nfts
-        for (let i = 0; i < balance; i++) {
-          try {
+      const nftContractABI = [
+        "function balanceOf(address owner) view returns (uint256)",
+        "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
+        "function tokenURI(uint256 tokenId) view returns (string)",
+        "function ownerOf(uint256 tokenId) view returns (address)",
+        "function totalSupply() view returns (uint256)",
+        "function getOwner(uint256 _tokenId) external view returns (address)",
+        "function getBaseValue(uint256 tokenId) external view returns (uint256)",
+        "function getCirculatingSupply() external view returns (uint256)"
+      ];
 
-            //get all the tokens owned by the launch 
-            //marketData.
-            //either getTokensHeldByLaunch(address launchAddress) or isTokenHeldByLaunch(address launchAddress, uint256 tokenId) 
-            //then we will dynamically get the token ids, maybe there is a way we can do it by page so dont loop through everything
+      const contract = new ethers.Contract(nftContract, nftContractABI, signer);
+      
+      // Get total supply of NFTs
+      const totalSupply = await contract.getCirculatingSupply();
+      console.log('Total Supply:', totalSupply.toString());
 
+      const fetchedNFTs = [];
+
+      // Loop through the entire NFT supply
+      for (let tokenId = 0; tokenId < totalSupply; tokenId++) {
+        try {
+          // Check if the NFT is owned by the marketplace contract (activeContract)
+          const owner = await contract.ownerOf(tokenId);
+          
+          // Only include NFTs owned by the marketplace contract
+          if (owner.toLowerCase() === activeContract.target.toLowerCase()) {
+            console.log(`Token ID ${tokenId} is owned by the marketplace`);
+            
             // Get token URI
-            const tokenURI = await contract.tokenURI(0);
-            console.log('Raw Token URI:', tokenURI);
-  
+            const tokenURI = await contract.tokenURI(tokenId);
+            console.log('Token URI:', tokenURI);
+
             // Decode and parse the metadata
             const metadata = decodeTokenURI(tokenURI);
             if (!metadata) continue;
-  
+
             console.log('Decoded metadata:', metadata);
-  
-            // Get owner address
-            const owner = await contract.getOwner(0);
-            console.log('Owner:', owner);
 
-            const baseValue = await contract.getBaseValue(0);
-            console.log('basevalue:', baseValue);
-            console.log("activeContract", activeContract);
+            // Get creator address
+            const creator = await contract.getOwner(tokenId);
+            console.log('Creator:', creator);
 
+            // Get base value
+            const baseValue = await contract.getBaseValue(tokenId);
+            console.log('Base value:', baseValue.toString());
+
+            // Get current buy price from the curve
             const [price, , , ] = await activeContract.getBuyPriceAfterFee(baseValue);
             console.log('Price:', ethers.formatEther(price));
             const formattedPrice = ethers.formatEther(price);
@@ -265,7 +264,7 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
             
             // Calculate USD price
             const priceInUsd = priceInEth * ethUsdPrice;
-  
+
             // Parse attributes with type checking
             const attributes = metadata.attributes as Array<{trait_type: string, value: string | number}> || [];
 
@@ -287,43 +286,44 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
 
             // Format the redemption value from wei to ETH
             const formattedRedemptionValue = baseRedemptionValue ? 
-            ethers.formatEther(baseRedemptionValue) : "0";
+              ethers.formatEther(baseRedemptionValue) : "0";
 
             fetchedNFTs.push({
-              id: i.toString(),
-              name: metadata.name || `NFT #1`,
+              id: tokenId.toString(),
+              name: metadata.name || `NFT #${tokenId}`,
               description: metadata.description || "No description available",
               image: metadata.image || "/api/placeholder/400/400",
               price: formattedPrice,
               priceEth: priceInEth,
               priceUsd: priceInUsd,
-              tokenId: "0",
-              creator: owner,
+              tokenId: tokenId.toString(),
+              creator: creator,
               attributes: {
-              weightClass,
-              category,
-              size,
-              baseRedemptionValue: formattedRedemptionValue
-            }
-          });
-          } catch (tokenError) {
-            console.error('Error fetching token:', tokenError);
-            continue;
+                weightClass,
+                category,
+                size,
+                baseRedemptionValue: formattedRedemptionValue
+              }
+            });
           }
+        } catch (tokenError) {
+          console.error(`Error checking token ${tokenId}:`, tokenError);
+          continue; // Skip this token if there's an error
         }
-  
-        setNfts(fetchedNFTs);
-        console.log('Fetched NFTs:', fetchedNFTs);
-      } catch (error) {
-        console.error('Error in fetchNFTs:', error);
-        setNfts([]);
-      } finally {
-        setIsLoading(false);
       }
-    };
-  
-    fetchNFTs();
-  }, [nftContract, signer, ethUsdPrice]); // Added ethUsdPrice as dependency to refresh NFTs when price changes
+
+      setNfts(fetchedNFTs);
+      console.log('Fetched NFTs:', fetchedNFTs);
+    } catch (error) {
+      console.error('Error in fetchNFTs:', error);
+      setNfts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchNFTs();
+}, [nftContract, signer, ethUsdPrice, activeContract]); // Added activeContract as dependency
 
   // Calculate base value from ETH amount using getNumberOfTokensForAmount
   const calculateBaseValue = async (ethAmount: string) => {
@@ -491,11 +491,17 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
       if (!activeContract || !modalState.actualPrice) {
         throw new Error('Contract or price not initialized');
       }
+
+      const launchABI = [
+        "function buyNFT(uint256 tokenId) public payable",
+      ];
+
+      const createContractInstance = new ethers.Contract(activeContract.target, launchABI, signer);
   
       const price = ethers.parseEther(modalState.actualPrice);
       
       // Call the buyNFT function with the token ID and value
-      const tx = await activeContract.buyNFT(nft.tokenId, {
+      const tx = await createContractInstance.buyNFT(nft.tokenId, {
         value: price
       });
   
