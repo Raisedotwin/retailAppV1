@@ -73,13 +73,13 @@ const WalletPage: React.FC = () => {
   const tokenPoolABI = require("../abi/traderPool");
   const storePayoutsABI = require("../abi/traderPayouts");
 
-  const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
+  const profileAddr = '0x33E04eC91A04F8791927C06EF5E862e6AA09b71a';
   const profileABI = require("../abi/profile");
 
   const whitelist = require("../abi/BETAWhitelist.json");
   const whitelistAddr = '0x0735b6E3b28A32423B6BaED39381866fDA5E6786';
 
-  const ordersAddr = "0x0A921B6D116bbF2cF2D5b0fC76f31BD95d840dE5";
+  const ordersAddr = "0x9C7D81Cadf8114e1C4760ca413BE0d0E5a126EB3";
   const ordersABI = require("../abi/orders");
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);

@@ -40,11 +40,13 @@ interface NFTMarketplaceProps {
   curveType?: number | null;
   signer?: any;
   pageLink?: string;
+  expired?: boolean;  
   marketData?: any;
   isAffiliate?: boolean;
   affiliateAddress?: string | null;
 }
 
+// Update the ListingFormData interface to include baseValueDisplay
 interface ListingFormData {
   quantity: string;
   name: string;
@@ -53,10 +55,12 @@ interface ListingFormData {
   weightClass: string;
   category: string;
   size: string;
-  inputEthAmount: string; // New field for ETH input
-  baseValue: string;      // This will be calculated
+  inputEthAmount: string;
+  baseValue: string;      // Raw BigInt string for contract
+  baseValueDisplay: string; // Formatted ETH value for display
   minRedeemValue: string;
 }
+
 
 // Add these helper functions at the top of your component
 const formatPrice = (ethPrice: number, usdPrice: number): React.ReactNode => {
@@ -108,6 +112,7 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   curveType,
   signer,
   pageLink,
+  expired,
   marketData,
   isAffiliate = false,
   affiliateAddress = null
@@ -116,21 +121,25 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
+  const [showExpiredNotification, setShowExpiredNotification] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showListingModal, setShowListingModal] = useState(false);
-  const [listingForm, setListingForm] = useState<ListingFormData>({
-    quantity: '',
-    name: '',
-    description: '',
-    itemPhoto: '',
-    weightClass: '',
-    category: '',
-    size: '',
-    inputEthAmount: '',  // New field for ETH input
-    baseValue: '',
-    minRedeemValue: ''
-  });
+  // Initialize the new field in the state
+const [listingForm, setListingForm] = useState<ListingFormData>({
+  quantity: '',
+  name: '',
+  description: '',
+  itemPhoto: '',
+  weightClass: '',
+  category: '',
+  size: '',
+  inputEthAmount: '',
+  baseValue: '',
+  baseValueDisplay: '',
+  minRedeemValue: ''
+});
+
   const [isCalculatingBaseValue, setIsCalculatingBaseValue] = useState(false);
   // Add state for ETH price
   const [ethUsdPrice, setEthUsdPrice] = useState<number>(0);
@@ -333,7 +342,8 @@ useEffect(() => {
       if (!activeContract || !ethAmount || isNaN(parseFloat(ethAmount))) {
         setListingForm(prev => ({
           ...prev,
-          baseValue: ''
+          baseValue: '',
+          baseValueDisplay: ''
         }));
         return;
       }
@@ -344,21 +354,26 @@ useEffect(() => {
       // Call getNumberOfTokensForAmount
       const baseValueBigInt = await activeContract.getNumberOfTokensForAmount(amountInWei);
       
-      // Format the result
-      const baseValueFormatted = ethers.formatEther(baseValueBigInt.toString());
+      // Store the raw BigInt value as string for submission
+      const baseValueRaw = baseValueBigInt.toString();
       
-      // Update the form
+      // Create a display version for UI only
+      const baseValueFormatted = ethers.formatEther(baseValueBigInt);
+      
+      // Update the form with both values
       setListingForm(prev => ({
         ...prev,
-        baseValue: baseValueFormatted
+        baseValue: baseValueRaw, // Use this for contract submission
+        baseValueDisplay: baseValueFormatted // Use this only for display
       }));
       
-      console.log(`Calculated base value: ${baseValueFormatted} for ${ethAmount} ETH`);
+      console.log(`Calculated base value: ${baseValueRaw} (raw) / ${baseValueFormatted} ETH (display)`);
     } catch (error) {
       console.error('Error calculating base value:', error);
       setListingForm(prev => ({
         ...prev,
-        baseValue: ''
+        baseValue: '',
+        baseValueDisplay: ''
       }));
     } finally {
       setIsCalculatingBaseValue(false);
@@ -383,7 +398,7 @@ useEffect(() => {
   const handleListingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
-
+  
     console.log('nftContract:', nftContract);
   
     try {
@@ -399,8 +414,10 @@ useEffect(() => {
       // Convert values to appropriate types
       const quantity = parseInt(listingForm.quantity);
       
-      // Use the calculated baseValue (already in correct format)
-      const baseValue = ethers.parseUnits(listingForm.baseValue, 0); // It's already in wei
+      // Use the raw baseValue string directly - do NOT use ethers.parseUnits on it!
+      const baseValue = listingForm.baseValue; // It's already a BigInt string
+      
+      // For minRedeemValue, we need to convert from ETH to Wei
       const baseRedeem = ethers.parseEther(listingForm.minRedeemValue);
   
       let tx;
@@ -442,7 +459,7 @@ useEffect(() => {
     } finally {
       setIsProcessing(false);
     }
-  };   
+  }; 
 
   const handleNFTClick = (nft: NFT) => {
     setSelectedNFT(nft);
@@ -576,25 +593,44 @@ useEffect(() => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {/* ETH price indicator */}
-            {ethUsdPrice > 0 && (
-              <div className="bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg text-sm flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 417" preserveAspectRatio="xMidYMid" className="w-4 h-4 mr-1 text-white">
-                  <path fill="currentColor" d="M127.962 0L0 212.32l127.962 75.639V154.158z" />
-                  <path fill="currentColor" d="M127.962 416.905v-104.72L0 236.585z" />
-                  <path fill="currentColor" d="M0 212.32l127.96 75.638v-133.8z" />
-                </svg>
-                <span className="text-white">1 ETH = <span className="font-bold">${ethUsdPrice.toLocaleString()}</span></span>
-              </div>
-            )}
-            <button 
-              onClick={() => setShowListingModal(true)}
-              className="px-4 py-2 bg-white text-blue-600 rounded-lg font-medium
-                      hover:bg-blue-50 transition-all transform hover:scale-105 shadow-md"
-            >
-              List New Item
-            </button>
-          </div>
+        {/* ETH price indicator */}
+{ethUsdPrice > 0 && (
+  <div className="bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg text-sm flex items-center">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 417" preserveAspectRatio="xMidYMid" className="w-4 h-4 mr-1 text-white">
+      <path fill="currentColor" d="M127.962 0L0 212.32l127.962 75.639V154.158z" />
+      <path fill="currentColor" d="M127.962 416.905v-104.72L0 236.585z" />
+      <path fill="currentColor" d="M0 212.32l127.96 75.638v-133.8z" />
+    </svg>
+    <span className="text-white">1 ETH = <span className="font-bold">${ethUsdPrice.toLocaleString()}</span></span>
+  </div>
+)}
+{/* Added Batch List button with Coming Soon tag */}
+<button 
+  className="flex items-center px-4 py-2 bg-gray-500 text-white rounded-lg font-medium cursor-not-allowed relative"
+>
+  Batch List
+  <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-yellow-400 text-xs text-gray-800 font-bold rounded-full shadow-sm">
+    Coming Soon
+  </span>
+</button>
+{/* List New Item button - conditionally shows different styling when expired */}
+{expired ? (
+  <button 
+    onClick={() => setShowExpiredNotification(true)}
+    className="px-4 py-2 bg-gray-300 text-gray-600 rounded-lg font-medium cursor-not-allowed shadow-md"
+  >
+    List New Item
+  </button>
+) : (
+  <button 
+    onClick={() => setShowListingModal(true)}
+    className="px-4 py-2 bg-white text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-all transform hover:scale-105 shadow-md"
+  >
+    List New Item
+  </button>
+)}
+</div>
+
         </div>
       </div>
   
@@ -682,337 +718,455 @@ useEffect(() => {
         </div>
       )}
   
-      {/* NFT Detail Modal */}
-      {showModal && selectedNFT && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-2xl max-w-2xl w-full">
-            <div className="flex gap-6">
-              <div className="w-1/2">
-                <img
-                  src={selectedNFT.image}
-                  alt={selectedNFT.name}
-                  className="w-full rounded-lg object-cover h-[400px]"
-                />
+       {/* NFT Detail Modal */}
+{showModal && selectedNFT && (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full overflow-hidden">
+      {/* Modal header with close button */}
+      <div className="flex justify-between items-center p-4 border-b border-gray-200">
+        <h2 className="text-xl font-bold text-gray-800">{selectedNFT.name}</h2>
+        <button 
+          onClick={() => setShowModal(false)}
+          className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      
+      {/* Modal content */}
+      <div className="flex flex-col md:flex-row">
+        {/* Image section */}
+        <div className="md:w-1/2 p-4">
+          <div className="rounded-lg overflow-hidden shadow-md">
+            <img
+              src={selectedNFT.image}
+              alt={selectedNFT.name}
+              className="w-full h-[350px] object-cover"
+            />
+          </div>
+        </div>
+        
+        {/* Info section */}
+        <div className="md:w-1/2 p-4 space-y-4">
+          <p className="text-gray-600">{selectedNFT.description}</p>
+          
+          {/* Redemption Notification */}
+          <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+            <div className="flex items-start gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 mt-0.5 flex-shrink-0">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <div>
+                <h4 className="text-amber-800 font-medium text-sm">Important Redemption Information</h4>
+                <p className="text-amber-700 text-sm">
+                  This NFT can only be redeemed for the physical item when its price reaches the Market Value of <strong>{selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH</strong>.
+                </p>
               </div>
-              <div className="w-1/2 space-y-4">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">{selectedNFT.name}</h2>
-                <p className="text-gray-600 mb-4">{selectedNFT.description}</p>
-                
-                {/* NFT Details */}
-                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Details</h3>
-                  <p className="text-gray-700">
-                    Current Price: 
-                    {selectedNFT.priceUsd > 0 ? (
-                      <span className="flex items-baseline gap-2">
-                        <span className="text-blue-600 font-bold">${selectedNFT.priceUsd.toFixed(2)}</span>
-                        <span className="text-gray-500 text-sm">({selectedNFT.priceEth.toFixed(5)} ETH)</span>
-                      </span>
-                    ) : (
-                      <span className="text-blue-600">{formatEthPrice(selectedNFT.price)}</span>
-                    )}
-                  </p>
-                  <p className="text-gray-700">
-                    Creator: <span className="text-blue-600 font-mono">
-                      {`${selectedNFT.creator.slice(0, 6)}...${selectedNFT.creator.slice(-4)}`}
+            </div>
+          </div>
+          
+          {/* Details card */}
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="font-semibold text-gray-800 mb-2">Details</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Current Price:</span>
+                <span className="font-medium">
+                  {selectedNFT.priceUsd > 0 ? (
+                    <span className="text-blue-600">${selectedNFT.priceUsd.toFixed(2)} <span className="text-gray-500 text-sm">({selectedNFT.priceEth.toFixed(5)} ETH)</span></span>
+                  ) : (
+                    <span className="text-blue-600">{formatEthPrice(selectedNFT.price)}</span>
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Creator:</span>
+                <span className="font-mono text-blue-600 text-sm">
+                  {`${selectedNFT.creator.slice(0, 6)}...${selectedNFT.creator.slice(-4)}`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Token ID:</span>
+                <span className="text-green-600">{selectedNFT.tokenId}</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Attributes grid */}
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <h3 className="font-semibold text-gray-800 mb-2">Attributes</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white p-2 rounded-lg border border-gray-100">
+                <p className="text-xs text-gray-500">Size</p>
+                <p className="font-medium">{selectedNFT.attributes?.size || 'Large'}</p>
+              </div>
+              <div className="bg-white p-2 rounded-lg border border-gray-100">
+                <p className="text-xs text-gray-500">Category</p>
+                <p className="font-medium">{selectedNFT.attributes?.category || 'Footwear'}</p>
+              </div>
+              <div className="bg-white p-2 rounded-lg border border-gray-100">
+                <p className="text-xs text-gray-500">Weight Class</p>
+                <p className="font-medium">{selectedNFT.attributes?.weightClass || '200'}</p>
+              </div>
+              <div className="bg-white p-2 rounded-lg border border-gray-100">
+                <p className="text-xs text-gray-500">Market Value</p>
+                <p className="font-medium">
+                  {selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH
+                  {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
+                    <span className="block text-xs text-gray-500">
+                      (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
                     </span>
-                  </p>
-                  <p className="text-gray-700">
-                    Token ID: <span className="text-green-600">{selectedNFT.tokenId}</span>
-                  </p>
-                </div>
-  
-                {/* NFT Attributes */}
-                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Attributes</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white p-3 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-500">Size</p>
-                      <p className="text-gray-700 font-medium">{selectedNFT.attributes?.size || 'N/A'}</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-500">Category</p>
-                      <p className="text-gray-700 font-medium">{selectedNFT.attributes?.category || 'N/A'}</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-500">Weight Class</p>
-                      <p className="text-gray-700 font-medium">{selectedNFT.attributes?.weightClass || 'N/A'}</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-500">Min Value for Redemption</p>
-                      <p className="text-gray-700 font-medium">
-                        {selectedNFT.attributes?.baseRedemptionValue || 'N/A'} ETH
-                        {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
-                          <span className="block text-xs text-gray-500">
-                            (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-  
-                <div className="flex justify-between gap-4 mt-6">
-                  <button
-                    onClick={() => setShowModal(false)}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium
-                             hover:bg-gray-200 transition-colors"
-                  >
-                    Close
-                  </button>
-                  <button 
-                    onClick={() => handlePurchase(selectedNFT)}
-                    disabled={isProcessing || modalState.isLoadingPrice}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium
-                             hover:bg-blue-700 transition-all transform hover:scale-105
-                             disabled:opacity-50 disabled:transform-none"
-                  >
-                    {modalState.isLoadingPrice ? 'Calculating Price...' : 
-                     isProcessing ? 'Processing...' : 'Purchase Now'}
-                  </button>
-                </div>
+                  )}
+                </p>
               </div>
             </div>
           </div>
         </div>
-      )}
-  
-      {/* Purchase Confirmation Modal */}
-      {modalState.showPurchaseConfirm && selectedNFT && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full border border-gray-200">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Purchase</h3>
-            
-            <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
-              <p className="text-gray-600 mb-2">Actual price to pay:</p>
-              <p className="text-2xl font-bold text-blue-600 mb-1">
-                ${modalState.actualPriceUsd}
+      </div>
+      
+      {/* Footer with actions */}
+      <div className="flex justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50">
+        <button
+          onClick={() => setShowModal(false)}
+          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+        >
+          Close
+        </button>
+        <button 
+          onClick={() => handlePurchase(selectedNFT)}
+          disabled={isProcessing || modalState.isLoadingPrice}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
+        >
+          {modalState.isLoadingPrice ? 'Calculating Price...' : 
+           isProcessing ? 'Processing...' : 'Purchase Now'}
+        </button>
+      </div>
+    </div>
+  </div>
+)} 
+
+{/* Purchase Confirmation Modal */}
+{modalState.showPurchaseConfirm && selectedNFT && (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full border border-gray-200">
+      <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Purchase</h3>
+      
+      {/* Expired Curve Notice */}
+      {expired && (
+        <div className="bg-red-50 border border-red-200 p-3 rounded-lg mb-4">
+          <div className="flex items-start gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 mt-0.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div>
+              <h4 className="text-red-800 font-medium">Expired Curve</h4>
+              <p className="text-red-700 text-sm">
+                This curve has expired. You cannot purchase NFTs on this marketplace at this time.
               </p>
-              <p className="text-sm text-gray-500">
-                {modalState.actualPrice} ETH
-              </p>
-            </div>
-  
-            {modalState.purchaseError && (
-              <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4">
-                {modalState.purchaseError}
-              </div>
-            )}
-  
-            <div className="flex gap-3">
-              <button
-                onClick={() => setModalState(prev => ({ ...prev, showPurchaseConfirm: false }))}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => confirmPurchase(selectedNFT)}
-                disabled={isProcessing}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg
-                        hover:bg-blue-700 transition-all disabled:opacity-50 font-medium"
-              >
-                {isProcessing ? 'Processing...' : 'Confirm Purchase'}
-              </button>
             </div>
           </div>
         </div>
       )}
+      
+      <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
+        <p className="text-gray-600 mb-2">Actual price to pay:</p>
+        <p className="text-2xl font-bold text-blue-600 mb-1">
+          ${modalState.actualPriceUsd}
+        </p>
+        <p className="text-sm text-gray-500">
+          {modalState.actualPrice} ETH
+        </p>
+      </div>
+
+      {modalState.purchaseError && (
+        <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4">
+          {modalState.purchaseError}
+        </div>
+      )}
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => setModalState(prev => ({ ...prev, showPurchaseConfirm: false }))}
+          className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => confirmPurchase(selectedNFT)}
+          disabled={isProcessing || expired}
+          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg
+                  hover:bg-blue-700 transition-all disabled:opacity-50 font-medium"
+        >
+          {isProcessing ? 'Processing...' : expired ? 'Curve Expired' : 'Confirm Purchase'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+      
+{/* Expired Curve Notification Modal */}
+{showExpiredNotification && (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white p-5 rounded-lg shadow-xl max-w-md w-full">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="p-2 bg-red-100 rounded-full">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </div>
+        <div>
+          <h3 className="text-xl font-bold text-gray-800">Cannot List on Expired Curve</h3>
+          <p className="text-gray-600 mt-1">
+            This marketplace is attached to an expired curve and no longer accepts new listings. 
+            Please contact the administrator for more information.
+          </p>
+        </div>
+      </div>
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowExpiredNotification(false)}
+          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
   
       {/* Listing Modal */}
-      {showListingModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-xl max-w-2xl w-full border border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">List New Item</h2>
+{showListingModal && (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white p-8 rounded-xl shadow-xl max-w-4xl w-11/12 border border-gray-200">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">List New Item</h2>
+        <button 
+          onClick={() => setShowListingModal(false)}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      
+      <form onSubmit={handleListingSubmit} className="space-y-4">
+        <div className="grid grid-cols-3 gap-6">
+          {/* First column */}
+          <div className="space-y-4">
+  <div>
+    <label className="block text-gray-700 mb-2">Quantity (10 per listing)</label>
+    <input
+      type="number"
+      name="quantity"
+      value={listingForm.quantity}
+      onChange={handleInputChange}
+      min="1"
+      max="10"
+      className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+      required
+    />
+    {parseInt(listingForm.quantity, 10) > 10 && (
+      <p className="text-red-500 text-sm mt-1">Maximum quantity is 10</p>
+    )}
+  </div>
+
             
-            <form onSubmit={handleListingSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-gray-700 mb-2">Quantity</label>
-                  <input
-                    type="number"
-                    name="quantity"
-                    value={listingForm.quantity}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-gray-700 mb-2">Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={listingForm.name}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    required
-                  />
-                </div>
+            <div>
+              <label className="block text-gray-700 mb-2">Name</label>
+              <input
+                type="text"
+                name="name"
+                value={listingForm.name}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                required
+              />
+            </div>
 
-                <div className="col-span-2">
-                  <label className="block text-gray-700 mb-2">Description</label>
-                  <textarea
-                    name="description"
-                    value={listingForm.description}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    rows={3}
-                    required
-                  />
-                </div>
+            <div>
+              <label className="block text-gray-700 mb-2">Weight Class</label>
+              <input
+                type="text"
+                name="weightClass"
+                value={listingForm.weightClass}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                required
+              />
+            </div>
+          </div>
 
-                <div>
-                  <label className="block text-gray-700 mb-2">Item Photo URL</label>
-                  <input
-                    type="text"
-                    name="itemPhoto"
-                    value={listingForm.itemPhoto}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    required
-                  />
-                </div>
+          {/* Second column */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-gray-700 mb-2">Item Photo URL</label>
+              <input
+                type="text"
+                name="itemPhoto"
+                value={listingForm.itemPhoto}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                required
+              />
+            </div>
 
-                <div>
-                  <label className="block text-gray-700 mb-2">Weight Class</label>
-                  <input
-                    type="text"
-                    name="weightClass"
-                    value={listingForm.weightClass}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    required
-                  />
-                </div>
+            <div>
+              <label className="block text-gray-700 mb-2">Category</label>
+              <input type="text"
+                name="category"
+                value={listingForm.category}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                required
+              />
+            </div>
 
-                <div>
-                  <label className="block text-gray-700 mb-2">Category</label>
-                  <input type="text"
-                    name="category"
-                    value={listingForm.category}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    required
-                  />
-                </div>
+            <div>
+              <label className="block text-gray-700 mb-2">Size</label>
+              <input
+                type="text"
+                name="size"
+                value={listingForm.size}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                required
+              />
+            </div>
+          </div>
 
-                <div>
-                  <label className="block text-gray-700 mb-2">Size</label>
-                  <input
-                    type="text"
-                    name="size"
-                    value={listingForm.size}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="flex justify-between items-center text-gray-700 mb-2">
-                    <span>Base Price (ETH)</span>
-                    {ethUsdPrice > 0 && parseFloat(listingForm.inputEthAmount) > 0 && (
-                      <span className="text-green-600 text-sm font-medium">
-                        ≈ ${(parseFloat(listingForm.inputEthAmount) * ethUsdPrice).toFixed(2)} USD
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    type="text"
-                    name="inputEthAmount"
-                    value={listingForm.inputEthAmount}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    placeholder="e.g. 0.1"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter amount in ETH, base value will be calculated automatically
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 mb-2">Calculated Base Token Value</label>
-                  <div className="flex items-center">
-                    <input
-                      type="text"
-                      name="baseValue"
-                      value={listingForm.baseValue}
-                      readOnly
-                      className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed"
-                      placeholder={isCalculatingBaseValue ? "Calculating..." : "Enter ETH amount first"}
-                    />
-                    {isCalculatingBaseValue && (
-                      <div className="animate-spin text-xl ml-2 text-blue-500">⏳</div>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    This value is automatically calculated from your ETH input
-                  </p>
-                </div>
-
-                <div>
-                  <label className="flex justify-between items-center text-gray-700 mb-2">
-                    <span>Redeem Price (ETH)</span>
-                    {ethUsdPrice > 0 && parseFloat(listingForm.minRedeemValue) > 0 && (
-                      <span className="text-green-600 text-sm font-medium">
-                        ≈ ${(parseFloat(listingForm.minRedeemValue) * ethUsdPrice).toFixed(2)} USD
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    type="text"
-                    name="minRedeemValue"
-                    value={listingForm.minRedeemValue}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Info section explaining the ETH to Base Value conversion */}
-              <div className="bg-blue-50 p-4 rounded-lg my-4 border border-blue-100">
-                <h4 className="text-blue-700 font-medium mb-2">How ETH Amount and Base Value Work</h4>
-                <p className="text-gray-700 text-sm">
-                  The ETH amount you enter is converted to a Base Value. This Base Value represents the token amount that corresponds to your ETH input based on the bonding curve.
-                </p>
-                {ethUsdPrice > 0 && (
-                  <div className="mt-2 flex items-center text-sm text-gray-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-1 text-blue-500">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="16" x2="12" y2="12"></line>
-                      <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                    </svg>
-                    <span>Current ETH price: ${ethUsdPrice.toLocaleString()} USD</span>
-                  </div>
+          {/* Third column */}
+          <div className="space-y-4">
+            <div>
+              <label className="flex justify-between items-center text-gray-700 mb-2">
+                <span>Listing Price (ETH)</span>
+                {ethUsdPrice > 0 && parseFloat(listingForm.inputEthAmount) > 0 && (
+                  <span className="text-green-600 text-sm font-medium">
+                    ≈ ${(parseFloat(listingForm.inputEthAmount) * ethUsdPrice).toFixed(2)} USD
+                  </span>
                 )}
-              </div>
+              </label>
+              <input
+                type="text"
+                name="inputEthAmount"
+                value={listingForm.inputEthAmount}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                placeholder="e.g. 0.1"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                The initial purchase price of the item
+              </p>
+            </div>
 
-              <div className="flex justify-end gap-4 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowListingModal(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isProcessing || isCalculatingBaseValue || !listingForm.baseValue}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg
-                           hover:bg-blue-700 transition-all
-                           disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  {isProcessing ? 'Processing...' : isCalculatingBaseValue ? 'Calculating...' : 'List Item'}
-                </button>
-              </div>
-            </form>
+        <div>
+          <label className="block text-gray-700 mb-2">Base Value / Token Weight</label>
+          <div className="flex items-center">
+          <input
+            type="text"
+            name="baseValueDisplay" // Changed this from baseValue
+            value={listingForm.baseValueDisplay} // Use the display version
+            readOnly
+            className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed"
+            placeholder={isCalculatingBaseValue ? "Calculating..." : "Enter ETH amount first"}
+          />
+          {isCalculatingBaseValue && (
+            <div className="animate-spin text-xl ml-2 text-blue-500">⏳</div>
+          )}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Automatically calculated
+          </p>
+      </div>
+
+            <div>
+              <label className="flex justify-between items-center text-gray-700 mb-2">
+                <span>Market Value (ETH)</span>
+                {ethUsdPrice > 0 && parseFloat(listingForm.minRedeemValue) > 0 && (
+                  <span className="text-green-600 text-sm font-medium">
+                    ≈ ${(parseFloat(listingForm.minRedeemValue) * ethUsdPrice).toFixed(2)} USD
+                  </span>
+                )}
+              </label>
+              <input
+                type="text"
+                name="minRedeemValue"
+                value={listingForm.minRedeemValue}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                The value required for redemption
+              </p>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Description field (full width) */}
+        <div className="mt-4">
+          <label className="block text-gray-700 mb-2">Description</label>
+          <textarea
+            name="description"
+            value={listingForm.description}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            rows={2}
+            required
+          />
+        </div>
+
+        {/* Info section explaining the ETH to Base Value conversion */}
+        <div className="bg-blue-50 p-4 rounded-lg my-4 border border-blue-100">
+          <h4 className="text-blue-700 font-medium mb-2">How listing price & market value work</h4>
+          <p className="text-gray-700 text-sm">
+            The listing price is the initial sale price of your item. The market value is the price the item must reach for you to accept it at redemption. The base value is calculated based on listing price, and it determines the items weight on the curve. The higher the base value, the more valuable your item is in the marketplace.
+          </p>
+          {ethUsdPrice > 0 && (
+            <div className="mt-2 flex items-center text-sm text-gray-600">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-1 text-blue-500">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <span>Current ETH price: ${ethUsdPrice.toLocaleString()} USD</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-4 mt-6">
+          <button
+            type="button"
+            onClick={() => setShowListingModal(false)}
+            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isProcessing || isCalculatingBaseValue || !listingForm.baseValue}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg
+                     hover:bg-blue-700 transition-all
+                     disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+          >
+            {isProcessing ? 'Processing...' : isCalculatingBaseValue ? 'Calculating...' : 'List Item'}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
     </div>
   );
 };

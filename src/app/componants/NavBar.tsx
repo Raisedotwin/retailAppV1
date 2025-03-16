@@ -151,32 +151,24 @@ const NavBar: React.FC = () => {
               <span className="ml-2 text-xs font-medium text-yellow-200 bg-gray-800 px-2 py-0.5 rounded-full">Beta</span>
             </div>
           </Link>
-          <Link href="/stake">
+          {!user && (<Link href="/stake">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">How It Works</div>
-          </Link>
+          </Link>)}
 
           {user && (
             <>
-              {isAdmin && (
-                <Link href="/admin">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Admin Panel</div>
-                </Link>
-              )}
+              <Link href="/profile">
+                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Profile</div>
+              </Link>
               <Link href="/holdings">
-                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Best Sellers</div>
+                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Leaderboard</div>
               </Link>
               <Link href="/chat">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Create</div>
               </Link>
               <Link href="/wallet">
-                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Dashboard</div>
+                <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Seller Dashboard</div>
               </Link>
-               <div className="flex items-center space-x-2">
-                <Link href="/profile">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Orders</div>
-                </Link>
-                <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">Soon</span>
-              </div>
             </>
           )}
         </div>
@@ -206,21 +198,7 @@ const NavBar: React.FC = () => {
               <SearchModal visible={isModalVisible} setVisible={setIsModalVisible} />
             </div>
           )}
-
-           {user && (
-            <>
-              <Link href="/wallet">
-                <Image
-                  src="/icons/accounts-icon.svg"
-                  alt="Wallet Icon"
-                  width={30}
-                  height={30}
-                  className="cursor-pointer"
-                />
-              </Link>
-            </>
-          )}
-
+          {/* Dropdown for user actions */}
           {user ? (
             <button
               onClick={logoutWithPrivy}

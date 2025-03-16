@@ -91,7 +91,7 @@ const PerpsForm: React.FC = () => {
   const { wallets } = useWallets();
   let wallet = wallets[0];
 
-  const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
+  const profileAddr = '0x33E04eC91A04F8791927C06EF5E862e6AA09b71a';
   const profileABI = require("../abi/profile");
   const tokenPoolABI = require("../abi/traderPool");
 

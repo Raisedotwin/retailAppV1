@@ -137,8 +137,8 @@ const MarketplacePage: React.FC = () => {
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
   
   // Contract addresses and ABIs
-  const marketDataContractAddr = '0x9baed514ed5AB1B13B6A4d05249C8F9f30EdF15E';
-  const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
+  const marketDataContractAddr = '0xcB85f27798925698a2bDd15E99394B933E925fD1';
+  const profileAddr = '0x33E04eC91A04F8791927C06EF5E862e6AA09b71a';
   
   // Simplified ABIs for the required functions
   const marketDataABI = [
@@ -324,8 +324,8 @@ const MarketplacePage: React.FC = () => {
           priceEth: ethPrice,          // Add raw ETH price
           priceUsd: usdPrice,          // Add raw USD price
           image: metadata.itemPhoto,
-          //merchantImage: merchantImage,
-          merchantImage: "https://pbs.twimg.com/profile_images/1853556885850361856/fDeK9VyY_normal.jpg", // Placeholder for merchant image
+          merchantImage: merchantImage,
+          //merchantImage: "https://pbs.twimg.com/profile_images/1853556885850361856/fDeK9VyY_normal.jpg", // Placeholder for merchant image
           merchantName: collectionName,
           storeName: collectionName,
           category: metadata.category,

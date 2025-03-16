@@ -13,7 +13,9 @@ interface CurveParams {
   redeemTime: string;
   timeLimit: string;
   expiryTime: string;
+  allowOthersToList: boolean; // Add this new field
 }
+
 
 interface LaunchData {
   address: string;
@@ -41,7 +43,6 @@ interface CurveModalProps {
 
 const Chat: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'stores'>('marketplace');
-  const [isProfileAssociated, setIsProfileAssociated] = useState<boolean>(true);
   const [mintAmount, setMintAmount] = useState<string>('');
   const [showOpenCurveModal, setShowOpenCurveModal] = useState<boolean>(false);
   const [showClosedCurveModal, setShowClosedCurveModal] = useState<boolean>(false);
@@ -53,13 +54,17 @@ const Chat: React.FC = () => {
   const [tokenPreview, setTokenPreview] = useState<string>('');
   const [isCalculating, setIsCalculating] = useState(false);
   const [isLoadingLaunches, setIsLoadingLaunches] = useState(false);
+  const [tokenAddress, setTokenAddress] = useState<string>('');
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+
   const [curveParams, setCurveParams] = useState<CurveParams>({
     initialSupply: '',
     name: '',
     symbol: '',
     redeemTime: '',
     timeLimit: '',
-    expiryTime: ''
+    expiryTime: '',
+    allowOthersToList: true // Default to true
   });
   const [storeFormData, setStoreFormData] = useState<StoreFormData>({
     name: '',
@@ -83,18 +88,18 @@ const Chat: React.FC = () => {
   let wallet = wallets[0];
 
   // Contract addresses and ABIs
-  const createAddr = '0x828ba1E00bA1f774CB25943Ef4aAF4874D10D374';
+  const createAddr = '0xc2B926A65E1e99a2db80C3C2Ff311F367Aa41775';
   const createABI = require("../abi/createAccount");
-  const launchFactory = '0x4A1009bD578f6daF99096CF2a251c3711C701D15';
+  const launchFactory = '0x2409d96fe23A0Ef255c6Ef1208B7963B994b7167';
   const launchFactoryABI = require("../abi/launchFactory");
-  const openFactory = '0x56Bf8A5DdA1BbbB5c1a1b622b2F3eF7fBf4d7d53';
+  const openFactory = '0x9b211F720fAf537C744ecbFbeFeBA0731e3C34C9';
   const openFactoryABI = require("../abi/openFactory");
-  const profileAddr = '0xA07Dc7B3d8cD9CE3a75237ed9E1b007932AA45Fb';
+  const profileAddr = '0x33E04eC91A04F8791927C06EF5E862e6AA09b71a';
   const profileABI = require("../abi/profile");
   const launchABI = require("../abi/launch");
   const openABI = require("../abi/open");
 
-  const tokenMarketAddr = '0xA832df5A5Ff0D436eCE19a38E84eB92faC380566';
+  const tokenMarketAddr = '0x5Cd11eafc8722992Eb64e4cCBdE77f86283C7191';
   const tokenMarketABI = require("../abi/tokenMarket");
 
   // Then update your useEffect for Twitter username changes:
@@ -128,6 +133,43 @@ useEffect(() => {
   
   updateProfileImage();
 }, [user?.twitter?.username]);
+
+const fetchTokenAddress = async () => {
+  if (!wallet) return;
+  
+  try {
+    const signer: any = await getSigner();
+    if (!signer) return;
+
+    const userAddress = await signer.getAddress();
+    
+    // Get account number from profile contract
+    const profileContract = new ethers.Contract(profileAddr, profileABI, signer);
+    const tokenMarketContract = new ethers.Contract(tokenMarketAddr, tokenMarketABI, signer);
+    
+    try {
+      // Get the token address from the account
+      const accountNumber = await profileContract.getAccountNumber(userAddress);
+      console.log('Account Number:', accountNumber.toString());
+      const tokenAddr = await tokenMarketContract.getTokenAddressByAccount(accountNumber);
+      console.log('Token Address:', tokenAddr);
+      
+      // Check if it's a valid address and not zero address
+      if (tokenAddr && tokenAddr !== '0x0000000000000000000000000000000000000000') {
+        setTokenAddress(tokenAddr);
+      } else {
+        setTokenAddress('');
+      }
+    } catch (error) {
+      console.error('Error fetching token address:', error);
+      setTokenAddress('');
+    }
+  } catch (error) {
+    console.error('Error getting signer or user address:', error);
+    setTokenAddress('');
+  }
+};
+
 
   const getSigner = async () => {
     if (user?.twitter?.username) {
@@ -411,8 +453,9 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
         alert('Failed to get signer. Please connect your wallet.');
         return;
       }
-
+  
       console.log('isOpen:', isOpen);
+      console.log('allowOthersToList:', curveParams.allowOthersToList);
   
       // Get user address
       const userAddress = await signer.getAddress();
@@ -440,7 +483,6 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
       const initialSupply = ethers.parseUnits(curveParams.initialSupply, 18);
       const timeLimit = parseInt(curveParams.timeLimit);
       const redeemTime = parseInt(curveParams.redeemTime);
-      const expiryTime = parseInt(curveParams.expiryTime);
   
       if (isOpen) {
         // Handle Open Curve creation using open contract ABI
@@ -451,8 +493,8 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
           curveParams.symbol,
           redeemTime,
           timeLimit,
-          expiryTime,
-          true // _curveOpen is always true for open curves
+          80000, //we will get rid of this in next update 
+          curveParams.allowOthersToList // Use the value from the checkbox
         );
         await tx.wait();
         alert('Open curve created successfully!');
@@ -463,8 +505,8 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
           initialSupply,
           curveParams.name,
           curveParams.symbol,
-          expiryTime,
-          false // _curveOpen is always false for closed curves
+          timeLimit,
+          curveParams.allowOthersToList // Use the value from the checkbox
         );
         await tx.wait();
         alert('Closed curve created successfully!');
@@ -484,7 +526,8 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
         symbol: '',
         redeemTime: '',
         timeLimit: '',
-        expiryTime: ''
+        expiryTime: '',
+        allowOthersToList: true // Reset to default
       });
   
     } catch (error: any) {
@@ -535,21 +578,74 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
   useEffect(() => {
     if (wallet && activeTab === 'stores') {
       fetchUserLaunches();
+      fetchTokenAddress();
     }
   }, [wallet, activeTab]);
 
-  // Find the CurveModal component and replace it with this updated version
-
+  // Add this state variable to your CurveModal component
 const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) => {
-  // Create a local state for the form to prevent re-renders of the entire modal
   const [localParams, setLocalParams] = useState<CurveParams>({
     initialSupply: curveParams.initialSupply,
     name: curveParams.name,
     symbol: curveParams.symbol,
     redeemTime: curveParams.redeemTime,
     timeLimit: curveParams.timeLimit,
-    expiryTime: curveParams.expiryTime
+    expiryTime: curveParams.expiryTime,
+    allowOthersToList: curveParams.allowOthersToList
   });
+  
+  // New state variables for launch detection
+  const [isCheckingLaunch, setIsCheckingLaunch] = useState<boolean>(true);
+  const [launchAddress, setLaunchAddress] = useState<string>('');
+  const [launchDetected, setLaunchDetected] = useState<boolean>(false);
+
+  // Check for launch address when modal opens
+  useEffect(() => {
+    const checkForLaunch = async () => {
+      setIsCheckingLaunch(true);
+      try {
+        const signer: any = await getSigner();
+        if (!signer) {
+          setLaunchDetected(false);
+          return;
+        }
+
+        const userAddress = await signer.getAddress();
+        
+        // Get the most recent launch address from profile contract
+        const profileContract = new ethers.Contract(profileAddr, profileABI, signer);
+        const launchCount = await profileContract.launchCount(userAddress);
+        
+        if (launchCount.toString() === '0') {
+          // No launches found
+          setLaunchDetected(false);
+          setLaunchAddress('');
+        } else {
+          // Get the most recent launch
+          const recentLauncher = await profileContract.getLaunch(userAddress, launchCount);
+          const address = recentLauncher.launchAddr;
+          
+          if (!address || address === '0x0000000000000000000000000000000000000000') {
+            setLaunchDetected(false);
+            setLaunchAddress('');
+          } else {
+            setLaunchDetected(true);
+            setLaunchAddress(address);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for launch:', error);
+        setLaunchDetected(false);
+        setLaunchAddress('');
+      } finally {
+        setIsCheckingLaunch(false);
+      }
+    };
+    
+    if (isOpen) {
+      checkForLaunch();
+    }
+  }, [isOpen]);
 
   // Initialize local state when modal opens
   useEffect(() => {
@@ -559,7 +655,8 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
       symbol: curveParams.symbol,
       redeemTime: curveParams.redeemTime,
       timeLimit: curveParams.timeLimit,
-      expiryTime: curveParams.expiryTime
+      expiryTime: curveParams.expiryTime,
+      allowOthersToList: curveParams.allowOthersToList
     });
   }, [isOpen]);
 
@@ -600,20 +697,70 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
           </p>
         </div>
         
+        {/* Launch status indicator */}
+        <div className="mb-6 bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
+          <h4 className="text-lg font-semibold text-white mb-2">Launch Status</h4>
+          
+          {isCheckingLaunch ? (
+            <div className="flex items-center space-x-3 text-gray-400">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-500"></div>
+              <p>Checking for launch address...</p>
+            </div>
+          ) : launchDetected ? (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <svg className="h-5 w-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <p className="text-green-400">Most recent launch detected</p>
+              </div>
+              <div className="flex items-center justify-between bg-gray-900/50 p-3 rounded-lg">
+                <p className="text-xs text-gray-300 font-mono break-all">
+                  {launchAddress}
+                </p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(launchAddress);
+                    alert("Launch address copied to clipboard!");
+                  }}
+                  className="ml-2 p-1.5 bg-gray-700 rounded-lg hover:bg-gray-600 transition-all duration-200"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <p className="text-red-400">No launch detected</p>
+              </div>
+              <p className="text-gray-400 text-sm">
+                Please click the "{curveType === 'Open' ? 'Launch Open Curve' : 'Launch Closed Curve'}" button above to create a launch first.
+              </p>
+            </div>
+          )}
+        </div>
+        
         {/* Configure curve parameters section */}
-        <h4 className="text-lg font-semibold text-white mb-4">Configure Curve Parameters</h4>
+        <h4 className="text-lg font-semibold text-white mb-4">List A Product Or Category Of Products</h4>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Token Details Row */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-gray-400 text-sm mb-2">Name</label>
+              <label className="block text-gray-400 text-sm mb-2">Product Name</label>
               <input
                 type="text"
                 value={localParams.name}
                 onChange={(e) => setLocalParams({...localParams, name: e.target.value})}
-                className="w-full bg-gray-700 text-white p-3 rounded-lg"
-                placeholder="Enter name"
+                className={`w-full bg-gray-700 text-white p-3 rounded-lg ${!launchDetected && 'opacity-50 cursor-not-allowed'}`}
+                placeholder="Category or name"
                 required
+                disabled={!launchDetected}
               />
             </div>
             <div>
@@ -622,20 +769,22 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
                 type="text"
                 value={localParams.symbol}
                 onChange={(e) => setLocalParams({...localParams, symbol: e.target.value})}
-                className="w-full bg-gray-700 text-white p-3 rounded-lg"
+                className={`w-full bg-gray-700 text-white p-3 rounded-lg ${!launchDetected && 'opacity-50 cursor-not-allowed'}`}
                 placeholder="Enter symbol"
                 required
+                disabled={!launchDetected}
               />
             </div>
             <div>
-              <label className="block text-gray-400 text-sm mb-2">Initial Supply</label>
+              <label className="block text-gray-400 text-sm mb-2">Product Supply</label>
               <input
                 type="number"
                 value={localParams.initialSupply}
                 onChange={(e) => setLocalParams({...localParams, initialSupply: e.target.value})}
-                className="w-full bg-gray-700 text-white p-3 rounded-lg"
-                placeholder="Enter initial supply"
+                className={`w-full bg-gray-700 text-white p-3 rounded-lg ${!launchDetected && 'opacity-50 cursor-not-allowed'}`}
+                placeholder="10 or more"
                 required
+                disabled={!launchDetected}
               />
             </div>
           </div>
@@ -645,57 +794,72 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
             {curveType === 'Open' && (
               <>
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Redeem Time</label>
+                  <label className="block text-gray-400 text-sm mb-2">Time Until Redemptions</label>
                   <input
                     type="number"
                     value={localParams.redeemTime}
                     onChange={(e) => setLocalParams({...localParams, redeemTime: e.target.value})}
-                    className="w-full bg-gray-700 text-white p-3 rounded-lg"
-                    placeholder="Enter redeem time"
+                    className={`w-full bg-gray-700 text-white p-3 rounded-lg ${!launchDetected && 'opacity-50 cursor-not-allowed'}`}
+                    placeholder="Enter in seconds"
                     required
+                    disabled={!launchDetected}
                   />
                   <p className="text-gray-500 text-xs mt-1">
-                    Period where trading and redemptions occur simultaneously
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">Trading Time</label>
-                  <input
-                    type="number"
-                    value={localParams.timeLimit}
-                    onChange={(e) => setLocalParams({...localParams, timeLimit: e.target.value})}
-                    className="w-full bg-gray-700 text-white p-3 rounded-lg"
-                    placeholder="Enter time limit"
-                    required
-                  />
-                  <p className="text-gray-500 text-xs mt-1">
-                    Period where only trading can occur
+                    Time until redemptions start
                   </p>
                 </div>
               </>
             )}
             <div className={curveType === 'Open' ? '' : 'col-span-3'}>
-              <label className="block text-gray-400 text-sm mb-2">Curve Expiry</label>
+              <label className="block text-gray-400 text-sm mb-2">Time Until Curve Expiry</label>
               <input
                 type="number"
-                value={localParams.expiryTime}
-                onChange={(e) => setLocalParams({...localParams, expiryTime: e.target.value})}
-                className="w-full bg-gray-700 text-white p-3 rounded-lg"
-                placeholder="Enter curve expiry"
+                value={localParams.timeLimit}
+                onChange={(e) => setLocalParams({...localParams, timeLimit: e.target.value})}
+                className={`w-full bg-gray-700 text-white p-3 rounded-lg ${!launchDetected && 'opacity-50 cursor-not-allowed'}`}
+                placeholder="Enter in seconds"
                 required
+                disabled={!launchDetected}
               />
               <p className="text-gray-500 text-xs mt-1">
-                Total time before the curve expires
+                Total before the curve expires
               </p>
             </div>
+          </div>
+          
+          {/* Add the checkbox for allowing others to list */}
+          <div className={`bg-gray-800/50 rounded-xl p-4 ${!launchDetected && 'opacity-70'}`}>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="allowOthersToList"
+                checked={localParams.allowOthersToList}
+                onChange={(e) => setLocalParams({...localParams, allowOthersToList: e.target.checked})}
+                className="h-5 w-5 rounded border-gray-600 text-purple-500 focus:ring-purple-500 focus:ring-offset-gray-800"
+                disabled={!launchDetected}
+              />
+              <label htmlFor="allowOthersToList" className={`ml-2 block text-gray-300 ${!launchDetected && 'opacity-70'}`}>
+                Allow others to list on your curve
+              </label>
+            </div>
+            <p className={`text-gray-500 text-xs mt-2 ${!launchDetected && 'opacity-70'}`}>
+              {curveType === 'Open' 
+                ? "If checked, others can list their items on your curve, you will receive surplus profit and fees."
+                : "If checked, others can list their items on your closed curve, you will receive surplus profit and fees."}
+            </p>
           </div>
   
           <div className="flex space-x-4 mt-6">
             <button
               type="submit"
-              className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-200"
+              disabled={!launchDetected}
+              className={`flex-1 py-3 ${
+                !launchDetected
+                  ? 'bg-gray-600 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
+              } text-white rounded-xl font-medium transition-all duration-200`}
             >
-              Create
+              {launchDetected ? 'Create' : 'Launch Required'}
             </button>
             <button
               type="button"
@@ -710,6 +874,9 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
     </div>
   );
 };
+
+  
+  
 
   const renderContent = () => {
     if (activeTab === 'marketplace') {
@@ -792,7 +959,7 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
               
               <div className="bg-gray-800/50 rounded-xl p-4">
                 <label className="block text-gray-400 text-sm mb-2">
-                  Custom Wallet Address (Optional)
+                  Admin Wallet (Use Any Ethereum Address)
                 </label>
                 <input
                   type="text"
@@ -873,6 +1040,43 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
             </div>
           </div>
 
+          {/* Token Address Section */}
+<div className="bg-gray-800/30 backdrop-blur-md rounded-2xl p-8 border border-gray-700/50">
+  <div className="text-center mb-8">
+    <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">
+      Store Token Address
+    </h2>
+  </div>
+  
+  {tokenAddress ? (
+    <div className="bg-gray-800/50 rounded-xl p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-gray-400 font-mono break-all text-sm">
+          {tokenAddress}
+        </p>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(tokenAddress);
+            alert("Token address copied to clipboard!");
+          }}
+          className="ml-2 p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-all duration-200"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div className="text-center py-8 bg-gray-800/50 rounded-xl">
+      <p className="text-gray-400">No token created</p>
+      <p className="text-gray-500 text-sm mt-2">
+        Mint tokens below to create your first token
+      </p>
+    </div>
+  )}
+</div>
+
           {/* Mint Tokens Section - Updated with token preview */}
           <div className="bg-gray-800/30 backdrop-blur-md rounded-2xl p-8 border border-gray-700/50">
             <div className="text-center mb-8">
@@ -895,7 +1099,7 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
                   //max="0.2"
                 />
                 <p className="text-gray-400 text-xs mt-1">
-                  The amount entered will be used to purchase tokens, purchase 1 token with 0.0000000000000116 ETH to intialize the curve
+                  The amount entered will be used to purchase tokens, purchase 1 token with 0.00000000000002 ETH to intialize the curve
                 </p>
                 {isCalculating ? (
                   <p className="text-purple-400 text-sm mt-2 flex items-center">
@@ -935,7 +1139,7 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
           <p className="text-gray-400 text-sm mb-2">Create an open trading curve</p>
           <div className="bg-purple-500/10 rounded-lg p-3 mt-2">
           <p className="text-xs text-gray-400 leading-relaxed">
-            Price discovery continues to occur even after items are redeemed. This allows for dynamic pricing throughout the entire trading period.
+            Customers can redeem or order items during the price discovery period.
           </p>
           </div>
           </button>
@@ -950,7 +1154,7 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
             <p className="text-gray-400 text-sm mb-2">Create a closed trading curve</p>
             <div className="bg-pink-500/10 rounded-lg p-3 mt-2">
             <p className="text-xs text-gray-400 leading-relaxed">
-              Redemption for items can only happen after the price discovery period is over. This ensures a fixed final price before redemptions begin.
+              Redemptions or orders can only be made after the price discovery period ends.
             </p>
           </div>
           </button>
@@ -977,24 +1181,108 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
             </div>
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent mb-4">
-            Store Marketplace
+            Welcome to the Store Marketplace!
           </h1>
-          <div className="text-gray-400 max-w-2xl mx-auto">
-            <p className="mb-4">
-              Create and manage your digital stores. Connect with customers and sell your products seamlessly.
-            </p>
-            {!user?.twitter?.username && (
-              <button
-                onClick={() => login()}
-                className="inline-flex items-center px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-200"
-              >
-                Connect with X
-              </button>
-            )}
-            {user?.twitter?.username && (
-              <p>Connected as: {user.twitter.username}</p>
-            )}
+          <p className="text-gray-400 text-lg mb-8">
+            Create your own store and launch token markets for your products!
+          </p>
+          <div className="max-w-2xl mx-auto">
+  {/* Stylized protocol description card with collapsible content */}
+  <div className="bg-gradient-to-br from-gray-800/50 via-purple-900/30 to-gray-800/50 rounded-xl border border-purple-500/20 shadow-lg mb-6 overflow-hidden transition-all duration-300 ease-in-out">
+    {/* Header - Always visible and clickable */}
+    <div 
+      className="p-4 flex items-center justify-between cursor-pointer hover:bg-purple-900/20 transition-colors duration-200"
+      onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+    >
+      <h2 className="text-xl font-semibold text-purple-300 flex items-center">
+        <span className="bg-gradient-to-r from-purple-400 to-pink-400 w-8 h-8 rounded-full flex items-center justify-center mr-3">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+        How It Works
+      </h2>
+      {/* Toggle arrow icon */}
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        className={`h-6 w-6 text-purple-300 transition-transform duration-300 ${isDescriptionExpanded ? 'transform rotate-180' : ''}`} 
+        fill="none" 
+        viewBox="0 0 24 24" 
+        stroke="currentColor"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    </div>
+    
+    {/* Collapsible content */}
+    <div 
+      className={`overflow-hidden transition-all duration-500 ease-in-out ${
+        isDescriptionExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+      }`}
+    >
+      <div className="p-4 pt-0 space-y-4">
+        <div className="flex items-start">
+          <div className="bg-purple-500/20 rounded-full p-2 mr-3 mt-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
           </div>
+          <p className="text-gray-300">
+            <span className="font-medium text-purple-300">Create a web3 store</span> and establish your brand on the blockchain.
+          </p>
+        </div>
+        
+        <div className="flex items-start">
+          <div className="bg-purple-500/20 rounded-full p-2 mr-3 mt-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <p className="text-gray-300">
+            <span className="font-medium text-purple-300">Launch price discovery curves</span> for products or categories, helping you find optimal pricing.
+          </p>
+        </div>
+        
+        <div className="flex items-start">
+          <div className="bg-purple-500/20 rounded-full p-2 mr-3 mt-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-gray-300">
+            <span className="font-medium text-purple-300">Reward loyal customers</span> with your store's token. As they make more purchases, the token price increases.
+          </p>
+        </div>
+        
+        <div className="mt-6 pt-4 border-t border-purple-500/20">
+          <p className="text-pink-300 text-sm italic text-center">
+            Launch multiple curves, build customer loyalty, and grow your business on the blockchain!
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  {/* Connection status */}
+  <div className="flex items-center justify-center bg-gray-800/50 rounded-lg py-2 px-4 border border-gray-700/50">
+    {user?.twitter?.username ? (
+      <div className="flex items-center text-green-400">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Connected as: <span className="font-mono ml-2">{user.twitter.username}</span>
+      </div>
+    ) : (
+      <div className="flex items-center text-green-400">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Connected as: <span className="font-mono ml-2 text-xs">{user?.wallet?.address}</span>
+      </div>
+    )}
+  </div>
+</div>
+  
         </div>
 
         <div className="flex justify-center space-x-4 mb-12">
