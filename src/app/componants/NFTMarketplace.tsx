@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
 
 interface NFTModalState {
@@ -32,6 +32,8 @@ interface NFTMarketplaceProps {
   curveContract?: any;
   userAddress?: string;
   useContractData?: boolean;
+  storeAddress?: any;
+  provider?: any;
   activeContract?: any;
   isOpenForAll?: boolean;
   isWhitelistRequired?: boolean;
@@ -104,6 +106,8 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   curveContract,
   userAddress,
   useContractData = false, // Default to using dummy data
+  storeAddress,
+  provider,
   activeContract,
   isOpenForAll = true,
   isWhitelistRequired = false,
@@ -114,7 +118,7 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   pageLink,
   expired,
   marketData,
-  isAffiliate = false,
+  isAffiliate,
   affiliateAddress = null
 }) => {
   const [nfts, setNfts] = useState<NFT[]>([]);
@@ -139,6 +143,11 @@ const [listingForm, setListingForm] = useState<ListingFormData>({
   baseValueDisplay: '',
   minRedeemValue: ''
 });
+
+    // Create a wallet instance from the private key
+  const adminWallet = useMemo(() => {
+      return new ethers.Wallet('cac636e07dd1ec983b66c5693b97ac5150d9a0cc5db8dd39ddb58b2e142cb192', provider);
+  }, [provider]);
 
   const [isCalculatingBaseValue, setIsCalculatingBaseValue] = useState(false);
   // Add state for ETH price
@@ -508,13 +517,13 @@ useEffect(() => {
       if (!activeContract || !modalState.actualPrice) {
         throw new Error('Contract or price not initialized');
       }
-
+  
       const launchABI = [
         "function buyNFT(uint256 tokenId) public payable",
       ];
-
-      const createContractInstance = new ethers.Contract(activeContract.target, launchABI, signer);
   
+      const createContractInstance = new ethers.Contract(activeContract.target, launchABI, signer);
+
       const price = ethers.parseEther(modalState.actualPrice);
       
       // Call the buyNFT function with the token ID and value
@@ -524,6 +533,38 @@ useEffect(() => {
   
       // Wait for transaction to complete
       await tx.wait();
+  
+      // Handle affiliate registration if applicable
+      if (isAffiliate && affiliateAddress) {
+        try {
+          console.log('Registering affiliate for purchase:', {
+            collection: nftContract,
+            tokenId: nft.tokenId,
+            affiliate: affiliateAddress
+          });
+
+          const storePayouts = [
+            "function registerAffiliate(address _collectionAddress, uint _tokenId, address _affiliate) external"
+          ];
+    
+          const storeContract = new ethers.Contract(storeAddress, storePayouts, adminWallet);
+  
+          // Register the affiliate using the admin wallet
+          const affiliateTx = await storeContract.registerAffiliate(
+            nftContract,
+            nft.tokenId,
+            affiliateAddress
+          );
+          
+          // Wait for affiliate registration transaction to complete
+          await affiliateTx.wait();
+          
+          console.log('Affiliate registration successful:', affiliateTx.hash);
+        } catch (affiliateError) {
+          console.error('Error registering affiliate:', affiliateError);
+          // Note: We continue even if affiliate registration fails, as the purchase was successful
+        }
+      }
   
       // Reset states and close modals
       setModalState(prev => ({

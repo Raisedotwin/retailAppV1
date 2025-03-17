@@ -24,6 +24,7 @@ const TraderPageContent: React.FC = () => {
   const [itemsOnCurve, setItemsOnCurve] = useState('-'); // Use dash instead of '0'
   const [contractBalance, setContractBalance] = useState('-'); // Use dash instead of '0'
   const [expiryTime, setExpiryTime] = useState('Loading...'); // Better loading state
+  const [storeAddress, setStoreAddress] = useState('');
   
   // Add ETH price state for USD conversion
   const [ethUsdPrice, setEthUsdPrice] = useState(0);
@@ -361,8 +362,12 @@ const TraderPageContent: React.FC = () => {
           const profile = await profileContractInstance.getProfileByName(params.username);
           const nativeAddr = profile[0];
           const traderAcc = profile[1];
+          const payouts = profile[5];
+
+          console.log(`Profile data:`, payouts);
           
           setTraderAddress(nativeAddr);
+          setStoreAddress(payouts);
           
           // Check active status
           const isClaimed = await profileContractInstance.isLaunchRegistered(nativeAddr);
@@ -555,16 +560,16 @@ const TraderPageContent: React.FC = () => {
                   <p className="text-xs font-medium text-gray-600">Time Left</p>
                 </div>
   
-                {/* LIQ */}
+                  {/* LIQ */}
                 <div className="text-center px-4">
                   <p className="text-lg font-bold text-violet-700">
-                    {isLoadingData ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      <p className="text-lg font-bold text-violet-700">{expiryTime}</p>
-                    )}
+                  {isLoadingData ? (
+                    <span className="animate-pulse">...</span>
+                  ) : (
+                    <span>{isExpired ? "Redemption" : "Trading Period"}</span>
+                  )}
                   </p>
-                  <p className="text-xs font-medium text-gray-600">Redemptions</p>
+                  <p className="text-xs font-medium text-gray-600">Phase</p>
                 </div>
   
                 {/* Curve Liquidity - Updated with USD */}
@@ -673,6 +678,8 @@ const TraderPageContent: React.FC = () => {
             curveContract={contractAddress}
             userAddress={walletAddress}
             useContractData={false}
+            storeAddress={storeAddress}
+            provider={provider}
             activeContract={activeContract}
             launchContract={launchContract}
             openContract={openContract}
@@ -726,6 +733,7 @@ const TraderPageContent: React.FC = () => {
                   walletAddress={walletAddress}
                   affiliateAddress={affiliateAddress}
                   contractAddress={params.contractAddress}
+                  storePayouts={storeAddress}
                   signer={signer}
                   activeContract={activeContract}
                 />

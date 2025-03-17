@@ -6,7 +6,7 @@ import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/reac
 import { ethers } from 'ethers';
 import Image from 'next/image';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
-import EarningsManagement from '../componants/EarningsManagement';
+import TradingFeesManagement from '../componants/TradingFeesManagement';
 
 const WalletPage: React.FC = () => {
   const [profileExists, setProfileExists] = useState(false);
@@ -17,6 +17,8 @@ const WalletPage: React.FC = () => {
   const [profileAddress, setProfileAddress] = useState('');
   const [claimableBalance, setClaimableBalance] = useState('0.00');
   const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(true);
+  const [payoutsAddress, setPayoutsAddress] = useState('');
+  const [name, setName] = useState('');
 
   // New store management state
   const [activeTab, setActiveTab] = useState('wallet');
@@ -26,15 +28,14 @@ const WalletPage: React.FC = () => {
     description: '',
     images: []
   });
-  const [editProductId, setEditProductId] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+
 
   // Orders management state
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isOrderModalVisible, setIsOrderModalVisible] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState('');
 
-  let rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
+  let rpcURL = EIP155_CHAINS["eip155:84532"].rpc;
 
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
@@ -143,7 +144,10 @@ const WalletPage: React.FC = () => {
       const walletAddress = currentWallet?.address || user?.wallet?.address;
 
       const profile = await profileContract.getProfile(walletAddress);
-      const payoutsAddress = profile[6];
+      const payoutsAddress = profile[5];
+      console.log('Payouts Address:', payoutsAddress);
+
+      setPayoutsAddress(payoutsAddress);
 
       if (payoutsAddress && payoutsAddress !== "0x0000000000000000000000000000000000000000") {
         const traderPayoutsInstance = new ethers.Contract(payoutsAddress, storePayoutsABI, signer);
@@ -419,22 +423,30 @@ const checkProfileAssociation = useCallback(async () => {
         const walletAddress = currentWallet?.address || user?.wallet?.address;
         
         if (walletAddress) {
-          const isAssociated = await checkProfileAssociation();
           
           // Try fetching by username first if available
           let profile = null;
           if (user?.twitter?.username) {
             profile = await fetchProfileByUsername(user.twitter.username);
-            await fetchClaimableBalance(user.twitter.username);
+            console.log('Profile fetched by username:', profile);
           }
           
           // If no profile found by username and we have an address, try fetching by address
           if (!profile) {
-            profile = await fetchProfileByAddress(walletAddress);
+            profile = await fetchProfileByAddress(walletAddress.toString());
+            console.log('Profile fetched by address:', profile);
           }
 
           if (profile) {
-            await fetchBalanceFromProfile(profile);
+            let storeName = profile[2];
+            setName(storeName);
+            if(storeName) {
+              setProfileExists(true);
+            }
+            console.log('Profile found:', storeName);
+            let payouts = profile[5];
+            console.log('Payouts Address:', payouts);
+            setPayoutsAddress(payouts);
           }
         }
       } catch (error) {
@@ -509,7 +521,7 @@ const checkProfileAssociation = useCallback(async () => {
 
   const MyCurvesContent = () => (
     <div className="bg-gray-800 p-6 rounded-lg">
-      <h2 className="text-xl font-bold text-white mb-6">My Curves</h2>
+      <h2 className="text-xl font-bold text-white mb-6">Collect Proceeds From Sales</h2>
       <div className="space-y-4">
         {[
           { address: '0x1234567890abcdef1234567890abcdef12345678', name: 'Cool Clothing' },
@@ -567,34 +579,11 @@ const checkProfileAssociation = useCallback(async () => {
 
   return (
     <div className="min-h-screen bg-black flex flex-col p-6">
-      {!isProfileAssociated && !user?.twitter?.username ? (
-        <div className="max-w-3xl w-full mx-auto p-8 bg-gray-900 rounded-lg shadow-lg flex flex-col items-center">
-          <div className="bg-white/10 p-4 rounded-full mb-6">
-            <Image src="/icons/logo.png" alt="Wallet" width={80} height={80} className="rounded-full" />
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-6">Connect Twitter or Wallet To View</h2>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={loginWithPrivy}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg shadow-lg hover:from-blue-600 hover:to-purple-700 transition duration-300"
-            >
-              Connect with X
-            </button>
-            {!nativeAddress && (
-              <button
-                onClick={loginWithPrivy}
-                className="px-6 py-3 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg hover:from-green-500 hover:to-blue-600 transition duration-300"
-              >
-                Connect Wallet
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
+     
         <div className="max-w-6xl w-full mx-auto">
-          {/* Tab Navigation */}
+          {/* Tab Navigation - Updated to replace Earnings with Trading Fees */}
           <div className="flex space-x-2 mb-6 overflow-x-auto">
-            {['wallet', 'orders', 'earnings', 'my-curves'].map((tab) => (
+            {['wallet', 'trading-fees', 'redemptions'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -607,19 +596,22 @@ const checkProfileAssociation = useCallback(async () => {
                 {tab.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
               </button>
             ))}
-            {activeTab !== 'orders' && (
-              <div className="relative">
-                <button
-                  onClick={() => setActiveTab('orders')}
-                  className="px-6 py-3 bg-gradient-to-r from-amber-500 to-red-600 text-white rounded-lg shadow-lg hover:from-amber-600 hover:to-red-700 transition duration-300 flex items-center space-x-2"
-                >
-                  <span>Orders</span>
-                  <div className="absolute -top-0 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                    {orders.length}
-                  </div>
-                </button>
-              </div>
-            )}
+            {/* Only keeping the orange Orders tab */}
+            <div className="relative">
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`px-6 py-3 ${
+                  activeTab === 'orders'
+                    ? 'bg-gradient-to-r from-orange-500 to-red-600'
+                    : 'bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-600 hover:to-red-700'
+                } text-white rounded-lg shadow-lg transition duration-300 flex items-center space-x-2`}
+              >
+                <span>Orders</span>
+                <div className="absolute -top-0 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                  {orders.length}
+                </div>
+              </button>
+            </div>
           </div>
   
           {/* Tab Content */}
@@ -629,43 +621,8 @@ const checkProfileAssociation = useCallback(async () => {
                 <div className="flex flex-col md:flex-row justify-between items-center mb-8">
                   {/* Existing wallet content */}
                   <div className="flex items-center space-x-4">
-                    <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Raise Wallet:</h2>
-                    {profileExists && (
-                      <div className="flex items-center space-x-4">
-                        <button
-                          type="button"
-                          onClick={handleWalletClaim}
-                          className="px-4 py-2 bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg hover:from-green-500 hover:to-blue-600 transition duration-300"
-                        >
-                          Claim
-                        </button>
-                        <div className="flex flex-col items-end">
-                          {isProfileAssociated ? (
-                            <button
-                              onClick={handleWithdrawRewards}
-                              className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors cursor-pointer"
-                            >
-                              Get Rewards!
-                            </button>
-                          ) : (
-                            <span className="text-sm font-medium text-blue-400">Get Rewards!</span>
-                          )}
-                          <div className="bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">
-                            <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-                              {formatEthValue(claimableBalance)} ETH
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <button
-                      onClick={() => setShowSwitchAddressModal(true)}
-                      className="px-4 py-2 bg-gradient-to-r from-orange-400 to-purple-500 text-white rounded-lg shadow-lg hover:from-orange-500 hover:to-purple-600 transition duration-300"
-                    >
-                      Switch Address
-                    </button>
+                    <h2 className="text-3xl font-bold text-white mb-4 md:mb-0">Dashboard Panel:</h2>
+                  
                   </div>
                 </div>
   
@@ -675,38 +632,22 @@ const checkProfileAssociation = useCallback(async () => {
                     <h3 className="text-lg font-semibold text-white">Connected Address:</h3>
                     {nativeAddress && (
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        isProfileAssociated 
+                        profileExists
                           ? 'bg-green-500/20 text-green-300 border border-green-500/30' 
                           : 'bg-red-500/20 text-red-300 border border-red-500/30'
                       }`}>
-                        {isProfileAssociated ? 'Linked to Raise' : 'Not Linked to Raise'}
+                        {profileExists ? `Linked to ${name}` : 'Not Linked to a store'}
                       </span>
                     )}
                   </div>
                   
                   <p className="text-gray-400 break-words">{nativeAddress || 'No Address Connected'}</p>
-                  <div className="mt-4">
-                    <h3 className="text-lg font-semibold text-white mb-2">Store Address:</h3>
-                    <p className="text-gray-400 break-words">
-                      {profileAddress || 'No Raise Wallet Connected'}
-                    </p>
-                  </div>
-                </div>
-  
-                <div className="mb-8">
-                  <div className="p-6 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
-                    <div className="text-center">
-                      <p className="text-gray-400 text-sm mb-2">Store Profit</p>
-                      <p className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">
-                        {ethBalance} ETH
-                      </p>
-                    </div>
-                  </div>
+        
                 </div>
   
                 <div>
                   <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 mb-4">
-                    How To Use Your Raise Wallet
+                    How To Use The Seller Dashboard
                   </h2>
                   <div className="relative w-full aspect-video bg-gray-800 rounded-xl overflow-hidden shadow-xl">
                     <iframe 
@@ -724,15 +665,18 @@ const checkProfileAssociation = useCallback(async () => {
             )}
             
             {activeTab === 'orders' && <OrdersContent />}
-            {activeTab === 'earnings' && (
+            
+            {/* Replacing Earnings with Trading Fees component */}
+            {activeTab === 'trading-fees' && (
               <div className="p-8">
-                <EarningsManagement />
+                <TradingFeesManagement />
               </div>
             )}
-            {activeTab === 'my-curves' && <MyCurvesContent />}
+            
+            {activeTab === 'redemptions' && <MyCurvesContent />}
           </div>
         </div>
-      )}
+  
   
       {/* Modals */}
       {isModalVisible && (
@@ -750,42 +694,42 @@ const checkProfileAssociation = useCallback(async () => {
         </div>
       )}
   
+      {/* Switch Address Modal */}
       {showSwitchAddressModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 flex flex-col items-center max-w-md w-full mx-4">
-            <div className="bg-white/10 p-4 rounded-full mb-6">
-              <Image src="/icons/logo.png" alt="Switch Address" width={80} height={80} className="rounded-full" />
+          <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-white/10 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-white">Switch Address</h3>
+              <button 
+                onClick={() => setShowSwitchAddressModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
             </div>
-            <h3 className="text-2xl font-bold text-white mb-4">Switch Address</h3>
-            <div className="w-full mb-6">
+            
+            <div className="mb-6">
+              <label className="block text-gray-300 text-sm mb-2">New Address</label>
               <input
                 type="text"
-                placeholder="Link new EVM address to Raise"
                 value={newAddress}
                 onChange={(e) => setNewAddress(e.target.value)}
+                placeholder="Enter new Ethereum address"
                 className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
               />
             </div>
-            <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mb-6"></div>
-            <div className="flex space-x-4 w-full">
-              <button 
-                onClick={() => setShowSwitchAddressModal(false)}
-                className="w-full py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all duration-200"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleSwitchAddress}
-                disabled={isSwitching || !newAddress}
-                className={`w-full py-3 ${
-                  isSwitching || !newAddress 
-                    ? 'bg-gray-600 cursor-not-allowed' 
-                    : 'bg-blue-600 hover:bg-blue-700'
-                } text-white rounded-lg font-medium transition-all duration-200`}
-              >
-                {isSwitching ? 'Switching...' : 'Switch'}
-              </button>
-            </div>
+            
+            <button
+              onClick={handleSwitchAddress}
+              disabled={isSwitching}
+              className={`w-full py-3 rounded-lg font-medium transition-all duration-200 ${
+                isSwitching
+                  ? 'bg-gray-600 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+              } text-white`}
+            >
+              {isSwitching ? 'Processing...' : 'Switch Address'}
+            </button>
           </div>
         </div>
       )}
@@ -880,4 +824,3 @@ const checkProfileAssociation = useCallback(async () => {
 }
 
 export default WalletPage;
-              
