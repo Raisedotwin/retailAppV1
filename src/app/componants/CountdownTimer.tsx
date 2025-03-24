@@ -42,7 +42,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
       const now = Math.floor(Date.now() / 1000); // Current time in seconds
       
       // If expired
-      if (timestampSec <= now) {
+      if (timestampSec <= now) { 
         setTimeRemaining('Expired');
         setIsExpired(true);
         setPercentRemaining(0);

@@ -10,12 +10,9 @@ interface CurveParams {
   initialSupply: string;
   name: string;
   symbol: string;
-  redeemTime: string;
   timeLimit: string;
-  expiryTime: string;
   allowOthersToList: boolean; // Add this new field
 }
-
 
 interface LaunchData {
   address: string;
@@ -61,9 +58,7 @@ const Chat: React.FC = () => {
     initialSupply: '',
     name: '',
     symbol: '',
-    redeemTime: '',
     timeLimit: '',
-    expiryTime: '',
     allowOthersToList: true // Default to true
   });
   const [storeFormData, setStoreFormData] = useState<StoreFormData>({
@@ -88,18 +83,18 @@ const Chat: React.FC = () => {
   let wallet = wallets[0];
 
   // Contract addresses and ABIs
-  const createAddr = '0xc2B926A65E1e99a2db80C3C2Ff311F367Aa41775';
+  const createAddr = '0x39cAAb47Fd2205D4711E42BeEF44e53D928ac25D';
   const createABI = require("../abi/createAccount");
-  const launchFactory = '0x2409d96fe23A0Ef255c6Ef1208B7963B994b7167';
+  const launchFactory = '0xa2803f025185476F108bf79039e0bfd00207A981';
   const launchFactoryABI = require("../abi/launchFactory");
-  const openFactory = '0x9b211F720fAf537C744ecbFbeFeBA0731e3C34C9';
+  const openFactory = '0x17487e2adA44408CfF05a97a36e3bCb43deFDc35';
   const openFactoryABI = require("../abi/openFactory");
-  const profileAddr = '0x33E04eC91A04F8791927C06EF5E862e6AA09b71a';
+  const profileAddr = '0xC829522b59B44EDa9303A2C643d4CCD3099F1c83';
   const profileABI = require("../abi/profile");
   const launchABI = require("../abi/launch");
   const openABI = require("../abi/open");
 
-  const tokenMarketAddr = '0x5Cd11eafc8722992Eb64e4cCBdE77f86283C7191';
+  const tokenMarketAddr = '0x038337c1e4d838a8D6e16F11f974c901363D306F';
   const tokenMarketABI = require("../abi/tokenMarket");
 
   // Then update your useEffect for Twitter username changes:
@@ -392,60 +387,6 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
     }
   };
 
-  const launchOpenCurve = async () => {
-    setIsLaunchingOpenCurve(true);
-    try {
-      const signer:any = await getSigner();
-      if (!signer) {
-        alert('Failed to get signer. Please connect your wallet.');
-        return;
-      }
-  
-      const openFactoryContract = new ethers.Contract(openFactory, openFactoryABI, signer);
-      const tx = await openFactoryContract.createTokenMarket();
-      const receipt = await tx.wait();
-      
-      let tokenMarketAddress = '';
-      if (receipt.events && receipt.events.length > 0) {
-        tokenMarketAddress = receipt.events[0].args ? receipt.events[0].args[0] : 'Address not found';
-      }
-      
-      alert(`Open curve token market created successfully! Address: ${tokenMarketAddress}`);
-    } catch (error) {
-      console.error('Error creating open curve token market:', error);
-      alert(`Error creating open curve: ${'Please try again.'}`);
-    } finally {
-      setIsLaunchingOpenCurve(false);
-    }
-  };
-  
-  const launchClosedCurve = async () => {
-    setIsLaunchingClosedCurve(true);
-    try {
-      const signer:any = await getSigner();
-      if (!signer) {
-        alert('Failed to get signer. Please connect your wallet.');
-        return;
-      }
-  
-      const launchFactoryContract = new ethers.Contract(launchFactory, launchFactoryABI, signer);
-      const tx = await launchFactoryContract.createTokenMarket();
-      const receipt = await tx.wait();
-      
-      let tokenMarketAddress = '';
-      if (receipt.events && receipt.events.length > 0) {
-        tokenMarketAddress = receipt.events[0].args ? receipt.events[0].args[0] : 'Address not found';
-      }
-      
-      alert(`Closed curve token market created successfully! Address: ${tokenMarketAddress}`);
-    } catch (error) {
-      console.error('Error creating closed curve token market:', error);
-      alert(`Error creating closed curve: ${'Please try again.'}`);
-    } finally {
-      setIsLaunchingClosedCurve(false);
-    }
-  };
-
   const handleCreateCurve = async (isOpen: boolean): Promise<void> => {
     try {
       const signer:any = await getSigner();
@@ -482,7 +423,6 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
       // Convert string values to appropriate types
       const initialSupply = ethers.parseUnits(curveParams.initialSupply, 18);
       const timeLimit = parseInt(curveParams.timeLimit);
-      const redeemTime = parseInt(curveParams.redeemTime);
   
       if (isOpen) {
         // Handle Open Curve creation using open contract ABI
@@ -491,12 +431,9 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
           initialSupply,
           curveParams.name,
           curveParams.symbol,
-          redeemTime,
           timeLimit,
-          80000, //we will get rid of this in next update 
           curveParams.allowOthersToList // Use the value from the checkbox
         );
-        await tx.wait();
         alert('Open curve created successfully!');
       } else {
         // Handle Launch (Closed) Curve creation using launch contract ABI
@@ -508,7 +445,6 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
           timeLimit,
           curveParams.allowOthersToList // Use the value from the checkbox
         );
-        await tx.wait();
         alert('Closed curve created successfully!');
       }
   
@@ -524,9 +460,7 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
         initialSupply: '',
         name: '',
         symbol: '',
-        redeemTime: '',
         timeLimit: '',
-        expiryTime: '',
         allowOthersToList: true // Reset to default
       });
   
@@ -582,70 +516,187 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
     }
   }, [wallet, activeTab]);
 
-  // Add this state variable to your CurveModal component
-const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) => {
+ // Update the launchOpenCurve and launchClosedCurve functions inside the CurveModal component:
+
+ // Update the CurveModal component with a force refresh mechanism:
+
+ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) => {
+  // Add a key state to force component remounting
+  const [refreshKey, setRefreshKey] = useState<number>(0);
+  
   const [localParams, setLocalParams] = useState<CurveParams>({
     initialSupply: curveParams.initialSupply,
     name: curveParams.name,
     symbol: curveParams.symbol,
-    redeemTime: curveParams.redeemTime,
     timeLimit: curveParams.timeLimit,
-    expiryTime: curveParams.expiryTime,
     allowOthersToList: curveParams.allowOthersToList
   });
   
-  // New state variables for launch detection
+  // State variables for launch detection
   const [isCheckingLaunch, setIsCheckingLaunch] = useState<boolean>(true);
   const [launchAddress, setLaunchAddress] = useState<string>('');
   const [launchDetected, setLaunchDetected] = useState<boolean>(false);
+  
+  // Add a formatted time display state
+  const [formattedTime, setFormattedTime] = useState<string>('');
 
-  // Check for launch address when modal opens
-  useEffect(() => {
-    const checkForLaunch = async () => {
-      setIsCheckingLaunch(true);
-      try {
-        const signer: any = await getSigner();
-        if (!signer) {
-          setLaunchDetected(false);
-          return;
-        }
+  // Function to calculate and format time based on seconds
+  const calculateTimeDisplay = (seconds: number) => {
+    if (!seconds || seconds <= 0) {
+      setFormattedTime('');
+      return;
+    }
+    
+    const days = Math.floor(seconds / 86400); // 86400 seconds in a day
+    const hours = Math.floor((seconds % 86400) / 3600); // 3600 seconds in an hour
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    let timeString = '';
+    
+    if (days > 0) {
+      timeString += `${days} day${days !== 1 ? 's' : ''}`;
+    }
+    
+    if (hours > 0) {
+      timeString += timeString ? ` ${hours} hour${hours !== 1 ? 's' : ''}` : `${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+    
+    if (minutes > 0 && days === 0) { // Only show minutes if less than a day
+      timeString += timeString ? ` ${minutes} minute${minutes !== 1 ? 's' : ''}` : `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    }
+    
+    setFormattedTime(timeString || 'Less than a minute');
+  };
 
-        const userAddress = await signer.getAddress();
+  // Function to check for launch address - improved with retry mechanism
+  const checkForLaunch = async (retry = true) => {
+    setIsCheckingLaunch(true);
+    try {
+      const signer: any = await getSigner();
+      if (!signer) {
+        setLaunchDetected(false);
+        return;
+      }
+
+      const userAddress = await signer.getAddress();
+      
+      // Get the most recent launch address from profile contract
+      const profileContract = new ethers.Contract(profileAddr, profileABI, signer);
+      const launchCount = await profileContract.launchCount(userAddress);
+      
+      if (launchCount.toString() === '0') {
+        // No launches found
+        setLaunchDetected(false);
+        setLaunchAddress('');
+      } else {
+        // Get the most recent launch
+        const recentLauncher = await profileContract.getLaunch(userAddress, launchCount);
+        const address = recentLauncher.launchAddr;
         
-        // Get the most recent launch address from profile contract
-        const profileContract = new ethers.Contract(profileAddr, profileABI, signer);
-        const launchCount = await profileContract.launchCount(userAddress);
-        
-        if (launchCount.toString() === '0') {
-          // No launches found
+        if (!address || address === '0x0000000000000000000000000000000000000000') {
           setLaunchDetected(false);
           setLaunchAddress('');
         } else {
-          // Get the most recent launch
-          const recentLauncher = await profileContract.getLaunch(userAddress, launchCount);
-          const address = recentLauncher.launchAddr;
-          
-          if (!address || address === '0x0000000000000000000000000000000000000000') {
-            setLaunchDetected(false);
-            setLaunchAddress('');
-          } else {
-            setLaunchDetected(true);
-            setLaunchAddress(address);
-          }
+          setLaunchDetected(true);
+          setLaunchAddress(address);
         }
-      } catch (error) {
-        console.error('Error checking for launch:', error);
-        setLaunchDetected(false);
-        setLaunchAddress('');
-      } finally {
-        setIsCheckingLaunch(false);
       }
-    };
-    
+    } catch (error) {
+      console.error('Error checking for launch:', error);
+      setLaunchDetected(false);
+      setLaunchAddress('');
+    } finally {
+      setIsCheckingLaunch(false);
+    }
+  };
+
+  // Force a refresh of the component
+  const forceRefresh = () => {
+    setRefreshKey(prevKey => prevKey + 1);
+  };
+
+  // Modified launchOpenCurve function with enhanced transaction handling
+  const launchOpenCurve = async () => {
+    setIsLaunchingOpenCurve(true);
+    try {
+      const signer: any = await getSigner();
+      if (!signer) {
+        alert('Failed to get signer. Please connect your wallet.');
+        return;
+      }
+  
+      const openFactoryContract = new ethers.Contract(openFactory, openFactoryABI, signer);
+      const tx = await openFactoryContract.createTokenMarket();
+      
+      // Show pending message
+      alert('Transaction submitted! Waiting for confirmation...');
+      
+      // Wait for blockchain state to update (additional delay)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Force refresh the component
+      forceRefresh();
+      
+      // Run the check for launch
+      await checkForLaunch();
+      
+      alert('Open curve successfully created! You can now configure it.');
+    } catch (error) {
+      console.error('Error creating open curve token market:', error);
+      alert(`Error creating open curve: ${'Please try again.'}`);
+    } finally {
+      setIsLaunchingOpenCurve(false);
+    }
+  };
+  
+  // Modified launchClosedCurve function with enhanced transaction handling
+  const launchClosedCurve = async () => {
+    setIsLaunchingClosedCurve(true);
+    try {
+      const signer: any = await getSigner();
+      if (!signer) {
+        alert('Failed to get signer. Please connect your wallet.');
+        return;
+      }
+  
+      const launchFactoryContract = new ethers.Contract(launchFactory, launchFactoryABI, signer);
+      const tx = await launchFactoryContract.createTokenMarket();
+      
+      // Show pending message
+      alert('Transaction submitted! Waiting for confirmation...');
+      
+      // Wait for blockchain state to update (additional delay)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Force refresh the component
+      forceRefresh();
+      
+      // Run the check for launch
+      await checkForLaunch();
+      
+      alert('Closed curve successfully created! You can now configure it.');
+    } catch (error) {
+      console.error('Error creating closed curve token market:', error);
+      alert(`Error creating closed curve: ${'Please try again.'}`);
+    } finally {
+      setIsLaunchingClosedCurve(false);
+    }
+  };
+
+  // Manual refresh button handler
+  const handleManualRefresh = async () => {
+    setIsCheckingLaunch(true);
+    // Force a small delay to ensure visual feedback
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await checkForLaunch();
+  };
+
+  // Reset and check for launch when component mounts or when refreshKey changes
+  useEffect(() => {
     if (isOpen) {
       checkForLaunch();
     }
-  }, [isOpen]);
+  }, [isOpen, refreshKey]);
 
   // Initialize local state when modal opens
   useEffect(() => {
@@ -653,12 +704,27 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
       initialSupply: curveParams.initialSupply,
       name: curveParams.name,
       symbol: curveParams.symbol,
-      redeemTime: curveParams.redeemTime,
       timeLimit: curveParams.timeLimit,
-      expiryTime: curveParams.expiryTime,
       allowOthersToList: curveParams.allowOthersToList
     });
-  }, [isOpen]);
+    
+    // Calculate formatted time based on initial timeLimit
+    if (curveParams.timeLimit) {
+      calculateTimeDisplay(Number(curveParams.timeLimit));
+    }
+  }, [isOpen, refreshKey]);
+  
+  // Update formatted time whenever timeLimit changes
+  useEffect(() => {
+    calculateTimeDisplay(Number(localParams.timeLimit));
+  }, [localParams.timeLimit]);
+  
+  // Handle time limit change with calculation
+  const handleTimeLimitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTimeLimit = e.target.value;
+    setLocalParams({...localParams, timeLimit: newTimeLimit});
+    calculateTimeDisplay(Number(newTimeLimit));
+  };
 
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
@@ -697,9 +763,25 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
           </p>
         </div>
         
-        {/* Launch status indicator */}
+        {/* Launch status indicator with manual refresh button */}
         <div className="mb-6 bg-gray-800/50 rounded-xl p-4 border border-gray-700/50">
-          <h4 className="text-lg font-semibold text-white mb-2">Launch Status</h4>
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="text-lg font-semibold text-white">Launch Status</h4>
+            <button 
+              onClick={handleManualRefresh}
+              disabled={isCheckingLaunch}
+              className={`px-3 py-1 rounded-lg text-xs flex items-center space-x-1 ${
+                isCheckingLaunch 
+                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed' 
+                  : 'bg-purple-600 text-white hover:bg-purple-700'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 ${isCheckingLaunch ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>{isCheckingLaunch ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          </div>
           
           {isCheckingLaunch ? (
             <div className="flex items-center space-x-3 text-gray-400">
@@ -746,7 +828,7 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
           )}
         </div>
         
-        {/* Configure curve parameters section */}
+        {/* The rest of your component remains the same */}
         <h4 className="text-lg font-semibold text-white mb-4">List A Product Or Category Of Products</h4>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Token Details Row */}
@@ -789,41 +871,34 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
             </div>
           </div>
   
-          {/* Time Parameters Row */}
+          {/* Time Parameters Row - MODIFIED */}
           <div className="grid grid-cols-3 gap-4">
-            {curveType === 'Open' && (
-              <>
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">Time Until Redemptions</label>
-                  <input
-                    type="number"
-                    value={localParams.redeemTime}
-                    onChange={(e) => setLocalParams({...localParams, redeemTime: e.target.value})}
-                    className={`w-full bg-gray-700 text-white p-3 rounded-lg ${!launchDetected && 'opacity-50 cursor-not-allowed'}`}
-                    placeholder="Enter in seconds"
-                    required
-                    disabled={!launchDetected}
-                  />
-                  <p className="text-gray-500 text-xs mt-1">
-                    Time until redemptions start
-                  </p>
-                </div>
-              </>
-            )}
             <div className={curveType === 'Open' ? '' : 'col-span-3'}>
               <label className="block text-gray-400 text-sm mb-2">Time Until Curve Expiry</label>
               <input
                 type="number"
                 value={localParams.timeLimit}
-                onChange={(e) => setLocalParams({...localParams, timeLimit: e.target.value})}
+                onChange={handleTimeLimitChange}
                 className={`w-full bg-gray-700 text-white p-3 rounded-lg ${!launchDetected && 'opacity-50 cursor-not-allowed'}`}
                 placeholder="Enter in seconds"
                 required
                 disabled={!launchDetected}
               />
-              <p className="text-gray-500 text-xs mt-1">
-                Total before the curve expires
-              </p>
+              <div className="mt-2 space-y-1">
+                <p className="text-gray-500 text-xs">
+                  Total before the curve expires
+                </p>
+                {formattedTime && (
+                  <div className="bg-purple-500/10 rounded-lg p-2 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-purple-400 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-purple-300 text-xs font-medium">
+                      = {formattedTime}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
@@ -874,10 +949,6 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
     </div>
   );
 };
-
-  
-  
-
   const renderContent = () => {
     if (activeTab === 'marketplace') {
       return (
@@ -993,54 +1064,64 @@ const CurveModal: React.FC<CurveModalProps> = ({ isOpen, onClose, curveType }) =
       return (
         <div className="max-w-lg mx-auto space-y-8">
           {/* Recent Launches Section */}
-          <div className="bg-gray-800/30 backdrop-blur-md rounded-2xl p-8 border border-gray-700/50">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">
-                Recent Launches
-              </h2>
+<div className="bg-gray-800/30 backdrop-blur-md rounded-2xl p-8 border border-gray-700/50">
+  <div className="text-center mb-8">
+    <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">
+      Recent Launches
+    </h2>
+  </div>
+  <div className="space-y-4">
+    {isLoadingLaunches ? (
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
+        <p className="text-gray-400 mt-4">Loading launches...</p>
+      </div>
+    ) : recentLaunches.length > 0 ? (
+      // Only show the first 4 launches
+      recentLaunches.slice(0, 4).map((launch, index) => (
+        <div 
+          key={launch.address}
+          className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50 hover:border-purple-500/20 transition-all duration-200"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-gray-400 text-sm font-mono">
+                {launch.address.substring(0, 6)}...{launch.address.substring(38)}
+              </p>
+              <p className="text-gray-500 text-xs mt-1">
+                Launched on {new Date(launch.date).toLocaleDateString()}
+              </p>
             </div>
-            <div className="space-y-4">
-              {isLoadingLaunches ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-                  <p className="text-gray-400 mt-4">Loading launches...</p>
-                </div>
-              ) : recentLaunches.length > 0 ? (
-                recentLaunches.map((launch, index) => (
-                  <div 
-                    key={launch.address}
-                    className="bg-gray-800/50 rounded-xl p-4 border border-gray-700/50 hover:border-purple-500/20 transition-all duration-200"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-gray-400 text-sm font-mono">
-                          {launch.address.substring(0, 6)}...{launch.address.substring(38)}
-                        </p>
-                        <p className="text-gray-500 text-xs mt-1">
-                          Launched on {new Date(launch.date).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <span 
-                        className={`px-3 py-1 rounded-full text-xs ${
-                          launch.status === 'active' 
-                            ? 'bg-green-500/20 text-green-400' 
-                            : 'bg-gray-500/20 text-gray-400'
-                        }`}
-                      >
-                        {launch.status}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-400">No launches found</p>
-                </div>
-              )}
-            </div>
+            <span 
+              className={`px-3 py-1 rounded-full text-xs ${
+                launch.status === 'active' 
+                  ? 'bg-green-500/20 text-green-400' 
+                  : 'bg-gray-500/20 text-gray-400'
+              }`}
+            >
+              {launch.status}
+            </span>
           </div>
+        </div>
+      ))
+    ) : (
+      <div className="text-center py-8">
+        <p className="text-gray-400">No launches found</p>
+      </div>
+    )}
 
-          {/* Token Address Section */}
+     {/* Show total count if there are more than 4 launches */}
+    {recentLaunches.length > 4 && (
+      <div className="text-center pt-4 border-t border-gray-700/30">
+        <p className="text-gray-400 text-sm">
+          Showing 4 of {recentLaunches.length} total launches
+        </p>
+      </div>
+    )}
+  </div>
+</div>
+
+{/* Token Address Section */}
 <div className="bg-gray-800/30 backdrop-blur-md rounded-2xl p-8 border border-gray-700/50">
   <div className="text-center mb-8">
     <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 bg-clip-text text-transparent">

@@ -29,16 +29,8 @@ interface NFTCardProps {
   nft: NFT;
 }
 
-// Mock placeholder for loading state
-const mockNFTs: NFT[] = [
-  // This will be replaced with real data
-];
-
 // NFT card component with improved image fitting
 const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
-  const timeUntilRedeemable = new Date(nft.redeemableAt).getTime() - new Date().getTime();
-  const daysUntilRedeemable = Math.max(0, Math.floor(timeUntilRedeemable / (1000 * 60 * 60 * 24)));
-
   // Function to format prices nicely
   const formatPrice = () => {
     if (nft.priceUsd) {
@@ -53,6 +45,10 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
     return <span className="font-bold">{nft.price}</span>;
   };
 
+  // Add fallback URL for image errors
+  const [imgError, setImgError] = useState(false);
+  const handleImgError = () => setImgError(true);
+
   return (
     <Link href={nft.storeLink || "#"} passHref>
       <div className="group relative bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl hover:translate-y-[-4px] hover:bg-white/90 cursor-pointer">
@@ -60,15 +56,16 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
         
         <div className="relative aspect-square w-full overflow-hidden">
           <img 
-            src={nft.image} 
+            src={imgError ? "/api/placeholder/400/400" : nft.image} 
             alt={nft.name}
             className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+            onError={handleImgError}
           />
           
           {/* Category Tag */}
           <div className="absolute top-3 right-3">
             <div className="bg-black/70 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium">
-              {nft.category}
+              {nft.category || "Uncategorized"}
             </div>
           </div>
 
@@ -77,11 +74,14 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
             <div className="flex items-center bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg transition-transform duration-300 group-hover:scale-105">
               <img 
                 src={nft.merchantImage || "/api/placeholder/40/40"} 
-                alt={nft.merchantName || nft.storeName}
+                alt={nft.merchantName || nft.storeName || "Store"}
                 className="w-6 h-6 rounded-full ring-2 ring-purple-500 object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/api/placeholder/40/40";
+                }}
               />
               <span className="ml-2 text-sm font-semibold text-gray-800 truncate max-w-[120px]">
-                {nft.merchantName || nft.storeName}
+                {nft.merchantName || nft.storeName || "Store"}
               </span>
             </div>
           </div>
@@ -97,7 +97,7 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
         <div className="p-5">
           <div className="flex justify-between items-start mb-3">
             <div>
-              <h3 className="font-bold text-xl text-gray-900 mb-1 group-hover:text-purple-600 transition-colors duration-300">{nft.name}</h3>
+              <h3 className="font-bold text-xl text-gray-900 mb-1 group-hover:text-purple-600 transition-colors duration-300">{nft.name || "Unnamed Item"}</h3>
             </div>
             <div className="flex items-center bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
               <span className="mr-2">💰</span>
@@ -105,10 +105,14 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
             </div>
           </div>
 
-          {/* Redeemable Timer */}
           <div className="flex items-center text-sm text-gray-600 mb-3">
             <span className="mr-2">⏱️</span>
-            <span>Redeemable in {nft.redeemableAt} days</span>
+            <span> Condition {nft.redeemableAt || "N/A"} </span>
+          </div>
+
+          <div className="flex items-center text-sm text-gray-600 mb-3">
+            <span className="mr-2">⏱️</span>
+            <span> Shipping {nft.mintedAt || "N/A"} </span>
           </div>
           
           {/* Visual indication for clickable card */}
@@ -125,20 +129,43 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
   );
 };
 
-// Updated MarketplacePage component with special graphic for the newest item
+// Updated MarketplacePage component with better error handling and loading states
 const MarketplacePage: React.FC = () => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ethUsdPrice, setEthUsdPrice] = useState<number>(0);
+  const [loadingStatus, setLoadingStatus] = useState<string>("Initializing...");
 
-  // Use Base network RPC URL
-  let rpcURL = EIP155_CHAINS["eip155:84532"].rpc;
-  const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
+  // Add multiple RPC URLs for fallback
+  const rpcURLs = useMemo(() => [
+    EIP155_CHAINS["eip155:84532"].rpc,
+    "https://mainnet.base.org", // Alternative Base RPC
+    "https://1rpc.io/base", // Another alternative
+  ], []);
+
+  // Create provider with fallback mechanism
+  const provider = useMemo(() => {
+    // Try to create provider with first URL
+    try {
+      const mainProvider = new ethers.JsonRpcProvider(rpcURLs[0]);
+      return mainProvider;
+    } catch (e) {
+      console.error("Failed to connect to primary RPC, trying fallback:", e);
+      try {
+        // Try fallback URL if first fails
+        return new ethers.JsonRpcProvider(rpcURLs[1]);
+      } catch (e2) {
+        console.error("Failed to connect to secondary RPC:", e2);
+        // Last attempt
+        return new ethers.JsonRpcProvider(rpcURLs[2]);
+      }
+    }
+  }, [rpcURLs]);
   
   // Contract addresses and ABIs
-  const marketDataContractAddr = '0xcB85f27798925698a2bDd15E99394B933E925fD1';
-  const profileAddr = '0x33E04eC91A04F8791927C06EF5E862e6AA09b71a';
+  const marketDataContractAddr = '0x45bDde4801230164fD4249717947D8658E8A6105';
+  const profileAddr = '0xC829522b59B44EDa9303A2C643d4CCD3099F1c83';
   
   // Simplified ABIs for the required functions
   const marketDataABI = [
@@ -147,10 +174,11 @@ const MarketplacePage: React.FC = () => {
   ];
   
   const phygitalABI = [
-    "function getAddressName() view returns (string)",
-    "function metadata(uint256) view returns (string name, string description, string itemPhoto, string weightClass, uint256 dateUntilRedemption, uint256 launchDate, string store, string category, string size, address owner, uint256 redeemValue)",
+    "function metadata(uint256) view returns (string name, string description, string itemPhoto, string condition, string shipping, string store, string category, string size, address owner, uint redeemValue)",
     "function getAddressLaunch() view returns (address)",
-    "function getBaseValue(uint256) view returns (uint256)"
+    "function getBaseValue(uint256) view returns (uint256)",
+    "function getOwner(uint256 _tokenId) view returns (address)",
+    "function name() view returns (string memory)"
   ];
   
   const launchABI = [
@@ -161,25 +189,65 @@ const MarketplacePage: React.FC = () => {
     "function getStoreNameByLaunchAddress(address _launchAddress) view returns (string memory, string memory, string memory)"
   ];
 
-  // Add a new useEffect to fetch the ETH/USD price
+  // Add a new useEffect to fetch the ETH/USD price with retries
   useEffect(() => {
-    const fetchEthPrice = async () => {
+    const fetchEthPrice = async (retryCount = 0) => {
       try {
-        // Fetch ETH price from CoinGecko API
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+        // Try multiple price APIs
+        const apis = [
+          'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd',
+          'https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD'
+        ];
+        
+        // Try first API
+        const response = await fetch(apis[0], { signal: AbortSignal.timeout(3000) });
+        if (!response.ok) throw new Error("Primary price API failed");
+        
         const data = await response.json();
-        setEthUsdPrice(data.ethereum.usd);
-        console.log(`Fetched ETH price: $${data.ethereum.usd}`);
+        const price = data.ethereum?.usd;
+        
+        if (!price && retryCount < 1) {
+          // Try second API if first fails
+          console.log("Trying alternate price API...");
+          const altResponse = await fetch(apis[1], { signal: AbortSignal.timeout(3000) });
+          const altData = await altResponse.json();
+          const altPrice = altData.USD;
+          
+          if (altPrice) {
+            setEthUsdPrice(altPrice);
+            console.log(`Fetched ETH price from alternate API: $${altPrice}`);
+            return;
+          }
+        } else if (price) {
+          setEthUsdPrice(price);
+          console.log(`Fetched ETH price: $${price}`);
+          return;
+        }
+        
+        // If we're here, both APIs failed
+        if (retryCount < 3) {
+          console.log(`Retrying price fetch (${retryCount + 1}/3)...`);
+          setTimeout(() => fetchEthPrice(retryCount + 1), 2000);
+        } else {
+          // Set fallback price after multiple failures
+          console.warn("Failed to fetch ETH price after multiple attempts, using fallback");
+          setEthUsdPrice(3000); // Use fallback price
+        }
       } catch (err) {
         console.error("Failed to fetch ETH price:", err);
-        // Fallback price if the API fails
-        setEthUsdPrice(3000); // Use a reasonable default or last known price
+        if (retryCount < 3) {
+          console.log(`Retrying price fetch (${retryCount + 1}/3)...`);
+          setTimeout(() => fetchEthPrice(retryCount + 1), 2000);
+        } else {
+          // Fallback price if the API fails after retries
+          setEthUsdPrice(3000);
+        }
       }
     };
 
     fetchEthPrice();
     // Refresh price every 5 minutes
-    const intervalId = setInterval(fetchEthPrice, 5 * 60 * 1000);
+    const intervalId = setInterval(() => fetchEthPrice(), 5 * 60 * 1000);
     
     return () => clearInterval(intervalId);
   }, []);
@@ -188,13 +256,29 @@ const MarketplacePage: React.FC = () => {
     const fetchNFTs = async () => {
       try {
         setLoading(true);
+        setLoadingStatus("Connecting to blockchain...");
         
-        // Connect to MarketData contract
-        const marketDataContract = new ethers.Contract(
-          marketDataContractAddr,
-          marketDataABI,
-          provider
-        );
+        // Connect to MarketData contract with timeout
+        const connectPromise = new Promise<ethers.Contract>(async (resolve, reject) => {
+          try {
+            const marketDataContract = new ethers.Contract(
+              marketDataContractAddr,
+              marketDataABI,
+              provider
+            );
+            resolve(marketDataContract);
+          } catch (err) {
+            reject(err);
+          }
+        });
+        
+        // Add timeout for connection
+        const marketDataContract = await Promise.race([
+          connectPromise,
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error("Connection timeout")), 10000)
+          )
+        ]) as ethers.Contract;
         
         // Connect to Profile contract
         const profileContract = new ethers.Contract(
@@ -203,136 +287,226 @@ const MarketplacePage: React.FC = () => {
           provider
         );
         
-        // Get the total number of NFTs
-        const nftCount = await marketDataContract.getNFTCount();
-        // Convert BigInt to Number safely
-        const nftCountNumber = Number(nftCount);
+        setLoadingStatus("Fetching NFT count...");
+        
+        // Get the total number of NFTs with timeout and retry
+        const getNFTCount = async (retries = 2): Promise<number> => {
+          try {
+            const nftCountPromise = marketDataContract.getNFTCount();
+            const nftCount = await Promise.race([
+              nftCountPromise,
+              new Promise<never>((_, reject) => 
+                setTimeout(() => reject(new Error("NFT count timeout")), 5000)
+              )
+            ]);
+            
+            // Convert BigInt to Number safely
+            return Number(nftCount);
+          } catch (err) {
+            console.error(`Error fetching NFT count (retries left: ${retries}):`, err);
+            if (retries > 0) {
+              console.log("Retrying getNFTCount...");
+              // Wait briefly before retrying
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              return getNFTCount(retries - 1);
+            }
+            throw new Error("Failed to get NFT count after retries");
+          }
+        };
+        
+        const nftCountNumber = await getNFTCount();
         console.log(`Found ${nftCountNumber} NFTs in MarketData contract`);
         
-        const nftPromises = [];
-        
-        // Get the data for each NFT, starting from the most recent (highest index)
-        for (let i = nftCountNumber - 1; i >= 0 && i >= nftCountNumber - 20; i--) {
-          nftPromises.push(fetchNFTData(marketDataContract, profileContract, i));
+        if (nftCountNumber === 0) {
+          setNfts([]);
+          setLoading(false);
+          return;
         }
         
-        const fetchedNFTs = await Promise.all(nftPromises);
-        // Filter out any null results (failed fetches)
-        const validNFTs = fetchedNFTs.filter(nft => nft !== null) as NFT[];
+        setLoadingStatus(`Loading NFT data for ${Math.min(nftCountNumber, 20)} items...`);
+        
+        // Instead of fetching all NFTs at once, fetch in batches
+        const fetchBatch = async (startIdx: number, endIdx: number): Promise<(NFT | null)[]> => {
+          const batchPromises = [];
+          
+          for (let i = startIdx; i >= endIdx; i--) {
+            // Add timeout to each fetch
+            const fetchWithTimeout = async (): Promise<NFT | null> => {
+              return Promise.race([
+                fetchNFTData(marketDataContract, profileContract, i),
+                new Promise<null>((resolve) => {
+                  setTimeout(() => {
+                    console.warn(`NFT fetch timeout for index ${i}`);
+                    resolve(null);
+                  }, 10000); // 10 second timeout per NFT
+                })
+              ]);
+            };
+            
+            batchPromises.push(fetchWithTimeout());
+          }
+          
+          return Promise.all(batchPromises);
+        };
+        
+        // Calculate start and end indices (fetch last 20 NFTs maximum)
+        const startIdx = nftCountNumber - 1;
+        const endIdx = Math.max(0, nftCountNumber - 20);
+        
+        // Fetch NFTs in smaller batches to avoid overwhelming the RPC
+        const batchSize = 5;
+        let allNFTs: (NFT | null)[] = [];
+        
+        for (let i = startIdx; i >= endIdx; i -= batchSize) {
+          const batchEndIdx = Math.max(endIdx, i - batchSize + 1);
+          setLoadingStatus(`Loading batch ${Math.floor((startIdx - i) / batchSize) + 1}/${Math.ceil((startIdx - endIdx + 1) / batchSize)}...`);
+          
+          const batchResult = await fetchBatch(i, batchEndIdx);
+          allNFTs = [...allNFTs, ...batchResult];
+          
+          // Update the UI with partial results as we go
+          const validNFTsSoFar = allNFTs.filter(nft => nft !== null) as NFT[];
+          if (validNFTsSoFar.length > 0) {
+            setNfts(validNFTsSoFar);
+          }
+        }
+        
+        // Final filtered results
+        const validNFTs = allNFTs.filter(nft => nft !== null) as NFT[];
+        console.log(`Successfully fetched ${validNFTs.length} valid NFTs out of ${allNFTs.length} attempts`);
+        
+        if (validNFTs.length === 0 && allNFTs.length > 0) {
+          // All fetches failed but we tried - show error
+          setError("Failed to load NFT data. Please refresh to try again.");
+        }
         
         setNfts(validNFTs);
       } catch (err) {
-        console.error("Error fetching NFTs:", err);
+        console.error("Error in main fetchNFTs:", err);
         setError("Failed to load NFTs from the blockchain. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
     
-    // Function to fetch data for a single NFT
+    // Function to fetch data for a single NFT with improved error handling
     const fetchNFTData = async (marketDataContract: ethers.Contract, profileContract: ethers.Contract, index: number) => {
       try {
-        console.log(`Fetching NFT data for index ${index}...`);
         // Get basic NFT data from MarketData contract
         const nftData = await marketDataContract.nfts(index);
         
-        // Connect to the Phygital contract for this NFT
-        const phygitalContract = new ethers.Contract(
-          nftData.collectionAddress,
-          phygitalABI,
-          provider
-        );
-        
-        // Get collection name
-        const collectionName = await phygitalContract.getAddressName();
-        
-        // Get NFT metadata
-        const metadata = await phygitalContract.metadata(nftData.tokenId);
-        
-        // Get base value 
-        const baseValue = await phygitalContract.getBaseValue(nftData.tokenId);
-        
-        // Get launch contract address
-        const launchAddress = await phygitalContract.getAddressLaunch();
-        console.log(`Launch address for collection ${nftData.collectionAddress}, token ${nftData.tokenId}: ${launchAddress}`);
-        
-        // Get merchant details from Profile contract
-        let merchantName = "";
+        let collectionName = "Unknown Collection";
+        let metadata = { 
+          name: "Unnamed NFT", 
+          itemPhoto: "/api/placeholder/400/400", 
+          category: "Other", 
+          shipping: "Unknown", 
+          condition: "Unknown"
+        };
+        let merchantName = "Unknown Merchant";
         let merchantImage = "/api/placeholder/40/40";
-        try {
-          // Call getStoreNameByLaunchAddress to get merchant details
-          const [storeName, avatarUrl, storeBio] = await profileContract.getStoreNameByLaunchAddress(launchAddress);
-          merchantName = storeName;
-          merchantImage = avatarUrl || "/api/placeholder/40/40";
-          console.log(`Fetched merchant details for token ${nftData.tokenId}: ${merchantName}, ${merchantImage}`);
-        } catch (merchantErr) {
-          console.error(`Error fetching merchant details for token ${nftData.tokenId}:`, merchantErr);
-          // Use collection name as fallback
-          merchantName = collectionName;
-        }
-        
         let formattedPrice = "Price unavailable";
         let ethPrice = 0;
         let usdPrice = 0;
+        let launchAddress = ethers.ZeroAddress;
         
         try {
-          // Connect to the Launch contract
-          const launchContract = new ethers.Contract(
-            launchAddress,
-            launchABI,
+          // Connect to the Phygital contract for this NFT
+          const phygitalContract = new ethers.Contract(
+            nftData.collectionAddress,
+            phygitalABI,
             provider
           );
           
-          // Get the actual price from the Launch contract using the base value
-          const priceData = await launchContract.getBuyPriceAfterFee(baseValue);
-          const actualPrice = priceData[0]; // Get first returned value
+          // Wrap each call in a try/catch to prevent a single failure from breaking everything
+          try {
+            collectionName = await phygitalContract.name();
+          } catch (e) {
+            console.warn(`Failed to get collection name for NFT ${index}:`, e);
+          }
           
-          // Convert BigInt to string before formatting
-          const priceInEth = parseFloat(ethers.formatEther(actualPrice.toString()));
-          // Ensure minimum price display of 0.00001 ETH
-          ethPrice = priceInEth < 0.00001 ? 0.00001 : priceInEth;
+          try {
+            metadata = await phygitalContract.metadata(nftData.tokenId);
+          } catch (e) {
+            console.warn(`Failed to get metadata for NFT ${index}:`, e);
+          }
           
-          // Calculate USD price
-          usdPrice = ethPrice * ethUsdPrice;
+          try {
+            launchAddress = await phygitalContract.getAddressLaunch();
           
-          // Format price
-          formattedPrice = `${ethPrice.toFixed(5)} ETH ($${usdPrice.toFixed(2)})`;
-          console.log(`Fetched price for token ${nftData.tokenId}: ${formattedPrice}`);
-        } catch (priceErr) {
-          console.error(`Error fetching price from launch contract for token ${nftData.tokenId}:`, priceErr);
-          // Fallback to base value with a marker
-          const fallbackPrice = parseFloat(ethers.formatEther(baseValue.toString()));
-          // Ensure minimum price display of 0.00001 ETH
-          ethPrice = fallbackPrice < 0.00001 ? 0.00001 : fallbackPrice;
+            // Try to get merchant details from Profile contract
+            try {
+              const [storeName, avatarUrl] = await profileContract.getStoreNameByLaunchAddress(launchAddress);
+              merchantName = storeName || collectionName;
+              merchantImage = avatarUrl || "/api/placeholder/40/40";
+            } catch (e) {
+              console.warn(`Failed to get merchant details for NFT ${index}:`, e);
+              merchantName = collectionName;
+            }
+          } catch (e) {
+            console.warn(`Failed to get launch address for NFT ${index}:`, e);
+          }
           
-          // Calculate USD price
-          usdPrice = ethPrice * ethUsdPrice;
-          
-          // Format price
-          formattedPrice = `${ethPrice.toFixed(5)} ETH* ($${usdPrice.toFixed(2)})`;
+          // Try to get price
+          try {
+            // Get base value first
+            const baseValue = await phygitalContract.getBaseValue(nftData.tokenId);
+            
+            // Only proceed with price calculation if we have launch address and base value
+            if (launchAddress !== ethers.ZeroAddress) {
+              const launchContract = new ethers.Contract(
+                launchAddress,
+                launchABI,
+                provider
+              );
+              
+              // Get the actual price from the Launch contract using the base value
+              const priceData = await launchContract.getBuyPriceAfterFee(baseValue.toString());
+              const actualPrice = priceData[0]; // Get first returned value
+              
+              // Convert BigInt to string before formatting
+              const priceInEth = parseFloat(ethers.formatEther(actualPrice.toString()));
+              // Ensure minimum price display of 0.00001 ETH
+              ethPrice = priceInEth < 0.00001 ? 0.00001 : priceInEth;
+              
+              // Calculate USD price
+              usdPrice = ethPrice * ethUsdPrice;
+              
+              // Format price
+              formattedPrice = `${ethPrice.toFixed(5)} ETH ($${usdPrice.toFixed(2)})`;
+            } else {
+              // Fallback to base value
+              const fallbackPrice = parseFloat(ethers.formatEther(baseValue.toString()));
+              ethPrice = fallbackPrice < 0.00001 ? 0.00001 : fallbackPrice;
+              usdPrice = ethPrice * ethUsdPrice;
+              formattedPrice = `${ethPrice.toFixed(5)} ETH* ($${usdPrice.toFixed(2)})`;
+            }
+          } catch (e) {
+            console.warn(`Failed to calculate price for NFT ${index}:`, e);
+          }
+        } catch (e) {
+          console.error(`Failed to process Phygital contract for NFT ${index}:`, e);
         }
-
-        console.log(`dateUntilRedemption: ${metadata.dateUntilRedemption}`);
         
-        // Format the NFT data
+        // Format the NFT data with fallbacks for missing values
         return {
           id: index,
           tokenId: Number(nftData.tokenId.toString()),
           collectionAddress: nftData.collectionAddress,
-          name: metadata.name,
+          name: metadata.name || "Unnamed Item",
           price: formattedPrice,
-          priceEth: ethPrice,          // Add raw ETH price
-          priceUsd: usdPrice,          // Add raw USD price
-          image: metadata.itemPhoto,
+          priceEth: ethPrice,
+          priceUsd: usdPrice,
+          image: metadata.itemPhoto || "/api/placeholder/400/400",
           merchantImage: merchantImage,
-          //merchantImage: "https://pbs.twimg.com/profile_images/1853556885850361856/fDeK9VyY_normal.jpg", // Placeholder for merchant image
-          merchantName: collectionName,
+          merchantName: merchantName,
           storeName: collectionName,
-          category: metadata.category,
-          storeLink: nftData.storeLink,
-          mintedAt: new Date(Number(nftData.timestamp.toString()) * 1000).toISOString(),
-          redeemableAt: (Number(metadata.dateUntilRedemption.toString()) / 86400).toFixed(2).toString()
+          category: metadata.category || "Other",
+          storeLink: nftData.storeLink || "#",
+          mintedAt: metadata.shipping || "Unknown",
+          redeemableAt: metadata.condition || "Unknown"
         };
+      
       } catch (err) {
         console.error(`Error fetching NFT at index ${index}:`, err);
         return null;
@@ -363,20 +537,6 @@ const MarketplacePage: React.FC = () => {
             {/* Regular NFT card with modified styling */}
             <div className="relative z-10">
               <NFTCard nft={nft} />
-            </div>
-            
-            {/* New minted ribbon - moved to top layer */}
-            <div className="absolute -top-4 -right-4 z-30 overflow-visible">
-              <div className="relative w-32 h-10">
-                {/* Animated starburst effect */}
-                {/*<div className="absolute inset-0 w-full h-full rounded-full bg-gradient-to-r from-yellow-400 via-red-500 to-pink-500 blur animate-spin-slow"></div>*/}
-                
-                {/* "New" badge */}
-                {/* <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-r from-yellow-400 to-red-500 text-white font-bold py-2 px-4 rounded-full shadow-lg transform -rotate-12 animate-pulse">
-                  <span className="mr-1 text-xl">🔥</span>
-                  <span className="text-sm whitespace-nowrap">NEW</span>
-                </div>*/}
-              </div>
             </div>
           </div>
         );

@@ -42,11 +42,11 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
 
   // ABIs
   const phygitalsABI = [
-    "function getAddressName() external view returns (string memory)",
+    "function name() external view returns (string memory)",
     "function getAddressLaunch() external view returns (address)"
   ];
 
-  const profileAddr = '0x33E04eC91A04F8791927C06EF5E862e6AA09b71a';
+  const profileAddr = '0xC829522b59B44EDa9303A2C643d4CCD3099F1c83';
   const profileABI = [
     "function getProfileByName(string memory name) external view returns (address, uint256, string memory, string memory, string memory, address, address, uint256, address)",
     "function getStoreNameByLaunchAddress(address _launchAddress) external view returns (string memory, string memory, string memory)"
@@ -90,7 +90,8 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
       );
       
       // Get collection name and launch address
-      const collectionName = await phygitalContract.getAddressName();
+      const collectionName = await phygitalContract.name();
+      //const collectionName = "name";
       const launchAddress = await phygitalContract.getAddressLaunch();
       
       console.log("Collection name:", collectionName);

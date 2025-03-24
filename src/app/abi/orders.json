@@ -139,6 +139,25 @@
 		"inputs": [
 			{
 				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "collection",
+				"type": "address"
+			}
+		],
+		"name": "PendingOrderRemoved",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
 				"internalType": "bytes32",
 				"name": "role",
 				"type": "bytes32"
@@ -324,11 +343,6 @@
 					},
 					{
 						"internalType": "string",
-						"name": "phoneNumber",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
 						"name": "email",
 						"type": "string"
 					}
@@ -336,11 +350,6 @@
 				"internalType": "struct Orders.ShippingDetails",
 				"name": "_shipping",
 				"type": "tuple"
-			},
-			{
-				"internalType": "bool",
-				"name": "_isExpedited",
-				"type": "bool"
 			}
 		],
 		"name": "createOrder",
@@ -448,11 +457,6 @@
 							},
 							{
 								"internalType": "string",
-								"name": "phoneNumber",
-								"type": "string"
-							},
-							{
-								"internalType": "string",
 								"name": "email",
 								"type": "string"
 							}
@@ -482,9 +486,9 @@
 						"type": "uint256"
 					},
 					{
-						"internalType": "bool",
-						"name": "isExpedited",
-						"type": "bool"
+						"internalType": "uint256",
+						"name": "orderType",
+						"type": "uint256"
 					}
 				],
 				"internalType": "struct Orders.Order[]",
@@ -500,6 +504,11 @@
 			{
 				"internalType": "address",
 				"name": "_collection",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_merchant",
 				"type": "address"
 			}
 		],
@@ -561,11 +570,6 @@
 							},
 							{
 								"internalType": "string",
-								"name": "phoneNumber",
-								"type": "string"
-							},
-							{
-								"internalType": "string",
 								"name": "email",
 								"type": "string"
 							}
@@ -595,9 +599,9 @@
 						"type": "uint256"
 					},
 					{
-						"internalType": "bool",
-						"name": "isExpedited",
-						"type": "bool"
+						"internalType": "uint256",
+						"name": "orderType",
+						"type": "uint256"
 					}
 				],
 				"internalType": "struct Orders.Order[]",
@@ -616,6 +620,19 @@
 	{
 		"inputs": [],
 		"name": "getMarketData",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getProfileAddr",
 		"outputs": [
 			{
 				"internalType": "address",
@@ -650,6 +667,11 @@
 			{
 				"internalType": "address",
 				"name": "_collection",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_merchant",
 				"type": "address"
 			}
 		],
@@ -711,11 +733,6 @@
 							},
 							{
 								"internalType": "string",
-								"name": "phoneNumber",
-								"type": "string"
-							},
-							{
-								"internalType": "string",
 								"name": "email",
 								"type": "string"
 							}
@@ -745,9 +762,9 @@
 						"type": "uint256"
 					},
 					{
-						"internalType": "bool",
-						"name": "isExpedited",
-						"type": "bool"
+						"internalType": "uint256",
+						"name": "orderType",
+						"type": "uint256"
 					}
 				],
 				"internalType": "struct Orders.Order[]",
@@ -922,11 +939,6 @@
 					},
 					{
 						"internalType": "string",
-						"name": "phoneNumber",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
 						"name": "email",
 						"type": "string"
 					}
@@ -956,22 +968,9 @@
 				"type": "uint256"
 			},
 			{
-				"internalType": "bool",
-				"name": "isExpedited",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "profile",
-		"outputs": [
-			{
-				"internalType": "contract IProfile",
-				"name": "",
-				"type": "address"
+				"internalType": "uint256",
+				"name": "orderType",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -1047,6 +1046,11 @@
 				"type": "address"
 			},
 			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			},
+			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
@@ -1083,43 +1087,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "tokenMarket",
-		"outputs": [
-			{
-				"internalType": "contract ITokenMarket",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "tokenRedeemed",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -1135,11 +1102,6 @@
 				"internalType": "enum Orders.OrderStatus",
 				"name": "_status",
 				"type": "uint8"
-			},
-			{
-				"internalType": "string",
-				"name": "_name",
-				"type": "string"
 			}
 		],
 		"name": "updateOrderStatus",
@@ -1162,11 +1124,6 @@
 			{
 				"internalType": "string",
 				"name": "_trackingNumber",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "_storeName",
 				"type": "string"
 			}
 		],

@@ -5,10 +5,13 @@ import ShippingModal from '../componants/ShippingDetailsModal';
 interface NFTModalState {
   showSellConfirm: boolean;
   showRedeemConfirm: boolean;
+  showPayInFullConfirm: boolean; // New state for pay in full confirmation
   actualPrice: string;
   actualPriceUsd: string;
   isLoadingPrice: boolean;
   transactionError: string;
+  paymentAmount: string; // New state for payment amount
+  paymentAmountUsd: string; // New state for payment amount in USD
 }
 
 interface NFT {
@@ -21,12 +24,14 @@ interface NFT {
   priceUsd: number;
   tokenId: string;
   creator: string;
-  isRedeemable?: boolean; // Added isRedeemable property
+  isRedeemable?: boolean;
   attributes?: {
-    weightClass: string;
     category: string;
     size: string;
     baseRedemptionValue?: string;
+    shipping?: string;
+    condition?: string;
+    baseValue?: string;  // Added baseValue attribute
   };
 }
 
@@ -49,7 +54,9 @@ interface MyInventoryProps {
   activeContract?: any;
   signer?: any;
   marketData?: any;
-  showRedeemableLabel?: boolean; // New prop to toggle the redeemable label
+  showRedeemableLabel?: boolean;
+  sellingRestricted?: boolean;
+  isExpired?: boolean;
 }
 
 // Helper functions
@@ -93,7 +100,9 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   activeContract,
   signer,
   marketData,
-  showRedeemableLabel = true // Default to showing the label
+  showRedeemableLabel = true,
+  sellingRestricted,
+  isExpired
 }) => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -109,18 +118,21 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   const [ethUsdPrice, setEthUsdPrice] = useState<number>(0);
   const [isLoadingEthPrice, setIsLoadingEthPrice] = useState(false);
   
-  // New state for shipping modal
+  // State for shipping modal
   const [showShippingModal, setShowShippingModal] = useState(false);
 
   const [modalState, setModalState] = useState<NFTModalState>({
     showSellConfirm: false,
     showRedeemConfirm: false,
+    showPayInFullConfirm: false, // Initialize new state
     actualPrice: '',
     actualPriceUsd: '',
     isLoadingPrice: false,
-    transactionError: ''
+    transactionError: '',
+    paymentAmount: '', // Initialize new payment amount state
+    paymentAmountUsd: '' // Initialize new payment amount USD state
   });
-  
+
   // Fetch ETH price
   useEffect(() => {
     const fetchEthPrice = async () => {
@@ -182,7 +194,7 @@ useEffect(() => {
         "function getOwner(uint256 _tokenId) external view returns (address)",
         "function getBaseValue(uint256 tokenId) external view returns (uint256)",
         "function getCirculatingSupply() external view returns (uint256)",
-        "function isRedeemable(uint256 tokenId) external view returns (bool)" // Added contract function to check if NFT is redeemable
+        "function getBaseRedeemValue(uint256 _tokenId) external view returns (uint)"
       ];
 
       const contract = new ethers.Contract(nftContract, nftContractABI, signer);
@@ -221,18 +233,35 @@ useEffect(() => {
             const baseValue = await contract.getBaseValue(tokenId);
             console.log('Base Value:', baseValue.toString());
 
-            // Check if token is redeemable
-            // Note: This is a mock implementation, as your contract may not have this method
-            // In a real implementation, you'd check if the contract has this method first
-            let isRedeemable = true; // Default to true for this example
-            try {
-              isRedeemable = await contract.isRedeemable(tokenId);
-              console.log('Is Redeemable:', isRedeemable);
-            } catch (error) {
-              console.log('isRedeemable function not available, defaulting to true');
-              // If the method doesn't exist, we'll just use the default value
-              // You can also determine redeemability based on other criteria if needed
-            }
+            const formattedBaseValue = ethers.formatEther(baseValue);
+
+            // Parse attributes
+            const attributes = metadata.attributes as Array<{trait_type: string, value: string | number}> || [];
+
+            const category = attributes.find(attr => 
+              attr.trait_type === "Category"
+            )?.value?.toString() || "";
+            
+            const size = attributes.find(attr => 
+              attr.trait_type === "Size"
+            )?.value?.toString() || "";
+            
+            const shipping = attributes.find(attr => 
+              attr.trait_type === "Shipping"
+            )?.value?.toString() || "";
+            
+            const condition = attributes.find(attr => 
+              attr.trait_type === "Condition"
+            )?.value?.toString() || "";
+            
+            const baseRedemptionValue = attributes.find(attr => 
+              attr.trait_type === "Required Base Value For Redemption"
+            )?.value?.toString() || "";
+
+            // Format the redemption value from wei to ETH
+            const formattedRedemptionValue = baseRedemptionValue ? 
+              ethers.formatEther(baseRedemptionValue) : "0";
+
 
             // Get current sell price from the curve
             const [price, , , ] = await activeContract.getSellPriceAfterFee(baseValue);
@@ -243,28 +272,33 @@ useEffect(() => {
             const priceInEth = parseFloat(formattedPrice);
             const priceInUsd = priceInEth * ethUsdPrice;
 
-            // Parse attributes
-            const attributes = metadata.attributes as Array<{trait_type: string, value: string | number}> || [];
-
-            const weightClass = attributes.find(attr => 
-              attr.trait_type === "Weight Class"
-            )?.value?.toString() || "";
-
-            const category = attributes.find(attr => 
-              attr.trait_type === "Category"
-            )?.value?.toString() || "";
-
-            const size = attributes.find(attr => 
-              attr.trait_type === "Size"
-            )?.value?.toString() || "";
-
-            const baseRedemptionValue = attributes.find(attr => 
-              attr.trait_type === "Required Base Value For Redemption"
-            )?.value?.toString() || "";
-
-            // Format the redemption value from wei to ETH
-            const formattedRedemptionValue = baseRedemptionValue ? 
-              ethers.formatEther(baseRedemptionValue) : "0";
+            // Check if token is redeemable
+            let isRedeemable = false; // Default to false
+            try {
+              // First try to use the contract method if it exists
+              try {
+                isRedeemable = await contract.isRedeemable(tokenId);
+                console.log('Is Redeemable (from contract):', isRedeemable);
+              } catch (error) {
+                console.log('isRedeemable function not available, will calculate dynamically');
+                
+                // Get the base redemption value from attributes or use baseValue as fallback
+                const baseRedemptionValueBigInt = baseRedemptionValue 
+                  ? ethers.parseEther(baseRedemptionValue) 
+                  : baseValue;
+                
+                console.log('Sell Price:', ethers.formatEther(price), 'Base Redemption Value:', ethers.formatEther(baseRedemptionValueBigInt));
+                
+                // Compare sell price with base redemption value
+                // Item is redeemable if sell price is greater than or equal to base redemption value
+                isRedeemable = price >= baseRedemptionValueBigInt;
+                console.log('Is Redeemable (calculated):', isRedeemable);
+              }
+            } catch (error) {
+              console.log('Error determining redeemability:', error);
+              // If there's an error, default to false for safety
+              isRedeemable = false;
+            }
 
             fetchedNFTs.push({
               id: tokenId.toString(),
@@ -276,12 +310,14 @@ useEffect(() => {
               priceUsd: priceInUsd,
               tokenId: tokenId.toString(),
               creator,
-              isRedeemable, // Add the redeemable status
+              isRedeemable,
               attributes: {
-                weightClass,
                 category,
                 size,
-                baseRedemptionValue: formattedRedemptionValue
+                baseRedemptionValue: formattedRedemptionValue,
+                shipping,
+                condition,
+                baseValue: formattedBaseValue // Added baseValue attribute
               }
             });
           }
@@ -317,18 +353,21 @@ useEffect(() => {
       
       setModalState(prev => ({ ...prev, isLoadingPrice: true, transactionError: '' }));
 
-      const baseValue = ethers.parseEther(nft.attributes?.baseRedemptionValue || "0");
+      const baseValue = ethers.parseEther(nft.attributes?.baseValue|| "0");
       const [actualPrice, , , ] = await activeContract.getSellPriceAfterFee(baseValue);
+      console.log("base value", baseValue);
       
       // Convert price to ETH and USD
       const actualPriceEth = ethers.formatEther(actualPrice);
       const actualPriceUsd = (parseFloat(actualPriceEth) * ethUsdPrice).toFixed(2);
+      console.log('Actual Price (ETH):', actualPriceEth);
       
       // Show confirmation modal with actual price
       setModalState(prev => ({
         ...prev,
         showSellConfirm: true,
         showRedeemConfirm: false,
+        showPayInFullConfirm: false,
         actualPrice: actualPriceEth,
         actualPriceUsd: actualPriceUsd,
         isLoadingPrice: false
@@ -351,7 +390,8 @@ useEffect(() => {
         ...prev,
         transactionError: 'This NFT is not eligible for redemption.',
         showSellConfirm: false,
-        showRedeemConfirm: false
+        showRedeemConfirm: false,
+        showPayInFullConfirm: false
       }));
       return;
     }
@@ -359,6 +399,50 @@ useEffect(() => {
     // Select NFT and open shipping modal instead of redeem confirmation
     setSelectedNFT(nft);
     setShowShippingModal(true);
+  };
+
+  // New handler for Pay in Full option
+  const handlePayInFull = async (nft: NFT) => {
+    try {
+      if (!activeContract) {
+        throw new Error('Contract not initialized');
+      }
+      
+      setModalState(prev => ({ ...prev, isLoadingPrice: true, transactionError: '' }));
+
+      // Calculate the remaining payment amount needed
+      // For this example, we'll use the base redemption value as the full payment amount
+      // In a real implementation, you'd calculate the difference between current value and full value
+      const baseRedemptionValue = nft.attributes?.baseRedemptionValue || "0";
+      const fullPaymentEth = parseFloat(baseRedemptionValue);
+      const currentValueEth = nft.priceEth;
+      
+      // Calculate the difference (remaining payment)
+      let remainingPaymentEth = fullPaymentEth - currentValueEth;
+      
+      // Ensure the payment is at least a minimum amount
+      remainingPaymentEth = Math.max(remainingPaymentEth, 0.001);
+      
+      const remainingPaymentUsd = (remainingPaymentEth * ethUsdPrice).toFixed(2);
+      
+      // Show pay in full confirmation modal
+      setModalState(prev => ({
+        ...prev,
+        showSellConfirm: false,
+        showRedeemConfirm: false,
+        showPayInFullConfirm: true,
+        paymentAmount: remainingPaymentEth.toFixed(6),
+        paymentAmountUsd: remainingPaymentUsd,
+        isLoadingPrice: false
+      }));
+    } catch (error) {
+      console.error('Error calculating payment amount:', error);
+      setModalState(prev => ({
+        ...prev,
+        isLoadingPrice: false,
+        transactionError: 'Error calculating payment amount. Please try again.'
+      }));
+    }
   };
   
   const handleShippingSubmit = (shippingDetails: ShippingDetails, isExpedited: boolean) => {
@@ -373,6 +457,7 @@ useEffect(() => {
       ...prev,
       showSellConfirm: false,
       showRedeemConfirm: true,
+      showPayInFullConfirm: false,
       transactionError: ''
     }));
   };
@@ -397,22 +482,21 @@ useEffect(() => {
       
       // Check if already approved
       const approved = await nftContractWithSigner.getApproved(nft.tokenId);
+      console.log('Approved address:', approved);
       if (approved !== activeContract.target) {
         console.log('Approving marketplace to transfer NFT...');
         const approveTx = await nftContractWithSigner.approve(activeContract.target, nft.tokenId);
-        await approveTx.wait();
         console.log('Approval successful');
       }
 
       const launchABI = [
-        "function sellNFT(uint256 tokenId) public payable",
+        "function sellNFT(uint256 tokenId) external payable",
       ];
 
       const createContractInstance = new ethers.Contract(activeContract.target, launchABI, signer);
       // Now sell the NFT
       console.log('Selling NFT:', nft.tokenId);
       const tx = await createContractInstance.sellNFT(nft.tokenId);
-      await tx.wait();
       console.log('NFT sold successfully');
   
       // Reset states and close modals
@@ -467,7 +551,6 @@ useEffect(() => {
       // Now redeem the NFT
       console.log('Redeeming NFT:', nft.tokenId);
       const tx = await activeContract.redeemNFT(nft.tokenId);
-      await tx.wait();
       console.log('NFT redeemed successfully');
   
       // Reset states and close modals
@@ -485,6 +568,51 @@ useEffect(() => {
       setModalState(prev => ({
         ...prev,
         transactionError: 'Failed to redeem NFT. Please try again.'
+      }));
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // New function to handle Pay in Full confirmation
+  const confirmPayInFull = async (nft: NFT) => {
+    try {
+      setIsProcessing(true);
+      setModalState(prev => ({ ...prev, transactionError: '' }));
+  
+      if (!activeContract) {
+        throw new Error('Contract not initialized');
+      }
+  
+      // Convert payment amount to wei
+      const paymentAmountWei = ethers.parseEther(modalState.paymentAmount);
+      
+      console.log('Paying in full for NFT:', nft.tokenId);
+      console.log('Payment amount (ETH):', modalState.paymentAmount);
+      console.log('Payment amount (Wei):', paymentAmountWei.toString());
+      
+      // Call the payInFull function on the contract
+      // Note: This is a placeholder. You would need to implement this function in your contract
+      const tx = await activeContract.payInFull(nft.tokenId, { value: paymentAmountWei });
+      console.log('Payment successful');
+  
+      // Reset states and close modals
+      setModalState(prev => ({
+        ...prev,
+        showPayInFullConfirm: false,
+        paymentAmount: '',
+        paymentAmountUsd: ''
+      }));
+      setShowModal(false);
+      
+      // Refresh the page or NFT list
+      window.location.reload();
+  
+    } catch (error) {
+      console.error('Error paying in full:', error);
+      setModalState(prev => ({
+        ...prev,
+        transactionError: 'Failed to process payment. Please try again.'
       }));
     } finally {
       setIsProcessing(false);
@@ -510,36 +638,56 @@ useEffect(() => {
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden mt-8">
       {/* Header section */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-700 p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
-              <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
-            </svg>
-            <h2 className="text-2xl font-bold text-white">
-              My NFT Inventory
-            </h2>
-          </div>
-          <div className="flex items-center gap-4">
-            {/* ETH price indicator */}
-            {ethUsdPrice > 0 && (
-              <div className="bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg text-sm flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 417" preserveAspectRatio="xMidYMid" className="w-4 h-4 mr-1 text-white">
-                  <path fill="currentColor" d="M127.962 0L0 212.32l127.962 75.639V154.158z" />
-                  <path fill="currentColor" d="M127.962 416.905v-104.72L0 236.585z" />
-                  <path fill="currentColor" d="M0 212.32l127.96 75.638v-133.8z" />
-                </svg>
-                <span className="text-white">1 ETH = <span className="font-bold">${ethUsdPrice.toLocaleString()}</span></span>
-              </div>
-            )}
-            <div className="bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg text-sm">
-              <span className="text-white">Total Items: <span className="font-bold">{nfts.length}</span></span>
-            </div>
-          </div>
+<div className="bg-gradient-to-r from-purple-600 to-indigo-700 p-6">
+  <div className="flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+      </svg>
+      <h2 className="text-2xl font-bold text-white">
+        My NFT Inventory
+      </h2>
+    </div>
+    <div className="flex items-center gap-4">
+      {/* Selling Restriction Badge */}
+      {sellingRestricted && (
+        <div className="bg-red-500/90 px-3 py-2 rounded-lg text-sm flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-1 text-white">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+          </svg>
+          <span className="text-white font-medium">Selling Restricted - Redeem Only</span>
         </div>
+      )}
+      {/* Expired Badge in Header */}
+{isExpired && (
+  <div className="bg-red-500/90 px-3 py-2 rounded-lg text-sm flex items-center">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-1 text-white">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+    </svg>
+    <span className="text-white font-medium">Curve Expired - Sell Disabled</span>
+  </div>
+)}
+      {/* ETH price indicator */}
+      {ethUsdPrice > 0 && (
+        <div className="bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg text-sm flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 256 417" preserveAspectRatio="xMidYMid" className="w-4 h-4 mr-1 text-white">
+            <path fill="currentColor" d="M127.962 0L0 212.32l127.962 75.639V154.158z" />
+            <path fill="currentColor" d="M127.962 416.905v-104.72L0 236.585z" />
+            <path fill="currentColor" d="M0 212.32l127.96 75.638v-133.8z" />
+          </svg>
+          <span className="text-white">1 ETH = <span className="font-bold">${ethUsdPrice.toLocaleString()}</span></span>
+        </div>
+      )}
+      <div className="bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg text-sm">
+        <span className="text-white">Total Items: <span className="font-bold">{nfts.length}</span></span>
       </div>
+    </div>
+  </div>
+</div>
   
       {/* NFT Grid */}
       <div className="p-6">
@@ -578,7 +726,7 @@ useEffect(() => {
                                  ${nft.isRedeemable 
                                     ? 'bg-green-500 text-white animate-pulse' 
                                     : 'bg-red-500 text-white'}`}
-                    >
+                                    >
                       {nft.isRedeemable ? 'Redeemable' : 'Not Redeemable'}
                     </div>
                   )}
@@ -586,21 +734,19 @@ useEffect(() => {
                 <div className="p-4">
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">{nft.name}</h3>
                   <div className="flex items-center justify-between">
-                    <div className="text-gray-500 text-sm">
-                      {nft.attributes?.category || ''} {nft.attributes?.size && `• ${nft.attributes.size}`}
-                    </div>
                     <div className="flex gap-2">
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSell(nft);
                         }}
-                        disabled={isProcessing || modalState.isLoadingPrice}
+                        disabled={isProcessing || modalState.isLoadingPrice || sellingRestricted || isExpired}
                         className="px-3 py-1 bg-purple-500 text-white rounded-lg font-medium
-                                 hover:bg-purple-600 transition-all text-xs
-                                 disabled:opacity-50 disabled:cursor-not-allowed"
+                          hover:bg-purple-600 transition-all text-xs
+                          disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={isExpired ? "Curve expired, selling not available" : ""}
                       >
-                        {modalState.isLoadingPrice ? 'Loading...' : 'Sell'}
+                        {modalState.isLoadingPrice ? 'Loading...' : isExpired ? 'Expired' : 'Sell'}
                       </button>
                       <button 
                         onClick={(e) => {
@@ -609,12 +755,27 @@ useEffect(() => {
                         }}
                         disabled={isProcessing || !nft.isRedeemable} // Disable if not redeemable
                         className={`px-3 py-1 rounded-lg font-medium transition-all text-xs
-                                 disabled:opacity-50 disabled:cursor-not-allowed
-                                 ${nft.isRedeemable
+                                  disabled:opacity-50 disabled:cursor-not-allowed
+                                  ${nft.isRedeemable
                                     ? 'bg-green-500 text-white hover:bg-green-600'
                                     : 'bg-gray-400 text-white'}`}
                       >
                         Redeem
+                      </button>
+                      {/* New Pay in Full button */}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePayInFull(nft);
+                        }}
+                        disabled={isProcessing || nft.isRedeemable} // Disable if already redeemable
+                        className={`px-3 py-1 rounded-lg font-medium transition-all text-xs
+                                 disabled:opacity-50 disabled:cursor-not-allowed
+                                 ${!nft.isRedeemable
+                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                                    : 'bg-gray-400 text-white'}`}
+                      >
+                        Pay Full
                       </button>
                     </div>
                   </div>
@@ -752,165 +913,240 @@ useEffect(() => {
         </div>
       )}
   
-      {/* NFT Detail Modal */}
-      {showModal && selectedNFT && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-2xl max-w-2xl w-full">
-            <div className="flex gap-6">
-              <div className="w-1/2">
-                <img
-                  src={selectedNFT.image}
-                  alt={selectedNFT.name}
-                  className="w-full rounded-lg object-cover h-[400px]"
-                />
+     {/* NFT Detail Modal */}
+{showModal && selectedNFT && (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 my-8 max-h-[85vh] overflow-y-auto">
+      {/* Modal header with close button */}
+      <div className="flex justify-between items-center p-3 border-b border-gray-200 sticky top-0 bg-white z-10">
+        <h2 className="text-lg font-bold text-gray-800">{selectedNFT.name}</h2>
+        <button 
+          onClick={() => setShowModal(false)}
+          className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      
+      <div className="flex flex-col md:flex-row">
+        {/* Image section - more compact */}
+        <div className="md:w-1/2 p-4">
+          <div className="bg-gray-50 rounded-lg overflow-hidden shadow-md">
+            <img
+              src={selectedNFT.image}
+              alt={selectedNFT.name}
+              className="w-full h-[300px] object-contain"
+            />
+          </div>
+        </div>
+        
+        {/* Info section */}
+        <div className="md:w-1/2 p-4 space-y-3">
+          {selectedNFT.description && (
+            <p className="text-gray-600 text-sm">{selectedNFT.description}</p>
+          )}
+          
+          {/* Important Redemption Information - more compact */}
+          <div className={`p-3 rounded-lg border text-sm ${selectedNFT.isRedeemable ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+            <div className="flex items-start gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`mt-0.5 flex-shrink-0 ${selectedNFT.isRedeemable ? 'text-amber-500' : 'text-red-500'}`}>
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <div>
+                <h4 className={`font-medium text-sm ${selectedNFT.isRedeemable ? 'text-amber-800' : 'text-red-800'}`}>
+                  {selectedNFT.isRedeemable ? 'Eligible for Redemption' : 'Not Eligible for Redemption Yet'}
+                </h4>
+                <p className={`text-xs ${selectedNFT.isRedeemable ? 'text-amber-700' : 'text-red-700'}`}>
+                  {selectedNFT.isRedeemable 
+                    ? 'This NFT can be redeemed for the physical item.'
+                    : `This NFT is not yet eligible for redemption. The current price needs to reach ${selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH first.`
+                  }
+                </p>
               </div>
-              <div className="w-1/2 space-y-4">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">{selectedNFT.name}</h2>
-                <p className="text-gray-600 mb-4">{selectedNFT.description}</p>
-                
-                {/* NFT Details */}
-                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Details</h3>
-                  <p className="text-gray-700">
-                    Current Value: 
-                    {selectedNFT.priceUsd > 0 ? (
-                      <span className="flex items-baseline gap-2">
-                        <span className="text-purple-600 font-bold">${selectedNFT.priceUsd.toFixed(2)}</span>
-                        <span className="text-gray-500 text-sm">({selectedNFT.priceEth.toFixed(5)} ETH)</span>
-                      </span>
-                    ) : (
-                      <span className="text-purple-600">{formatEthPrice(selectedNFT.price)}</span>
-                    )}
-                  </p>
-                  <p className="text-gray-700">
-                    Creator: <span className="text-purple-600 font-mono">
-                      {`${selectedNFT.creator.slice(0, 6)}...${selectedNFT.creator.slice(-4)}`}
+            </div>
+          </div>
+          
+          {/* Details & Attributes in a more compact format */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-gray-800 text-sm">Details</h3>
+              <div className="bg-gray-50 p-3 rounded-lg text-sm">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-xs">Current Price:</span>
+                    <span className="font-medium text-xs">
+                      ${selectedNFT.priceUsd.toFixed(2)}
+                      <span className="block text-gray-500 text-xs">{selectedNFT.priceEth.toFixed(5)} ETH</span>
                     </span>
-                  </p>
-                  <p className="text-gray-700">
-                    Token ID: <span className="text-green-600">{selectedNFT.tokenId}</span>
-                  </p>
-                  {/* Add redeemable status in details */}
-                  <p className="text-gray-700">
-                    Status: <span className={`font-medium px-2 py-1 rounded-full text-xs ${
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-xs">Token ID:</span>
+                    <span className="text-green-600 text-xs">{selectedNFT.tokenId}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-xs">Status:</span>
+                    <span className={`font-medium px-2 py-0.5 rounded-full text-xs ${
                       selectedNFT.isRedeemable 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
                       {selectedNFT.isRedeemable ? 'Redeemable' : 'Not Redeemable'}
                     </span>
-                  </p>
-                </div>
-  
-                {/* NFT Attributes */}
-                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Attributes</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white p-3 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-500">Size</p>
-                      <p className="text-gray-700 font-medium">{selectedNFT.attributes?.size || 'N/A'}</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-500">Category</p>
-                      <p className="text-gray-700 font-medium">{selectedNFT.attributes?.category || 'N/A'}</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-500">Weight Class</p>
-                      <p className="text-gray-700 font-medium">{selectedNFT.attributes?.weightClass || 'N/A'}</p>
-                    </div>
-                    <div className="bg-white p-3 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-500">Base Redemption Value</p>
-                      <p className="text-gray-700 font-medium">
-                        {selectedNFT.attributes?.baseRedemptionValue || 'N/A'} ETH
-                        {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
-                          <span className="block text-xs text-gray-500">
-                            (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-  
-                <div className="flex justify-between gap-4 mt-6">
-                  <button
-                    onClick={() => setShowModal(false)}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium
-                             hover:bg-gray-200 transition-colors"
-                  >
-                    Close
-                  </button>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => handleSell(selectedNFT)}
-                      disabled={isProcessing || modalState.isLoadingPrice}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium
-                              hover:bg-purple-700 transition-all
-                              disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {modalState.isLoadingPrice ? 'Calculating...' : 
-                        isProcessing ? 'Processing...' : 'Sell'}
-                    </button>
-                    <button 
-                      onClick={() => handleRedeem(selectedNFT)}
-                      disabled={isProcessing || !selectedNFT.isRedeemable}
-                      className={`px-4 py-2 rounded-lg font-medium transition-all
-                              disabled:opacity-50 disabled:cursor-not-allowed
-                              ${selectedNFT.isRedeemable 
-                                ? 'bg-green-600 text-white hover:bg-green-700' 
-                                : 'bg-gray-400 text-white'}`}
-                    >
-                      {isProcessing ? 'Processing...' : 'Redeem'}
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-  
-      {/* Sell Confirmation Modal */}
-      {modalState.showSellConfirm && selectedNFT && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full border border-gray-200">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Sale</h3>
             
-            <div className="bg-purple-50 p-4 rounded-lg mb-6 border border-purple-100">
-              <p className="text-gray-600 mb-2">You will receive:</p>
-              <p className="text-2xl font-bold text-purple-600 mb-1">
-                ${modalState.actualPriceUsd}
-              </p>
-              <p className="text-sm text-gray-500">
-                {modalState.actualPrice} ETH
-              </p>
-            </div>
-  
-            {modalState.transactionError && (
-              <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4">
-                {modalState.transactionError}
+            <div className="space-y-2">
+              <h3 className="font-semibold text-gray-800 text-sm">Market Value</h3>
+              <div className="bg-gray-50 p-3 rounded-lg text-sm h-[calc(100%-24px)]">
+                <div className="flex items-center justify-between h-full">
+                  <span className="text-gray-600 text-xs">Redemption Price:</span>
+                  <div className="text-right">
+                    <p className="text-gray-700 font-medium">
+                      {selectedNFT.attributes?.baseRedemptionValue || 'N/A'} ETH
+                    </p>
+                    {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
+                      <span className="block text-xs text-gray-500">
+                        (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-            )}
-  
-            <div className="flex gap-3">
-              <button
-                onClick={() => setModalState(prev => ({ ...prev, showSellConfirm: false }))}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => confirmSell(selectedNFT)}
-                disabled={isProcessing}
-                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg
-                        hover:bg-purple-700 transition-all disabled:opacity-50 font-medium"
-              >
-                {isProcessing ? 'Processing...' : 'Confirm Sale'}
-              </button>
             </div>
+          </div>
+          
+          {/* Attributes grid - more compact */}
+          <div>
+            <h3 className="font-semibold text-gray-800 text-sm mb-2">Attributes</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-gray-50 p-2 rounded-lg">
+                <p className="text-xs text-gray-500">Size</p>
+                <p className="text-gray-700 font-medium text-sm">{selectedNFT.attributes?.size || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-2 rounded-lg">
+                <p className="text-xs text-gray-500">Category</p>
+                <p className="text-gray-700 font-medium text-sm">{selectedNFT.attributes?.category || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-2 rounded-lg">
+                <p className="text-xs text-gray-500">Condition</p>
+                <p className="text-gray-700 font-medium text-sm">{selectedNFT.attributes?.condition || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-2 rounded-lg">
+                <p className="text-xs text-gray-500">Shipping</p>
+                <p className="text-gray-700 font-medium text-sm">{selectedNFT.attributes?.shipping || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Action buttons with new Pay in Full button */}
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => setShowModal(false)}
+              className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-200 transition-colors"
+            >
+              Close
+            </button>
+            <button 
+              onClick={() => handleSell(selectedNFT)}
+              disabled={isProcessing || modalState.isLoadingPrice || sellingRestricted || isExpired}
+              className="px-4 py-1.5 bg-purple-600 text-white rounded-lg font-medium text-sm
+                hover:bg-purple-700 transition-all
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {modalState.isLoadingPrice ? 'Calculating...' : 
+                isProcessing ? 'Processing...' : 'Sell'}
+            </button>
+            <button 
+              onClick={() => handleRedeem(selectedNFT)}
+              disabled={isProcessing || !selectedNFT.isRedeemable}
+              className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        ${selectedNFT.isRedeemable 
+                          ? 'bg-green-600 text-white hover:bg-green-700' 
+                          : 'bg-gray-400 text-white'}`}
+            >
+              {isProcessing ? 'Processing...' : 'Redeem'}
+            </button>
+            <button 
+              onClick={() => handlePayInFull(selectedNFT)}
+              disabled={isProcessing || selectedNFT.isRedeemable}
+              className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        ${!selectedNFT.isRedeemable 
+                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                          : 'bg-gray-400 text-white'}`}
+            >
+              {isProcessing ? 'Processing...' : 'Pay in Full'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+  
+  {/* Sell Confirmation Modal */}
+{modalState.showSellConfirm && selectedNFT && (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full border border-gray-200">
+      <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Sale</h3>
+      
+      <div className="bg-purple-50 p-4 rounded-lg mb-6 border border-purple-100">
+        <p className="text-gray-600 mb-2">You will receive:</p>
+        <p className="text-2xl font-bold text-purple-600 mb-1">
+          ${modalState.actualPriceUsd}
+        </p>
+        <p className="text-sm text-gray-500">
+          {modalState.actualPrice} ETH
+        </p>
+      </div>
+
+      {/* Display error message for expired curve */}
+      {isExpired && (
+        <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4">
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>The bonding curve has expired. NFTs can no longer be sold.</span>
           </div>
         </div>
       )}
+
+      {modalState.transactionError && (
+        <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4">
+          {modalState.transactionError}
+        </div>
+      )}
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => setModalState(prev => ({ ...prev, showSellConfirm: false }))}
+          className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => confirmSell(selectedNFT)}
+          disabled={isProcessing || isExpired}
+          className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg
+                  hover:bg-purple-700 transition-all disabled:opacity-50 font-medium"
+        >
+          {isProcessing ? 'Processing...' : isExpired ? 'Curve Expired' : 'Confirm Sale'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       
       {/* Redeem Confirmation Modal */}
       {modalState.showRedeemConfirm && selectedNFT && (
@@ -958,6 +1194,59 @@ useEffect(() => {
                         hover:bg-green-700 transition-all disabled:opacity-50 font-medium"
               >
                 {isProcessing ? 'Processing...' : 'Confirm Redemption'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Pay in Full Confirmation Modal */}
+      {modalState.showPayInFullConfirm && selectedNFT && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full border border-gray-200">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Pay in Full</h3>
+            
+            <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
+              <p className="text-gray-600 mb-2">You are about to pay the remaining amount to make this item eligible for redemption:</p>
+              <p className="text-xl font-bold text-blue-600 mb-1">
+                ${modalState.paymentAmountUsd}
+              </p>
+              <p className="text-sm text-gray-500">
+                {modalState.paymentAmount} ETH
+              </p>
+              
+              <div className="mt-4 bg-blue-100 p-3 rounded">
+                <p className="text-blue-700 text-sm font-medium">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  After payment, this NFT will become redeemable for the physical item.
+                </p>
+              </div>
+            </div>
+  
+            {modalState.transactionError && (
+              <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4">
+                {modalState.transactionError}
+              </div>
+            )}
+  
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalState(prev => ({ ...prev, showPayInFullConfirm: false }))}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmPayInFull(selectedNFT)}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg
+                        hover:bg-blue-700 transition-all disabled:opacity-50 font-medium"
+              >
+                {isProcessing ? 'Processing...' : 'Confirm Payment'}
               </button>
             </div>
           </div>

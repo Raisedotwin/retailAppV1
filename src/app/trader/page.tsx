@@ -25,10 +25,12 @@ const TraderPageContent: React.FC = () => {
   const [contractBalance, setContractBalance] = useState('-'); // Use dash instead of '0'
   const [expiryTime, setExpiryTime] = useState('Loading...'); // Better loading state
   const [storeAddress, setStoreAddress] = useState('');
+  const [curveMarketCap, setCurveMarketCap] = useState(''); // Use dash instead of '0'
   
   // Add ETH price state for USD conversion
   const [ethUsdPrice, setEthUsdPrice] = useState(0);
   const [isLoadingEthPrice, setIsLoadingEthPrice] = useState(false);
+  const [restricted, setRestricted] = useState(false);
   
   // Extract parameters first - do this synchronously at component initialization
   const name = searchParams.get('name');
@@ -59,6 +61,13 @@ const TraderPageContent: React.FC = () => {
     "function getBaseValue(uint256 tokenId) external view returns (uint256)"
   ];
 
+  const tokenERC20ABI = [
+    "function symbol() view returns (string)",
+    "function balanceOf(address owner) view returns (uint256)",
+    "function decimals() view returns (uint8)"
+  ];
+  
+
   // Setup contract instances using useMemo
   const openContract = useMemo(() => {
     if (params.contractAddress) {
@@ -76,10 +85,10 @@ const TraderPageContent: React.FC = () => {
     return null;
   }, [params.contractAddress, provider]);
 
-  const tokenContractAddr = '0x5Cd11eafc8722992Eb64e4cCBdE77f86283C7191';
-  const marketDataAddr = '0xcB85f27798925698a2bDd15E99394B933E925fD1';
-  const createAccountAddr = '0xc2B926A65E1e99a2db80C3C2Ff311F367Aa41775';
-  const profileAddr = '0x33E04eC91A04F8791927C06EF5E862e6AA09b71a';
+  const tokenContractAddr = '0x038337c1e4d838a8D6e16F11f974c901363D306F';
+  const marketDataAddr = '0x45bDde4801230164fD4249717947D8658E8A6105';
+  const createAccountAddr = '0x39cAAb47Fd2205D4711E42BeEF44e53D928ac25D';
+  const profileAddr = '0xC829522b59B44EDa9303A2C643d4CCD3099F1c83';
   const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
 
   // Rest of your state variables...
@@ -96,6 +105,9 @@ const TraderPageContent: React.FC = () => {
   // Add loading state indicators
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [dataLoadError, setDataLoadError] = useState<string | null>(null);
+
+  const [tokenSymbol, setTokenSymbol] = useState('TOKEN'); // Default to BTC until loaded
+  const [tokenBalance, setTokenBalance] = useState('-'); // Default 
   
   // Get Privy-related data
   const { user } = usePrivy();
@@ -117,6 +129,38 @@ const TraderPageContent: React.FC = () => {
   const [initTimestamp, setInitTimestamp] = useState<number | null>(null);
   const [curveDuration, setCurveDuration] = useState<number | null>(null);
   const [isExpired, setIsExpired] = useState(false);
+
+  const fetchTokenDetails = useCallback(async () => {
+    if (!activeContract || !tokenAddress || !provider) return;
+    
+    try {
+      // Create token contract instance
+      const tokenContract = new ethers.Contract(tokenAddress, tokenERC20ABI, provider);
+      
+      // Fetch the token symbol
+      const symbol = await tokenContract.symbol();
+      setTokenSymbol(symbol);
+      console.log(`Token Symbol: ${symbol}`);
+      
+      // Fetch token balance for the curve contract
+      const balance = await tokenContract.balanceOf(activeContract.target);
+      const decimals = await tokenContract.decimals();
+      
+      // Format with proper decimals
+      const formattedBalance = ethers.formatUnits(balance, decimals);
+      setTokenBalance(formattedBalance);
+      console.log(`Token Balance: ${formattedBalance} ${symbol}`);
+    } catch (error) {
+      console.error('Error fetching token details:', error);
+      // Keep defaults if there's an error
+    }
+  }, [activeContract, tokenAddress, provider]);
+
+  useEffect(() => {
+    if (tokenAddress) {
+      fetchTokenDetails();
+    }
+  }, [tokenAddress, fetchTokenDetails]);
 
   // Add useEffect to fetch ETH price
   useEffect(() => {
@@ -245,27 +289,51 @@ const TraderPageContent: React.FC = () => {
         activeContract.getCurveInitializedTime(),
         provider.getBalance(activeContract.target)
       ]);
+
+      console.log('expiry:', expiry);
+      console.log('startTime:', startTime); 
+
+      let expiryNum: any;
       
       // Handle expiry time
       if (expiry.status === 'fulfilled') {
-        const expiryNum = Number(expiry.value.toString());
-        setExpiryTimestamp(expiryNum);
+        expiryNum = Number(expiry.value.toString());
+
         setExpiryTime(formatBlockTimestamp(expiry.value.toString()));
+
+        console.log('Curve expires at:', expiryNum.toString());
+        console.log(`Formatted expiry time: ${formatBlockTimestamp(expiry.value.toString())}`);
         
-        // Check if already expired
-        const now = Math.floor(Date.now() / 1000);
-        setIsExpired(expiryNum <= now);
       }
       
       // Handle start time
       if (startTime.status === 'fulfilled') {
         const startNum = Number(startTime.value.toString());
         setInitTimestamp(startNum);
+        console.log(`Curve initialized at: ${formatBlockTimestamp(startNum.toString())}`);
+
+        const finalTime = expiryNum + startNum;
+        const now = Math.floor(Date.now() / 1000);
+        setIsExpired(finalTime <= now); //we need to add the start and expiry
+
+        const timeStamp = finalTime - now;
+        const finalTimeStamp = timeStamp + now;
+        console.log(`Time since expiry: ${timeStamp}`);
+
+        setExpiryTimestamp(finalTimeStamp);
+
+        // Check if already expired
+        console.log(`Current time: ${now}`);
+        console.log(`Is expired: ${isExpired}`);
+        console.log(`Final time: ${finalTime}`);
         
         // Calculate duration if both times are available
         if (expiry.status === 'fulfilled') {
           const expiryNum = Number(expiry.value.toString());
-          const duration = calculateCurveDuration(startNum, expiryNum);
+          //const duration = calculateCurveDuration(finalTime, expiryNum);
+          const duration = finalTime - now;
+          console.log(`Curve duration: ${duration}`);
+          console.log(`Formatted duration: ${formatDuration(duration)}`);
           setCurveDuration(duration);
         }
       }
@@ -359,6 +427,7 @@ const TraderPageContent: React.FC = () => {
       // Fetch profile data
       if (profileContractInstance && params.username) {
         try {
+          console.log(`Fetching profile for username: ${params.username}`);
           const profile = await profileContractInstance.getProfileByName(params.username);
           const nativeAddr = profile[0];
           const traderAcc = profile[1];
@@ -377,13 +446,18 @@ const TraderPageContent: React.FC = () => {
           setProfile(profile);
           
           // Get token address and market cap if trader account exists
-          if (traderAcc && traderAcc !== "0") {
+          if (traderAcc) {
             const tokenAddress = await marketContractInstance.getTokenAddressByAccount(traderAcc.toString());
             setTokenAddress(tokenAddress);
+            console.log(`Loyalty Token Address: ${tokenAddress}`);
             
             // Get market cap
             const MCAP = await marketContractInstance.getMarketCap(traderAcc.toString());
             setMarketCap(ethers.formatEther(MCAP));
+
+            const curveMarketCap = await activeContract?.getMarketCap();
+            setCurveMarketCap(ethers.formatEther(curveMarketCap.toString()));
+            console.log(`Curve Market Cap: ${curveMarketCap}`);
           }
         } catch (error) {
           console.error('Error fetching profile data:', error);
@@ -550,7 +624,7 @@ const TraderPageContent: React.FC = () => {
                   ) : expiryTimestamp ? (
                     <CountdownTimer 
                       expiryTimestamp={expiryTimestamp}
-                      onExpire={() => setIsExpired(true)}
+                      onExpire={() => setIsExpired(isExpired)}
                       totalDuration={curveDuration || undefined}
                       showProgressBar={true}
                     />
@@ -561,16 +635,44 @@ const TraderPageContent: React.FC = () => {
                 </div>
   
                   {/* LIQ */}
-                <div className="text-center px-4">
-                  <p className="text-lg font-bold text-violet-700">
-                  {isLoadingData ? (
-                    <span className="animate-pulse">...</span>
-                  ) : (
-                    <span>{isExpired ? "Redemption" : "Trading Period"}</span>
+                  <div className="text-center px-4">
+                    <p className="text-lg font-bold text-violet-700">
+                    {isLoadingData ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      <span>{isExpired ? "Redemption" : "Trading"}</span>
+                    )}
+                    </p>
+                    <p className="text-xs font-medium text-gray-600">Period</p>
+  
+                  {/* Restriction indicator below the period */}
+                  {restricted && !isLoadingData && (
+                    <div className="mt-1">
+                    <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                      No Selling
+                    </span>
+                    </div>
                   )}
-                  </p>
-                  <p className="text-xs font-medium text-gray-600">Phase</p>
                 </div>
+
+                 {/* Curve Liquidity - Updated with token symbol and balance */}
+        <div className="text-center px-4">
+          <p className="text-lg font-bold text-violet-700">
+            {isLoadingData ? (
+              <span className="animate-pulse">...</span>
+            ) : (
+              <div className="flex flex-col items-center">
+                <span className="text-base font-bold">
+                  {Number(tokenBalance).toFixed(0)} ${tokenSymbol}
+                </span>
+                <span className="text-xs text-gray-500">
+                  In Contract
+                </span>
+              </div>
+            )}
+          </p>
+          <p className="text-xs font-medium text-gray-600">2% on Redeem</p>
+        </div>
   
                 {/* Curve Liquidity - Updated with USD */}
                 <div className="text-center px-4">
@@ -588,7 +690,7 @@ const TraderPageContent: React.FC = () => {
                       </div>
                     )}
                   </p>
-                  <p className="text-xs font-medium text-gray-600">Curve Liquidity</p>
+                  <p className="text-xs font-medium text-gray-600">Refund Liquidity</p>
                 </div>
   
                 {/* Curve Type */}
@@ -611,10 +713,10 @@ const TraderPageContent: React.FC = () => {
                     ) : (
                       <div className="flex flex-col items-center">
                         <span className="text-base font-bold">
-                          ${(Number(marketCap) * ethUsdPrice).toFixed(2)}
+                          ${(Number(curveMarketCap) * ethUsdPrice).toFixed(2)}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {Number(marketCap).toFixed(4)} ETH
+                          {Number(curveMarketCap).toFixed(4)} ETH
                         </span>
                       </div>
                     )}
@@ -638,20 +740,20 @@ const TraderPageContent: React.FC = () => {
                       </div>
                     )}
                   </p>
-                  <p className="text-xs font-medium text-gray-600">Store MCAP</p>
+                  <p className="text-xs font-medium text-gray-600">${tokenSymbol} MCAP</p>
                 </div>
   
-                {/* Items on Curve */}
+                {/* Items on Curve 
                 <div className="text-center px-4">
                   <p className="text-lg font-bold text-violet-700">
                     {isLoadingData ? (
                       <span className="animate-pulse">...</span>
                     ) : (
-                      `${itemsOnCurve} Products`
+                      `${itemsOnCurve}`
                     )}
                   </p>
                   <p className="text-xs font-medium text-gray-600">Items On Curve</p>
-                </div>
+                </div>*/}
               </div>
             </div>
           </div>
@@ -699,6 +801,8 @@ const TraderPageContent: React.FC = () => {
             activeContract={activeContract}
             signer={signer}
             marketData={marketDataContract}
+            sellingRestricted={restricted}
+            isExpired={isExpired}
           />
   
           {/* Activity Tabs Section */}

@@ -309,6 +309,74 @@
 			{
 				"indexed": true,
 				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "contractAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "carrier",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "processingTime",
+				"type": "string"
+			}
+		],
+		"name": "TokenShippingSet",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "contractAddress",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "status",
+				"type": "string"
+			}
+		],
+		"name": "TokenShippingUpdated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
 				"name": "oldAddress",
 				"type": "address"
 			},
@@ -462,25 +530,6 @@
 		"name": "createProfile",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "dynamicPricingPerAccount",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -761,6 +810,80 @@
 	{
 		"inputs": [
 			{
+				"internalType": "address",
+				"name": "_contractAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "getTokenShippingPreferences",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "carrier",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "processingTimeInDays",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "serviceLevel",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "specialInstructions",
+				"type": "string"
+			},
+			{
+				"internalType": "bool",
+				"name": "isInternational",
+				"type": "bool"
+			},
+			{
+				"internalType": "string",
+				"name": "calculatedCost",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "weight",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "dimensions",
+				"type": "string"
+			},
+			{
+				"internalType": "bool",
+				"name": "isFreeShipping",
+				"type": "bool"
+			},
+			{
+				"internalType": "uint256",
+				"name": "updatedAt",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "uint256",
 				"name": "_accNum",
 				"type": "uint256"
@@ -814,6 +937,30 @@
 			}
 		],
 		"name": "hasRole",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_contractAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "hasTokenShippingPreferences",
 		"outputs": [
 			{
 				"internalType": "bool",
@@ -1016,6 +1163,69 @@
 			}
 		],
 		"name": "setLaunchesRole",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_contractAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "_carrier",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_processingTimeInDays",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_serviceLevel",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_specialInstructions",
+				"type": "string"
+			},
+			{
+				"internalType": "bool",
+				"name": "_isInternational",
+				"type": "bool"
+			},
+			{
+				"internalType": "string",
+				"name": "_calculatedCost",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_weight",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_dimensions",
+				"type": "string"
+			},
+			{
+				"internalType": "bool",
+				"name": "_isFreeShipping",
+				"type": "bool"
+			}
+		],
+		"name": "setTokenShippingPreferences",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

@@ -20,10 +20,12 @@ interface NFT {
   tokenId: string;
   creator: string;
   attributes?: {
-    weightClass: string;
     category: string;
     size: string;
+    condition: string;  // Added condition instead of weightClass
+    shipping: string;   // Added shipping attribute
     baseRedemptionValue?: string;
+    baseValue?: string;  // Added baseValue attribute
   };
 }
 
@@ -54,7 +56,8 @@ interface ListingFormData {
   name: string;
   description: string;
   itemPhoto: string;
-  weightClass: string;
+  condition: string;
+  shipping: string;     // Added shipping
   category: string;
   size: string;
   inputEthAmount: string;
@@ -130,19 +133,21 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showListingModal, setShowListingModal] = useState(false);
   // Initialize the new field in the state
-const [listingForm, setListingForm] = useState<ListingFormData>({
-  quantity: '',
-  name: '',
-  description: '',
-  itemPhoto: '',
-  weightClass: '',
-  category: '',
-  size: '',
-  inputEthAmount: '',
-  baseValue: '',
-  baseValueDisplay: '',
-  minRedeemValue: ''
-});
+  const [listingForm, setListingForm] = useState<ListingFormData>({
+    quantity: '',
+    name: '',
+    description: '',
+    itemPhoto: '',
+    condition: '',      // Changed from weightClass
+    shipping: '',       // Added shipping
+    category: '',
+    size: '',
+    inputEthAmount: '',
+    baseValue: '',
+    baseValueDisplay: '',
+    minRedeemValue: ''
+  });
+  
 
     // Create a wallet instance from the private key
   const adminWallet = useMemo(() => {
@@ -271,6 +276,9 @@ useEffect(() => {
             // Get base value
             const baseValue = await contract.getBaseValue(tokenId);
             console.log('Base value:', baseValue.toString());
+            
+            // Format the base value from wei to ETH
+            const formattedBaseValue = ethers.formatEther(baseValue);
 
             // Get current buy price from the curve
             const [price, , , ] = await activeContract.getBuyPriceAfterFee(baseValue);
@@ -286,18 +294,22 @@ useEffect(() => {
             // Parse attributes with type checking
             const attributes = metadata.attributes as Array<{trait_type: string, value: string | number}> || [];
 
-            const weightClass = attributes.find(attr => 
-              attr.trait_type === "Weight Class"
-            )?.value?.toString() || "";
-
             const category = attributes.find(attr => 
               attr.trait_type === "Category"
             )?.value?.toString() || "";
-
+            
             const size = attributes.find(attr => 
               attr.trait_type === "Size"
             )?.value?.toString() || "";
-
+            
+            const condition = attributes.find(attr => 
+              attr.trait_type === "Condition"
+            )?.value?.toString() || "";
+            
+            const shipping = attributes.find(attr => 
+              attr.trait_type === "Shipping"
+            )?.value?.toString() || "";
+            
             const baseRedemptionValue = attributes.find(attr => 
               attr.trait_type === "Required Base Value For Redemption"
             )?.value?.toString() || "";
@@ -317,10 +329,12 @@ useEffect(() => {
               tokenId: tokenId.toString(),
               creator: creator,
               attributes: {
-                weightClass,
                 category,
                 size,
-                baseRedemptionValue: formattedRedemptionValue
+                condition,
+                shipping,
+                baseRedemptionValue: formattedRedemptionValue,
+                baseValue: formattedBaseValue
               }
             });
           }
@@ -437,11 +451,12 @@ useEffect(() => {
           listingForm.name,
           listingForm.description,
           listingForm.itemPhoto,
-          listingForm.weightClass,
+          listingForm.condition,  // Changed from weightClass
           listingForm.category,
           listingForm.size,
           pageLink,
-          baseValue
+          baseValue,
+          baseRedeem
         );
       } else {
         // Open curve
@@ -450,7 +465,7 @@ useEffect(() => {
           listingForm.name,
           listingForm.description,
           listingForm.itemPhoto,
-          listingForm.weightClass,
+          listingForm.condition,  // Changed from weightClass
           listingForm.category,
           listingForm.size,
           pageLink,
@@ -459,7 +474,7 @@ useEffect(() => {
         );
       }
   
-      await tx.wait();
+      //await tx.wait();
       setShowListingModal(false);
       window.location.reload();
     } catch (error) {
@@ -473,6 +488,7 @@ useEffect(() => {
   const handleNFTClick = (nft: NFT) => {
     setSelectedNFT(nft);
     setShowModal(true);
+    console.log("base redemption value:", listingForm.baseValue);
   };
 
   const handlePurchase = async (nft: NFT) => {
@@ -483,9 +499,12 @@ useEffect(() => {
   
       // First, get the actual price
       setModalState(prev => ({ ...prev, isLoadingPrice: true, purchaseError: '' }));
-      
-      const baseValue = ethers.parseEther(nft.attributes.baseRedemptionValue);
+
+      const baseValueformated = Number(nft.attributes.baseValue);
+
+      const baseValue = ethers.parseEther(baseValueformated.toString());
       const [actualPrice, , , ] = await activeContract.getBuyPriceAfterFee(baseValue);
+      console.log('Actual Price:', ethers.formatEther(actualPrice));
       
       // Convert price to ETH and USD
       const actualPriceEth = ethers.formatEther(actualPrice);
@@ -519,7 +538,7 @@ useEffect(() => {
       }
   
       const launchABI = [
-        "function buyNFT(uint256 tokenId) public payable",
+        "function buyNFT(uint256 tokenId) external payable",
       ];
   
       const createContractInstance = new ethers.Contract(activeContract.target, launchABI, signer);
@@ -532,7 +551,7 @@ useEffect(() => {
       });
   
       // Wait for transaction to complete
-      await tx.wait();
+      //await tx.wait();
   
       // Handle affiliate registration if applicable
       if (isAffiliate && affiliateAddress) {
@@ -557,7 +576,7 @@ useEffect(() => {
           );
           
           // Wait for affiliate registration transaction to complete
-          await affiliateTx.wait();
+          //await affiliateTx.wait();
           
           console.log('Affiliate registration successful:', affiliateTx.hash);
         } catch (affiliateError) {
@@ -603,6 +622,7 @@ useEffect(() => {
       </div>
     );
   }
+
 
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden mt-8">
@@ -838,8 +858,8 @@ useEffect(() => {
             </div>
           </div>
           
-          {/* Attributes grid */}
-          <div className="bg-gray-50 p-3 rounded-lg">
+         {/* Attributes grid */}
+         <div className="bg-gray-50 p-3 rounded-lg">
             <h3 className="font-semibold text-gray-800 mb-2">Attributes</h3>
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-white p-2 rounded-lg border border-gray-100">
@@ -851,10 +871,14 @@ useEffect(() => {
                 <p className="font-medium">{selectedNFT.attributes?.category || 'Footwear'}</p>
               </div>
               <div className="bg-white p-2 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500">Weight Class</p>
-                <p className="font-medium">{selectedNFT.attributes?.weightClass || '200'}</p>
+                <p className="text-xs text-gray-500">Condition</p>
+                <p className="font-medium">{selectedNFT.attributes?.condition || 'New'}</p>
               </div>
               <div className="bg-white p-2 rounded-lg border border-gray-100">
+                <p className="text-xs text-gray-500">Shipping</p>
+                <p className="font-medium">{selectedNFT.attributes?.shipping || 'Worldwide'}</p>
+              </div>
+              <div className="bg-white p-2 rounded-lg border border-gray-100 col-span-2">
                 <p className="text-xs text-gray-500">Market Value</p>
                 <p className="font-medium">
                   {selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH
@@ -984,12 +1008,12 @@ useEffect(() => {
   </div>
 )}
   
-      {/* Listing Modal */}
+{/* Listing Modal - Modified to reduce height */}
 {showListingModal && (
-  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-    <div className="bg-white p-8 rounded-xl shadow-xl max-w-4xl w-11/12 border border-gray-200">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">List New Item</h2>
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-xl shadow-xl max-w-4xl w-11/12 max-h-[90vh] overflow-y-auto border border-gray-200">
+      <div className="sticky top-0 bg-white p-4 border-b border-gray-200 flex justify-between items-center z-10">
+        <h2 className="text-xl font-bold text-gray-800">List New Item</h2>
         <button 
           onClick={() => setShowListingModal(false)}
           className="text-gray-400 hover:text-gray-600"
@@ -1001,98 +1025,127 @@ useEffect(() => {
         </button>
       </div>
       
-      <form onSubmit={handleListingSubmit} className="space-y-4">
-        <div className="grid grid-cols-3 gap-6">
+      <form onSubmit={handleListingSubmit} className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* First column */}
-          <div className="space-y-4">
-  <div>
-    <label className="block text-gray-700 mb-2">Quantity (10 per listing)</label>
-    <input
-      type="number"
-      name="quantity"
-      value={listingForm.quantity}
-      onChange={handleInputChange}
-      min="1"
-      max="10"
-      className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-      required
-    />
-    {parseInt(listingForm.quantity, 10) > 10 && (
-      <p className="text-red-500 text-sm mt-1">Maximum quantity is 10</p>
-    )}
-  </div>
-
+          <div>
+            <div className="mb-3">
+              <label className="block text-gray-700 text-sm font-medium mb-1">Quantity (10 per listing)</label>
+              <input
+                type="number"
+                name="quantity"
+                value={listingForm.quantity}
+                onChange={handleInputChange}
+                min="1"
+                max="10"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                required
+              />
+              {parseInt(listingForm.quantity, 10) > 10 && (
+                <p className="text-red-500 text-xs mt-1">Maximum quantity is 10</p>
+              )}
+            </div>
             
-            <div>
-              <label className="block text-gray-700 mb-2">Name</label>
+            <div className="mb-3">
+              <label className="block text-gray-700 text-sm font-medium mb-1">Name</label>
               <input
                 type="text"
                 name="name"
                 value={listingForm.name}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-gray-700 mb-2">Weight Class</label>
+            <div className="mb-3">
+              <label className="block text-gray-700 text-sm font-medium mb-1">Condition</label>
               <input
                 type="text"
-                name="weightClass"
-                value={listingForm.weightClass}
+                name="condition"
+                value={listingForm.condition}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 required
               />
             </div>
           </div>
 
           {/* Second column */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-gray-700 mb-2">Item Photo URL</label>
+          <div>
+            <div className="mb-3">
+              <label className="block text-gray-700 text-sm font-medium mb-1">Item Photo URL</label>
               <input
                 type="text"
                 name="itemPhoto"
                 value={listingForm.itemPhoto}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-gray-700 mb-2">Category</label>
+            <div className="mb-3">
+              <label className="block text-gray-700 text-sm font-medium mb-1">Category</label>
               <input type="text"
                 name="category"
                 value={listingForm.category}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-gray-700 mb-2">Size</label>
+            <div className="mb-3">
+              <label className="block text-gray-700 text-sm font-medium mb-1">Size</label>
               <input
                 type="text"
                 name="size"
                 value={listingForm.size}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 required
               />
             </div>
           </div>
 
           {/* Third column */}
-          <div className="space-y-4">
-            <div>
-              <label className="flex justify-between items-center text-gray-700 mb-2">
+          <div>
+            <div className="mb-3">
+              <label className="block text-gray-700 text-sm font-medium mb-1">Shipping</label>
+              <button
+                type="button"
+                onClick={() => {
+                  // This will be connected to the shipping modal in the future
+                  // For now, set a default value
+                  setListingForm(prev => ({
+                    ...prev,
+                    shipping: "Default Worldwide Shipping"
+                  }));
+                }}
+                className="w-full px-3 py-2 bg-blue-50 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="14" x="2" y="5" rx="2"></rect>
+                  <line x1="2" x2="22" y1="10" y2="10"></line>
+                </svg>
+                Set Shipping Details
+              </button>
+              {listingForm.shipping && (
+                <p className="text-xs text-green-600 mt-1 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                    <path d="M20 6L9 17l-5-5"></path>
+                  </svg>
+                  {listingForm.shipping}
+                </p>
+              )}
+            </div>
+
+            <div className="mb-3">
+              <label className="flex justify-between items-center text-gray-700 text-sm font-medium mb-1">
                 <span>Listing Price (ETH)</span>
                 {ethUsdPrice > 0 && parseFloat(listingForm.inputEthAmount) > 0 && (
-                  <span className="text-green-600 text-sm font-medium">
+                  <span className="text-green-600 text-xs font-medium">
                     ≈ ${(parseFloat(listingForm.inputEthAmount) * ethUsdPrice).toFixed(2)} USD
                   </span>
                 )}
@@ -1102,102 +1155,103 @@ useEffect(() => {
                 name="inputEthAmount"
                 value={listingForm.inputEthAmount}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 placeholder="e.g. 0.1"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
-                The initial purchase price of the item
-              </p>
+              <p className="text-xs text-gray-500 mt-0.5">The initial purchase price of the item</p>
             </div>
 
-        <div>
-          <label className="block text-gray-700 mb-2">Base Value / Token Weight</label>
-          <div className="flex items-center">
-          <input
-            type="text"
-            name="baseValueDisplay" // Changed this from baseValue
-            value={listingForm.baseValueDisplay} // Use the display version
-            readOnly
-            className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed"
-            placeholder={isCalculatingBaseValue ? "Calculating..." : "Enter ETH amount first"}
-          />
-          {isCalculatingBaseValue && (
-            <div className="animate-spin text-xl ml-2 text-blue-500">⏳</div>
-          )}
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Automatically calculated
-          </p>
-      </div>
-
-            <div>
-              <label className="flex justify-between items-center text-gray-700 mb-2">
-                <span>Market Value (ETH)</span>
-                {ethUsdPrice > 0 && parseFloat(listingForm.minRedeemValue) > 0 && (
-                  <span className="text-green-600 text-sm font-medium">
-                    ≈ ${(parseFloat(listingForm.minRedeemValue) * ethUsdPrice).toFixed(2)} USD
-                  </span>
+            <div className="mb-3">
+              <label className="block text-gray-700 text-sm font-medium mb-1">Base Value / Token Weight</label>
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  name="baseValueDisplay"
+                  value={listingForm.baseValueDisplay}
+                  readOnly
+                  className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600 cursor-not-allowed"
+                  placeholder={isCalculatingBaseValue ? "Calculating..." : "Enter ETH amount first"}
+                />
+                {isCalculatingBaseValue && (
+                  <div className="animate-spin text-lg ml-2 text-blue-500">⏳</div>
                 )}
-              </label>
-              <input
-                type="text"
-                name="minRedeemValue"
-                value={listingForm.minRedeemValue}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                The value required for redemption
-              </p>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">Automatically calculated</p>
             </div>
           </div>
         </div>
 
-        {/* Description field (full width) */}
-        <div className="mt-4">
-          <label className="block text-gray-700 mb-2">Description</label>
-          <textarea
-            name="description"
-            value={listingForm.description}
-            onChange={handleInputChange}
-            className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            rows={2}
-            required
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-1">
+          {/* Market Value Field */}
+          <div>
+            <label className="flex justify-between items-center text-gray-700 text-sm font-medium mb-1">
+              <span>Market Value (ETH)</span>
+              {ethUsdPrice > 0 && parseFloat(listingForm.minRedeemValue) > 0 && (
+                <span className="text-green-600 text-xs font-medium">
+                  ≈ ${(parseFloat(listingForm.minRedeemValue) * ethUsdPrice).toFixed(2)} USD
+                </span>
+              )}
+            </label>
+            <input
+              type="text"
+              name="minRedeemValue"
+              value={listingForm.minRedeemValue}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-0.5">The value required for redemption</p>
+          </div>
+
+          {/* Description field */}
+          <div>
+            <label className="block text-gray-700 text-sm font-medium mb-1">Description</label>
+            <textarea
+              name="description"
+              value={listingForm.description}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              rows={2}
+              required
+            />
+          </div>
         </div>
 
-        {/* Info section explaining the ETH to Base Value conversion */}
-        <div className="bg-blue-50 p-4 rounded-lg my-4 border border-blue-100">
-          <h4 className="text-blue-700 font-medium mb-2">How listing price & market value work</h4>
-          <p className="text-gray-700 text-sm">
-            The listing price is the initial sale price of your item. The market value is the price the item must reach for you to accept it at redemption. The base value is calculated based on listing price, and it determines the items weight on the curve. The higher the base value, the more valuable your item is in the marketplace.
-          </p>
-          {ethUsdPrice > 0 && (
-            <div className="mt-2 flex items-center text-sm text-gray-600">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 mr-1 text-blue-500">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-              </svg>
-              <span>Current ETH price: ${ethUsdPrice.toLocaleString()} USD</span>
+        {/* Info section explaining the ETH to Base Value conversion - Condensed */}
+        <div className="bg-blue-50 p-3 rounded-lg mt-4 border border-blue-100">
+          <div className="flex items-start gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500 mt-0.5 flex-shrink-0">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <div>
+              <h4 className="text-blue-700 text-sm font-medium">How listing price & market value work</h4>
+              <p className="text-gray-700 text-xs">
+                The listing price is the initial sale price. The market value is the price required for redemption. The base value determines the item's weight on the curve - higher values make your item more valuable in the marketplace.
+              </p>
+              {ethUsdPrice > 0 && (
+                <div className="mt-1 flex items-center text-xs text-gray-600">
+                  <span>Current ETH price: ${ethUsdPrice.toLocaleString()} USD</span>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
-        <div className="flex justify-end gap-4 mt-6">
+        <div className="flex justify-end gap-3 mt-4 sticky bottom-0 bg-white border-t border-gray-200 pt-3 pb-2">
           <button
             type="button"
             onClick={() => setShowListingModal(false)}
-            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+            className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isProcessing || isCalculatingBaseValue || !listingForm.baseValue}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg
+            className="px-5 py-2 bg-blue-600 text-white rounded-lg
                      hover:bg-blue-700 transition-all
                      disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >

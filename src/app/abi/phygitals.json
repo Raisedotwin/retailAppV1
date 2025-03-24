@@ -326,6 +326,25 @@
 		"inputs": [
 			{
 				"indexed": true,
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "string",
+				"name": "newShipping",
+				"type": "string"
+			}
+		],
+		"name": "ShippingUpdated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
 				"internalType": "address",
 				"name": "from",
 				"type": "address"
@@ -469,7 +488,7 @@
 			},
 			{
 				"internalType": "string[]",
-				"name": "_weightClasses",
+				"name": "_conditions",
 				"type": "string[]"
 			},
 			{
@@ -512,13 +531,7 @@
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "tokenId",
-				"type": "uint256"
-			}
-		],
+		"inputs": [],
 		"name": "expirationDate",
 		"outputs": [
 			{
@@ -538,19 +551,6 @@
 				"internalType": "address",
 				"name": "",
 				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "getAddressName",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
 			}
 		],
 		"stateMutability": "view",
@@ -731,19 +731,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "marketData",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -770,18 +757,13 @@
 			},
 			{
 				"internalType": "string",
-				"name": "weightClass",
+				"name": "condition",
 				"type": "string"
 			},
 			{
-				"internalType": "uint256",
-				"name": "dateUntilRedemption",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "launchDate",
-				"type": "uint256"
+				"internalType": "string",
+				"name": "shipping",
+				"type": "string"
 			},
 			{
 				"internalType": "string",
@@ -841,7 +823,7 @@
 			},
 			{
 				"internalType": "string",
-				"name": "_weightClass",
+				"name": "_condition",
 				"type": "string"
 			},
 			{
@@ -913,11 +895,6 @@
 				"internalType": "uint256",
 				"name": "tokenId",
 				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "_burner",
-				"type": "address"
 			}
 		],
 		"name": "redeem",
@@ -1033,19 +1010,6 @@
 	{
 		"inputs": [
 			{
-				"internalType": "uint256",
-				"name": "_maxSupply",
-				"type": "uint256"
-			}
-		],
-		"name": "setMaxSupply",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
 				"internalType": "bytes4",
 				"name": "interfaceId",
 				"type": "bytes4"
@@ -1113,6 +1077,24 @@
 			}
 		],
 		"name": "transferFrom",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "newShipping",
+				"type": "string"
+			}
+		],
+		"name": "updateShipping",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

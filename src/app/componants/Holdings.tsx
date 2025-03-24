@@ -59,7 +59,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data: initialData, itemsPerPage = 1
               Top Launches
             </h2>
           </div>
-          <p className="text-gray-600 mt-1">Browse and discover merchandise curves, trade retail items from top merchants</p>
+          <p className="text-gray-600 mt-1">Discover new product launches, bet on the price and aquire them before anyone else!</p>
         </div>
         
         <div className="overflow-x-auto">

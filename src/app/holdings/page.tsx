@@ -26,9 +26,9 @@ const HoldingsPage = () => {
   let rpcURL = EIP155_CHAINS["eip155:84532"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const tokenContractAddr = '0x5Cd11eafc8722992Eb64e4cCBdE77f86283C7191';
-  const createAccountAddr = '0xc2B926A65E1e99a2db80C3C2Ff311F367Aa41775';
-  const profileAddr = '0x33E04eC91A04F8791927C06EF5E862e6AA09b71a';
+  const tokenContractAddr = '0x038337c1e4d838a8D6e16F11f974c901363D306F';
+  const createAccountAddr = '0x39cAAb47Fd2205D4711E42BeEF44e53D928ac25D';
+  const profileAddr = '0xC829522b59B44EDa9303A2C643d4CCD3099F1c83';
 
   const tokenMarketABI = require("../abi/tokenMarket");
   const createAccountABI = require("../abi/createAccount");
@@ -67,7 +67,7 @@ const HoldingsPage = () => {
       const phygitalContract = new ethers.Contract(phygitalAddress, phygitABI, provider);
       
       // Get collection name from phygital contract
-      const collectionName = await phygitalContract.getAddressName();
+      const collectionName = await phygitalContract.name();
       
       return {
         launchAddress: launchAddr,
@@ -239,20 +239,16 @@ const HoldingsPage = () => {
             ) : (
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <Holdings
-                  data={accountBalances.map((balance, index) => ({
-                    token: index + 1,
-                    // Use collection name if available, otherwise use profile name
-                    name: balance.collectionName || balance.profileName,
-                    username: balance.username,
-                    balance: balance.balance,
-                    logo: balance.logo,
-                    // Create link using collection name and launch address if available
-                    link: balance.launchAddress ? 
-                      `/trader?name=${balance.collectionName || balance.profileName}&logo=${balance.logo}&username=${balance.username}&contractAddress=${balance.launchAddress}` : 
-                      balance.profileName ? 
-                        `/trader?name=${balance.profileName}&logo=${balance.logo}&username=${balance.username}` : 
-                        '#',
-                  }))}
+                  data={accountBalances
+                    .filter(balance => balance.launchAddress) // Only include accounts with a launchAddress
+                    .map((balance, index) => ({
+                      token: index + 1,
+                      name: balance.collectionName || balance.profileName,
+                      username: balance.username,
+                      balance: balance.balance,
+                      logo: balance.logo,
+                      link: `/trader?name=${balance.collectionName || balance.profileName}&logo=${balance.logo}&username=${balance.username}&contractAddress=${balance.launchAddress}`,
+                    }))}
                 />
               </div>
             )}
