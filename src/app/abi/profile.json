@@ -665,6 +665,25 @@
 		"inputs": [
 			{
 				"internalType": "address",
+				"name": "_launchAddress",
+				"type": "address"
+			}
+		],
+		"name": "getPayoutsByLaunchAddress",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "payoutsAddress",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
 				"name": "user",
 				"type": "address"
 			}

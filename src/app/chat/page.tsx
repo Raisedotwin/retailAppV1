@@ -83,18 +83,18 @@ const Chat: React.FC = () => {
   let wallet = wallets[0];
 
   // Contract addresses and ABIs
-  const createAddr = '0x39cAAb47Fd2205D4711E42BeEF44e53D928ac25D';
+  const createAddr = '0x10Efc88f1FBDb23664C275f2471758F311Df6f13';
   const createABI = require("../abi/createAccount");
-  const launchFactory = '0xa2803f025185476F108bf79039e0bfd00207A981';
+  const launchFactory = '0x22CbE5B81Dbc891d83C64058Fc600426d6561074';
   const launchFactoryABI = require("../abi/launchFactory");
-  const openFactory = '0x17487e2adA44408CfF05a97a36e3bCb43deFDc35';
+  const openFactory = '0xFcebf1369227A18F7bCbefd871c73529DE28536F';
   const openFactoryABI = require("../abi/openFactory");
-  const profileAddr = '0xC829522b59B44EDa9303A2C643d4CCD3099F1c83';
+  const profileAddr = '0x1543bD73dCD88eeeF065E61c30408E9ea13514dD';
   const profileABI = require("../abi/profile");
   const launchABI = require("../abi/launch");
   const openABI = require("../abi/open");
 
-  const tokenMarketAddr = '0x038337c1e4d838a8D6e16F11f974c901363D306F';
+  const tokenMarketAddr = '0x32383c402d5Af4640908C5b34D44559dc133ebBA';
   const tokenMarketABI = require("../abi/tokenMarket");
 
   // Then update your useEffect for Twitter username changes:

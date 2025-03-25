@@ -477,7 +477,7 @@ useEffect(() => {
         setModalState(prev => ({ ...prev, transactionError: '' }));
         
         // Get the orders contract
-        const ordersContractAddress = "0xf85D4Ec5d2BD4F62276B5bA07FF32390662c9676";
+        const ordersContractAddress = "0xCfAe2f219E22a774211B12c2F2185Ad0CB34A31e";
         const ordersContractABI = [
           "function createOrder(address _collection, uint256 _tokenId, tuple(string recipientName, string streetAddress, string city, string state, string zipCode, string country, string phoneNumber, string email) _shipping) external payable nonReentrant"
         ];

@@ -703,6 +703,19 @@
 	},
 	{
 		"inputs": [],
+		"name": "getLiquidityTracking",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "getLoyaltyBuyOver",
 		"outputs": [
 			{
@@ -1098,6 +1111,19 @@
 	},
 	{
 		"inputs": [],
+		"name": "liquidityTracker",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
 		"name": "marketData",
 		"outputs": [
 			{
@@ -1338,6 +1364,19 @@
 			}
 		],
 		"name": "setExternalAdmin",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_tracker",
+				"type": "address"
+			}
+		],
+		"name": "setLiquidityTracker",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

@@ -85,10 +85,10 @@ const TraderPageContent: React.FC = () => {
     return null;
   }, [params.contractAddress, provider]);
 
-  const tokenContractAddr = '0x038337c1e4d838a8D6e16F11f974c901363D306F';
-  const marketDataAddr = '0x45bDde4801230164fD4249717947D8658E8A6105';
-  const createAccountAddr = '0x39cAAb47Fd2205D4711E42BeEF44e53D928ac25D';
-  const profileAddr = '0xC829522b59B44EDa9303A2C643d4CCD3099F1c83';
+  const tokenContractAddr = '0x32383c402d5Af4640908C5b34D44559dc133ebBA';
+  const marketDataAddr = '0x911a5B0E9968b8E4727B3a16273876038b7197D7';
+  const createAccountAddr = '0x10Efc88f1FBDb23664C275f2471758F311Df6f13';
+  const profileAddr = '0x1543bD73dCD88eeeF065E61c30408E9ea13514dD';
   const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
 
   // Rest of your state variables...
