@@ -57,6 +57,9 @@ interface MyInventoryProps {
   showRedeemableLabel?: boolean;
   sellingRestricted?: boolean;
   isExpired?: boolean;
+  finallyExpired?: boolean;
+  currentPeriod?: any
+  curveType?: any
 }
 
 // Helper functions
@@ -102,7 +105,10 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   marketData,
   showRedeemableLabel = true,
   sellingRestricted,
-  isExpired
+  isExpired,
+  finallyExpired,
+  currentPeriod,
+  curveType
 }) => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -120,6 +126,8 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   
   // State for shipping modal
   const [showShippingModal, setShowShippingModal] = useState(false);
+  // Add new state to track if shipping is for Pay in Full
+  const [isShippingForPayInFull, setIsShippingForPayInFull] = useState(false);
 
   const [modalState, setModalState] = useState<NFTModalState>({
     showSellConfirm: false,
@@ -398,21 +406,30 @@ useEffect(() => {
     
     // Select NFT and open shipping modal instead of redeem confirmation
     setSelectedNFT(nft);
+    setIsShippingForPayInFull(false); // Set flag to indicate this is for redemption
     setShowShippingModal(true);
   };
 
-  // New handler for Pay in Full option
+  // Updated handler for Pay in Full option
   const handlePayInFull = async (nft: NFT) => {
     try {
       if (!activeContract) {
         throw new Error('Contract not initialized');
       }
       
+      // Check if this is the right curve type and not expired
+      if (curveType !== 2 || isExpired) {
+        setModalState(prev => ({
+          ...prev,
+          transactionError: 'Pay in Full is only available during active second curve phase',
+          isLoadingPrice: false
+        }));
+        return;
+      }
+      
       setModalState(prev => ({ ...prev, isLoadingPrice: true, transactionError: '' }));
 
       // Calculate the remaining payment amount needed
-      // For this example, we'll use the base redemption value as the full payment amount
-      // In a real implementation, you'd calculate the difference between current value and full value
       const baseRedemptionValue = nft.attributes?.baseRedemptionValue || "0";
       const fullPaymentEth = parseFloat(baseRedemptionValue);
       const currentValueEth = nft.priceEth;
@@ -421,7 +438,7 @@ useEffect(() => {
       let remainingPaymentEth = fullPaymentEth - currentValueEth;
       
       // Ensure the payment is at least a minimum amount
-      remainingPaymentEth = Math.max(remainingPaymentEth, 0.001);
+      remainingPaymentEth = Math.max(remainingPaymentEth, 0.000000000000000001);
       
       const remainingPaymentUsd = (remainingPaymentEth * ethUsdPrice).toFixed(2);
       
@@ -445,21 +462,109 @@ useEffect(() => {
     }
   };
   
-  const handleShippingSubmit = (shippingDetails: ShippingDetails, isExpedited: boolean) => {
+  // Updated shipping submit handler to handle both redemption and pay in full cases
+  const handleShippingSubmit = async (shippingDetails: ShippingDetails, isExpedited: boolean) => {
     console.log("Shipping details:", shippingDetails);
     console.log("Expedited shipping:", isExpedited);
     
     // Close shipping modal
     setShowShippingModal(false);
     
-    // Now proceed to redemption confirmation
+    if (isShippingForPayInFull && selectedNFT) {
+      // This is for pay in full
+      try {
+        setIsProcessing(true);
+        setModalState(prev => ({ ...prev, transactionError: '' }));
+        
+        // Get the orders contract
+        const ordersContractAddress = "0xf85D4Ec5d2BD4F62276B5bA07FF32390662c9676";
+        const ordersContractABI = [
+          "function createOrder(address _collection, uint256 _tokenId, tuple(string recipientName, string streetAddress, string city, string state, string zipCode, string country, string phoneNumber, string email) _shipping) external payable nonReentrant"
+        ];
+        
+        const ordersContract = new ethers.Contract(ordersContractAddress, ordersContractABI, signer);
+        
+        // Convert payment amount to wei
+        const paymentAmountWei = ethers.parseEther(modalState.paymentAmount);
+        
+        console.log('Paying in full for NFT:', selectedNFT.tokenId);
+        console.log('Payment amount (ETH):', modalState.paymentAmount);
+        console.log('Payment amount (Wei):', paymentAmountWei.toString());
+        
+        // Format shipping details for the contract
+        const shippingDetailsForContract = [
+          shippingDetails.recipientName,
+          shippingDetails.streetAddress,
+          shippingDetails.city,
+          shippingDetails.state,
+          shippingDetails.zipCode,
+          shippingDetails.country,
+          shippingDetails.phoneNumber,
+          shippingDetails.email
+        ];
+        
+        // Call the createOrder function on the orders contract
+        const tx = await ordersContract.createOrder(
+          nftContract, // collection address
+          selectedNFT.tokenId, 
+          shippingDetailsForContract,
+          { value: paymentAmountWei }
+        );
+        
+        console.log('Payment and order creation successful');
+        
+        // Reset states and close modals
+        setModalState(prev => ({
+          ...prev,
+          paymentAmount: '',
+          paymentAmountUsd: ''
+        }));
+        setShowModal(false);
+        
+        // Refresh the page or NFT list
+        window.location.reload();
+        
+      } catch (error) {
+        console.error('Error processing payment and creating order:', error);
+        setModalState(prev => ({
+          ...prev,
+          showRedeemConfirm: true, // Show redeem confirmation with error
+          transactionError: 'Failed to process payment and create order. Please try again.'
+        }));
+      } finally {
+        setIsProcessing(false);
+      }
+    } else {
+      // This is for normal redemption
+      setModalState(prev => ({
+        ...prev,
+        showSellConfirm: false,
+        showRedeemConfirm: true,
+        showPayInFullConfirm: false,
+        transactionError: ''
+      }));
+    }
+  };
+  
+  // Updated confirmPayInFull function to handle the 2-step process
+  const confirmPayInFull = (nft: any) => {
+    if (!nft) return;
+
+    // Close the payment confirmation modal
     setModalState(prev => ({
       ...prev,
-      showSellConfirm: false,
-      showRedeemConfirm: true,
-      showPayInFullConfirm: false,
-      transactionError: ''
+      showPayInFullConfirm: false
     }));
+    
+    // Set flag to indicate this shipping is for pay in full
+    setIsShippingForPayInFull(true);
+
+    if (!selectedNFT) {
+      setSelectedNFT(nft);
+    }
+    
+    // Now open shipping modal to collect shipping details
+    setShowShippingModal(true);
   };
   
   const confirmSell = async (nft: NFT) => {
@@ -568,51 +673,6 @@ useEffect(() => {
       setModalState(prev => ({
         ...prev,
         transactionError: 'Failed to redeem NFT. Please try again.'
-      }));
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // New function to handle Pay in Full confirmation
-  const confirmPayInFull = async (nft: NFT) => {
-    try {
-      setIsProcessing(true);
-      setModalState(prev => ({ ...prev, transactionError: '' }));
-  
-      if (!activeContract) {
-        throw new Error('Contract not initialized');
-      }
-  
-      // Convert payment amount to wei
-      const paymentAmountWei = ethers.parseEther(modalState.paymentAmount);
-      
-      console.log('Paying in full for NFT:', nft.tokenId);
-      console.log('Payment amount (ETH):', modalState.paymentAmount);
-      console.log('Payment amount (Wei):', paymentAmountWei.toString());
-      
-      // Call the payInFull function on the contract
-      // Note: This is a placeholder. You would need to implement this function in your contract
-      const tx = await activeContract.payInFull(nft.tokenId, { value: paymentAmountWei });
-      console.log('Payment successful');
-  
-      // Reset states and close modals
-      setModalState(prev => ({
-        ...prev,
-        showPayInFullConfirm: false,
-        paymentAmount: '',
-        paymentAmountUsd: ''
-      }));
-      setShowModal(false);
-      
-      // Refresh the page or NFT list
-      window.location.reload();
-  
-    } catch (error) {
-      console.error('Error paying in full:', error);
-      setModalState(prev => ({
-        ...prev,
-        transactionError: 'Failed to process payment. Please try again.'
       }));
     } finally {
       setIsProcessing(false);
@@ -762,21 +822,21 @@ useEffect(() => {
                       >
                         Redeem
                       </button>
-                      {/* New Pay in Full button */}
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePayInFull(nft);
-                        }}
-                        disabled={isProcessing || nft.isRedeemable} // Disable if already redeemable
-                        className={`px-3 py-1 rounded-lg font-medium transition-all text-xs
-                                 disabled:opacity-50 disabled:cursor-not-allowed
-                                 ${!nft.isRedeemable
-                                    ? 'bg-blue-500 text-white hover:bg-blue-600'
-                                    : 'bg-gray-400 text-white'}`}
-                      >
-                        Pay Full
-                      </button>
+                      {/* Updated Pay in Full button - only show when curveType is 2 and not expired */}
+                      {curveType === 2 && !isExpired && !nft.isRedeemable && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePayInFull(nft);
+                          }}
+                          disabled={isProcessing || nft.isRedeemable}
+                          className="px-3 py-1 rounded-lg font-medium transition-all text-xs
+                                   bg-blue-500 text-white hover:bg-blue-600
+                                   disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Pay Full
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1045,7 +1105,7 @@ useEffect(() => {
             </div>
           </div>
           
-          {/* Action buttons with new Pay in Full button */}
+          {/* Action buttons with conditional Pay in Full button */}
           <div className="flex justify-end gap-3 pt-2">
             <button
               onClick={() => setShowModal(false)}
@@ -1074,17 +1134,18 @@ useEffect(() => {
             >
               {isProcessing ? 'Processing...' : 'Redeem'}
             </button>
-            <button 
-              onClick={() => handlePayInFull(selectedNFT)}
-              disabled={isProcessing || selectedNFT.isRedeemable}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all
-                        disabled:opacity-50 disabled:cursor-not-allowed
-                        ${!selectedNFT.isRedeemable 
-                          ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                          : 'bg-gray-400 text-white'}`}
-            >
-              {isProcessing ? 'Processing...' : 'Pay in Full'}
-            </button>
+            {/* Conditional Pay in Full button in modal - only show when curveType is 2 and not expired */}
+            {curveType === 2 && !isExpired && !selectedNFT.isRedeemable && (
+              <button 
+                onClick={() => handlePayInFull(selectedNFT)}
+                disabled={isProcessing}
+                className="px-4 py-1.5 rounded-lg font-medium text-sm transition-all
+                          bg-blue-600 text-white hover:bg-blue-700
+                          disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isProcessing ? 'Processing...' : 'Pay in Full'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1204,7 +1265,7 @@ useEffect(() => {
       {modalState.showPayInFullConfirm && selectedNFT && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full border border-gray-200">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Pay in Full</h3>
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Buy Now!</h3>
             
             <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
               <p className="text-gray-600 mb-2">You are about to pay the remaining amount to make this item eligible for redemption:</p>
@@ -1246,7 +1307,7 @@ useEffect(() => {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg
                         hover:bg-blue-700 transition-all disabled:opacity-50 font-medium"
               >
-                {isProcessing ? 'Processing...' : 'Confirm Payment'}
+                {isProcessing ? 'Processing...' : 'Proceed to Shipping'}
               </button>
             </div>
           </div>
@@ -1257,7 +1318,11 @@ useEffect(() => {
       {showShippingModal && selectedNFT && (
         <ShippingModal
           isOpen={showShippingModal}
-          onClose={() => setShowShippingModal(false)}
+          onClose={() => {
+            setShowShippingModal(false);
+            // Reset isShippingForPayInFull if user closes modal
+            setIsShippingForPayInFull(false);
+          }}
           onSubmit={(shippingDetails, isExpedited) => {
             handleShippingSubmit(shippingDetails, isExpedited);
           }}

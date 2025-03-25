@@ -48,6 +48,9 @@ interface NFTMarketplaceProps {
   marketData?: any;
   isAffiliate?: boolean;
   affiliateAddress?: string | null;
+  finallyExpired?: boolean;
+  currentPeriod?: any
+
 }
 
 // Update the ListingFormData interface to include baseValueDisplay

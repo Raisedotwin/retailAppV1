@@ -130,6 +130,12 @@ const TraderPageContent: React.FC = () => {
   const [curveDuration, setCurveDuration] = useState<number | null>(null);
   const [isExpired, setIsExpired] = useState(false);
 
+  // Add these state variables near the other countdown related states
+  const [redeemPeriodDuration, setRedeemPeriodDuration] = useState<number | null>(null);
+  const [redeemExpiryTimestamp, setRedeemExpiryTimestamp] = useState<number | null>(null);
+  const [isFinallyExpired, setIsFinallyExpired] = useState(false);
+  const [currentPeriod, setCurrentPeriod] = useState<'trading' | 'redemption' | 'expired'>('trading');
+
   const fetchTokenDetails = useCallback(async () => {
     if (!activeContract || !tokenAddress || !provider) return;
     
@@ -278,7 +284,6 @@ const TraderPageContent: React.FC = () => {
     }
   }, [openContract, launchContract, checkCurveType]);
 
-  // 6. Load contract data after curve type is determined
   const fetchContractData = useCallback(async () => {
     if (!activeContract || curveType === null) return;
     
@@ -289,21 +294,20 @@ const TraderPageContent: React.FC = () => {
         activeContract.getCurveInitializedTime(),
         provider.getBalance(activeContract.target)
       ]);
-
+  
       console.log('expiry:', expiry);
       console.log('startTime:', startTime); 
-
+  
       let expiryNum: any;
       
       // Handle expiry time
       if (expiry.status === 'fulfilled') {
         expiryNum = Number(expiry.value.toString());
-
+  
         setExpiryTime(formatBlockTimestamp(expiry.value.toString()));
-
+  
         console.log('Curve expires at:', expiryNum.toString());
         console.log(`Formatted expiry time: ${formatBlockTimestamp(expiry.value.toString())}`);
-        
       }
       
       // Handle start time
@@ -311,30 +315,81 @@ const TraderPageContent: React.FC = () => {
         const startNum = Number(startTime.value.toString());
         setInitTimestamp(startNum);
         console.log(`Curve initialized at: ${formatBlockTimestamp(startNum.toString())}`);
-
-        const finalTime = expiryNum + startNum;
+  
+        const tradingEndTime = expiryNum + startNum;
         const now = Math.floor(Date.now() / 1000);
-        setIsExpired(finalTime <= now); //we need to add the start and expiry
-
-        const timeStamp = finalTime - now;
-        const finalTimeStamp = timeStamp + now;
-        console.log(`Time since expiry: ${timeStamp}`);
-
-        setExpiryTimestamp(finalTimeStamp);
-
-        // Check if already expired
-        console.log(`Current time: ${now}`);
-        console.log(`Is expired: ${isExpired}`);
-        console.log(`Final time: ${finalTime}`);
         
+        // Check if trading period is expired
+        const isTradingExpired = tradingEndTime <= now;
+        setIsExpired(isTradingExpired);
+        
+        // Set trading period countdown
+        const timeUntilTradingEnds = tradingEndTime - now;
+        const tradingEndTimestamp = timeUntilTradingEnds + now;
+        console.log(`Time until trading ends: ${timeUntilTradingEnds}`);
+        setExpiryTimestamp(tradingEndTimestamp);
+  
         // Calculate duration if both times are available
         if (expiry.status === 'fulfilled') {
-          const expiryNum = Number(expiry.value.toString());
-          //const duration = calculateCurveDuration(finalTime, expiryNum);
-          const duration = finalTime - now;
-          console.log(`Curve duration: ${duration}`);
-          console.log(`Formatted duration: ${formatDuration(duration)}`);
-          setCurveDuration(duration);
+          const tradingDuration = tradingEndTime - now;
+          console.log(`Trading duration: ${tradingDuration}`);
+          console.log(`Formatted duration: ${formatDuration(tradingDuration)}`);
+          setCurveDuration(tradingDuration);
+          
+          // Determine current period
+          if (isTradingExpired) {
+            // We need to fetch the redemption period duration
+            try {
+              // Fetch redemption period from token market contract
+              if (contract) {
+                const redeemTime = await contract.getRedeemTime();
+                const redeemDuration = Number(redeemTime.toString());
+                setRedeemPeriodDuration(redeemDuration);
+                console.log(`Redemption period duration: ${redeemDuration}`);
+                
+                // Calculate when redemption period ends
+                const redemptionEndTime = tradingEndTime + redeemDuration;
+                const isFinalExpired = redemptionEndTime <= now;
+                setIsFinallyExpired(isFinalExpired);
+                
+                // Set redemption countdown
+                const timeUntilRedemptionEnds = redemptionEndTime - now;
+                const redemptionEndTimestamp = timeUntilRedemptionEnds + now;
+                setRedeemExpiryTimestamp(redemptionEndTimestamp);
+                
+                // Set current period status
+                if (isFinalExpired) {
+                  setCurrentPeriod('expired');
+                } else {
+                  setCurrentPeriod('redemption');
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching redemption period:', error);
+              // Default to a fixed redemption period if we can't fetch it
+              const defaultRedeemDuration = 14 * 24 * 60 * 60; // 14 days
+              setRedeemPeriodDuration(defaultRedeemDuration);
+              
+              // Calculate when redemption period ends with default duration
+              const redemptionEndTime = tradingEndTime + defaultRedeemDuration;
+              const isFinalExpired = redemptionEndTime <= now;
+              setIsFinallyExpired(isFinalExpired);
+              
+              // Set redemption countdown
+              const timeUntilRedemptionEnds = redemptionEndTime - now;
+              const redemptionEndTimestamp = timeUntilRedemptionEnds + now;
+              setRedeemExpiryTimestamp(redemptionEndTimestamp);
+              
+              // Set current period status
+              if (isFinalExpired) {
+                setCurrentPeriod('expired');
+              } else {
+                setCurrentPeriod('redemption');
+              }
+            }
+          } else {
+            setCurrentPeriod('trading');
+          }
         }
       }
       
@@ -351,7 +406,7 @@ const TraderPageContent: React.FC = () => {
       console.error('Error fetching contract data:', error);
       setDataLoadError('Failed to load contract information');
     }
-  }, [activeContract, curveType, provider]);
+  }, [activeContract, curveType, provider, contract]);
   
   // 7. Execute fetchContractData when activeContract changes
   useEffect(() => {
@@ -618,42 +673,68 @@ const TraderPageContent: React.FC = () => {
               {/* Stats Section - Updated with USD Displays */}
               <div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-7 gap-4 bg-gradient-to-r from-fuchsia-50 to-violet-50 p-4 rounded-xl border border-violet-100">
                 {/* Time Left */}
-                <div className="text-center px-4">
-                  {isLoadingData ? (
-                    <p className="text-lg font-bold text-violet-700 animate-pulse">Loading...</p>
-                  ) : expiryTimestamp ? (
-                    <CountdownTimer 
-                      expiryTimestamp={expiryTimestamp}
-                      onExpire={() => setIsExpired(isExpired)}
-                      totalDuration={curveDuration || undefined}
-                      showProgressBar={true}
-                    />
-                  ) : (
-                    <p className="text-lg font-bold text-violet-700">{expiryTime}</p>
-                  )}
-                  <p className="text-xs font-medium text-gray-600">Time Left</p>
-                </div>
+<div className="text-center px-4">
+  {isLoadingData ? (
+    <p className="text-lg font-bold text-violet-700 animate-pulse">Loading...</p>
+  ) : currentPeriod === 'trading' && expiryTimestamp ? (
+    <>
+      <CountdownTimer 
+        expiryTimestamp={expiryTimestamp}
+        onExpire={() => {
+          setIsExpired(true);
+          setCurrentPeriod('redemption');
+        }}
+        totalDuration={curveDuration || undefined}
+        showProgressBar={true}
+      />
+      <p className="text-xs font-medium text-gray-600">Trading Ends</p>
+    </>
+  ) : currentPeriod === 'redemption' && redeemExpiryTimestamp ? (
+    <>
+      <CountdownTimer 
+        expiryTimestamp={redeemExpiryTimestamp}
+        onExpire={() => {
+          setIsFinallyExpired(true);
+          setCurrentPeriod('expired');
+        }}
+        totalDuration={redeemPeriodDuration || undefined}
+        showProgressBar={true}
+      />
+      <p className="text-xs font-medium text-gray-600">Redemption Ends</p>
+    </>
+  ) : (
+    <>
+      <p className="text-lg font-bold text-red-700">Expired</p>
+      <p className="text-xs font-medium text-gray-600">All Periods Ended</p>
+    </>
+  )}
+</div>
+
   
-                  {/* LIQ */}
-                  <div className="text-center px-4">
-                    <p className="text-lg font-bold text-violet-700">
-                    {isLoadingData ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      <span>{isExpired ? "Redemption" : "Trading"}</span>
-                    )}
-                    </p>
-                    <p className="text-xs font-medium text-gray-600">Period</p>
-  
-                  {/* Restriction indicator below the period */}
-                  {restricted && !isLoadingData && (
-                    <div className="mt-1">
-                    <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                      No Selling
-                    </span>
-                    </div>
-                  )}
-                </div>
+                 {/* LIQ */}
+<div className="text-center px-4">
+  <p className="text-lg font-bold text-violet-700">
+  {isLoadingData ? (
+    <span className="animate-pulse">...</span>
+  ) : (
+    <span>
+      {currentPeriod === 'trading' ? "Trading" : 
+       currentPeriod === 'redemption' ? "Redemption" : 
+       "Closed"}
+    </span>
+  )}
+  </p>
+  <p className="text-xs font-medium text-gray-600">Period</p>
+
+  {/* Restriction indicator below the period */}
+  {restricted && !isLoadingData && (
+    <div className="mt-1">
+    <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
+      No Selling
+    </span>
+    </div>
+  )}
+</div>
 
                  {/* Curve Liquidity - Updated with token symbol and balance */}
         <div className="text-center px-4">
@@ -690,7 +771,7 @@ const TraderPageContent: React.FC = () => {
                       </div>
                     )}
                   </p>
-                  <p className="text-xs font-medium text-gray-600">Refund Liquidity</p>
+                  <p className="text-xs font-medium text-gray-600">Curve Liquidity</p>
                 </div>
   
                 {/* Curve Type */}
@@ -776,34 +857,39 @@ const TraderPageContent: React.FC = () => {
     
           {/* NFT Marketplace Section */}
           <NFTMarketplace 
-            nftContract={nftTokenAddress}
-            curveContract={contractAddress}
-            userAddress={walletAddress}
-            useContractData={false}
-            storeAddress={storeAddress}
-            provider={provider}
-            activeContract={activeContract}
-            launchContract={launchContract}
-            openContract={openContract}
-            curveType={curveType}
-            signer={signer}
-            pageLink={pageLink}
-            expired={isExpired}
-            isAffiliate={isAffiliate}
-            affiliateAddress={affiliateAddress}
-          />
-  
-          <MyInventory
-            nftContract={nftTokenAddress}
-            curveContract={contractAddress}
-            userAddress={walletAddress}
-            useContractData={false}
-            activeContract={activeContract}
-            signer={signer}
-            marketData={marketDataContract}
-            sellingRestricted={restricted}
-            isExpired={isExpired}
-          />
+  nftContract={nftTokenAddress}
+  curveContract={contractAddress}
+  userAddress={walletAddress}
+  useContractData={false}
+  storeAddress={storeAddress}
+  provider={provider}
+  activeContract={activeContract}
+  launchContract={launchContract}
+  openContract={openContract}
+  curveType={curveType}
+  signer={signer}
+  pageLink={pageLink}
+  expired={isExpired}
+  isAffiliate={isAffiliate}
+  affiliateAddress={affiliateAddress}
+  finallyExpired={isFinallyExpired} // Add this prop
+  currentPeriod={currentPeriod} // Add this prop
+/>
+
+<MyInventory
+  nftContract={nftTokenAddress}
+  curveContract={contractAddress}
+  userAddress={walletAddress}
+  useContractData={false}
+  activeContract={activeContract}
+  signer={signer}
+  marketData={marketDataContract}
+  sellingRestricted={restricted}
+  isExpired={isExpired}
+  finallyExpired={isFinallyExpired} // Add this prop
+  currentPeriod={currentPeriod} // Add this prop
+  curveType={curveType}
+/>
   
           {/* Activity Tabs Section */}
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-md mt-8 p-6">

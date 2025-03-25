@@ -435,7 +435,7 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
           curveParams.allowOthersToList // Use the value from the checkbox
         );
         alert('Open curve created successfully!');
-      } else {
+      } else if (!isOpen) {
         // Handle Launch (Closed) Curve creation using launch contract ABI
         const launchContract = new ethers.Contract(launchAddress, launchABI, signer);
         const tx = await launchContract.create(
@@ -579,7 +579,7 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
       }
 
       const userAddress = await signer.getAddress();
-      
+       
       // Get the most recent launch address from profile contract
       const profileContract = new ethers.Contract(profileAddr, profileABI, signer);
       const launchCount = await profileContract.launchCount(userAddress);
