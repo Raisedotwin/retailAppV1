@@ -49,7 +49,8 @@ interface NFTMarketplaceProps {
   isAffiliate?: boolean;
   affiliateAddress?: string | null;
   finallyExpired?: boolean;
-  currentPeriod?: any
+  currentPeriod?: any;
+  redeemValue?: any;
 
 }
 
@@ -125,7 +126,11 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   expired,
   marketData,
   isAffiliate,
-  affiliateAddress = null
+  affiliateAddress = null,
+  finallyExpired,
+  currentPeriod,
+  redeemValue
+
 }) => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -782,10 +787,10 @@ useEffect(() => {
         </div>
       )}
   
-       {/* NFT Detail Modal */}
+ {/* NFT Detail Modal */}
 {showModal && selectedNFT && (
-  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full overflow-hidden">
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
       {/* Modal header with close button */}
       <div className="flex justify-between items-center p-4 border-b border-gray-200">
         <h2 className="text-xl font-bold text-gray-800">{selectedNFT.name}</h2>
@@ -802,13 +807,13 @@ useEffect(() => {
       
       {/* Modal content */}
       <div className="flex flex-col md:flex-row">
-        {/* Image section */}
+        {/* Image section - Fixed to show full image */}
         <div className="md:w-1/2 p-4">
-          <div className="rounded-lg overflow-hidden shadow-md">
+          <div className="rounded-lg overflow-hidden shadow-md flex items-center justify-center">
             <img
               src={selectedNFT.image}
               alt={selectedNFT.name}
-              className="w-full h-[350px] object-cover"
+              className="w-full object-contain h-auto max-h-[350px]"
             />
           </div>
         </div>
@@ -817,19 +822,56 @@ useEffect(() => {
         <div className="md:w-1/2 p-4 space-y-4">
           <p className="text-gray-600">{selectedNFT.description}</p>
           
-          {/* Redemption Notification */}
-          <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
-            <div className="flex items-start gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 mt-0.5 flex-shrink-0">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                <line x1="12" y1="9" x2="12" y2="13"></line>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          {/* Redemption Info Card - Enhanced with clearer conditions */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
+            <h3 className="text-blue-800 font-semibold flex items-center gap-2 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               </svg>
-              <div>
-                <h4 className="text-amber-800 font-medium text-sm">Important Redemption Information</h4>
-                <p className="text-amber-700 text-sm">
-                  This NFT can only be redeemed for the physical item when its price reaches the Market Value of <strong>{selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH</strong>.
+              Redemption Conditions
+            </h3>
+            
+            <div className="space-y-3">
+              {/* During Trading Period */}
+              <div className="bg-white p-3 rounded-lg border border-blue-100">
+                <h4 className="text-sm font-medium text-blue-800 mb-1">During Trading Period</h4>
+                <p className="text-sm text-blue-700">
+                  To redeem this NFT for the physical item during the trading period, its price must reach <span className="font-bold">{selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH</span> (Market Value).
                 </p>
+              </div>
+              
+              {/* After Expiry */}
+              <div className="bg-white p-3 rounded-lg border border-blue-100">
+                <h4 className="text-sm font-medium text-blue-800 mb-1">After Expiry (Redemption Period)</h4>
+                <p className="text-sm text-blue-700">
+                  After curve expiry, the NFT can be redeemed when the total liquidity pool value is at least <span className="font-bold">{redeemValue ? 
+                    `${(Number(redeemValue) + Number(selectedNFT.attributes?.baseRedemptionValue || '0.005')).toFixed(5)} ETH` : 
+                    `${(Number(selectedNFT.attributes?.baseRedemptionValue || '0.005') + 0.01).toFixed(5)} ETH`}</span>
+                  <span className="text-xs text-gray-500 block mt-1">
+                    (Pool Requirement: {redeemValue || '0.01'} ETH + Market Value: {selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH)
+                  </span>
+                </p>
+              </div>
+              
+              {/* Current Status */}
+              <div className={`${currentPeriod === 'trading' ? 'bg-green-50 border-green-100' : 
+                               currentPeriod === 'redemption' ? 'bg-amber-50 border-amber-100' : 
+                               'bg-gray-50 border-gray-100'} 
+                              p-3 rounded-lg border`}>
+                <h4 className="text-sm font-medium mb-1 
+                      text-gray-800">Current Status</h4>
+                <div className="flex items-center gap-2">
+                  <span className={`w-3 h-3 rounded-full ${
+                    currentPeriod === 'trading' ? 'bg-green-500' : 
+                    currentPeriod === 'redemption' ? 'bg-amber-500' : 
+                    'bg-gray-500'
+                  }`}></span>
+                  <p className="text-sm">
+                    {currentPeriod === 'trading' ? 'Trading Period Active' : 
+                     currentPeriod === 'redemption' ? 'Redemption Period Active' : 
+                     'Expired'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -862,38 +904,51 @@ useEffect(() => {
           </div>
           
          {/* Attributes grid */}
-         <div className="bg-gray-50 p-3 rounded-lg">
-            <h3 className="font-semibold text-gray-800 mb-2">Attributes</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white p-2 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500">Size</p>
-                <p className="font-medium">{selectedNFT.attributes?.size || 'Large'}</p>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500">Category</p>
-                <p className="font-medium">{selectedNFT.attributes?.category || 'Footwear'}</p>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500">Condition</p>
-                <p className="font-medium">{selectedNFT.attributes?.condition || 'New'}</p>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500">Shipping</p>
-                <p className="font-medium">{selectedNFT.attributes?.shipping || 'Worldwide'}</p>
-              </div>
-              <div className="bg-white p-2 rounded-lg border border-gray-100 col-span-2">
-                <p className="text-xs text-gray-500">Market Value</p>
-                <p className="font-medium">
-                  {selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH
-                  {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
-                    <span className="block text-xs text-gray-500">
-                      (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
+<div className="bg-gray-50 p-3 rounded-lg">
+  <h3 className="font-semibold text-gray-800 mb-2">Attributes</h3>
+  <div className="grid grid-cols-2 gap-2">
+    <div className="bg-white p-2 rounded-lg border border-gray-100">
+      <p className="text-xs text-gray-500">Size</p>
+      <p className="font-medium">{selectedNFT.attributes?.size || 'Large'}</p>
+    </div>
+    <div className="bg-white p-2 rounded-lg border border-gray-100">
+      <p className="text-xs text-gray-500">Category</p>
+      <p className="font-medium">{selectedNFT.attributes?.category || 'Footwear'}</p>
+    </div>
+    <div className="bg-white p-2 rounded-lg border border-gray-100">
+      <p className="text-xs text-gray-500">Condition</p>
+      <p className="font-medium">{selectedNFT.attributes?.condition || 'New'}</p>
+    </div>
+    <div className="bg-white p-2 rounded-lg border border-gray-100">
+      <p className="text-xs text-gray-500">Shipping</p>
+      <p className="font-medium">{selectedNFT.attributes?.shipping || 'Worldwide'}</p>
+    </div>
+    <div className="bg-white p-2 rounded-lg border border-gray-100">
+      <p className="text-xs text-gray-500">Market Value</p>
+      <p className="font-medium">
+        {selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH
+        {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
+          <span className="block text-xs text-gray-500">
+            (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
+          </span>
+        )}
+      </p>
+    </div>
+    <div className="bg-white p-2 rounded-lg border border-blue-100">
+      <p className="text-xs text-blue-500">Pool at Expiry</p>
+      <p className="font-medium text-blue-700">
+        {redeemValue ? 
+          `${(Number(redeemValue) + Number(selectedNFT.attributes?.baseRedemptionValue || '0.005')).toFixed(5)}` : 
+          `${(Number(selectedNFT.attributes?.baseRedemptionValue || '0.005') + 0.01).toFixed(5)}`} ETH
+        {ethUsdPrice > 0 && (
+          <span className="block text-xs text-blue-500">
+            (${((Number(redeemValue || 0.01) + Number(selectedNFT.attributes?.baseRedemptionValue || 0.005)) * ethUsdPrice).toFixed(2)})
+          </span>
+        )}
+      </p>
+    </div>
+  </div>
+</div>
         </div>
       </div>
       
@@ -916,7 +971,7 @@ useEffect(() => {
       </div>
     </div>
   </div>
-)} 
+)}
 
 {/* Purchase Confirmation Modal */}
 {modalState.showPurchaseConfirm && selectedNFT && (

@@ -26,6 +26,7 @@ const TraderPageContent: React.FC = () => {
   const [expiryTime, setExpiryTime] = useState('Loading...'); // Better loading state
   const [storeAddress, setStoreAddress] = useState('');
   const [curveMarketCap, setCurveMarketCap] = useState(''); // Use dash instead of '0'
+  const [totalActiveRedeemValue, setTotalActiveRedeemValue] = useState('-'); // New state for redeem value
   
   // Add ETH price state for USD conversion
   const [ethUsdPrice, setEthUsdPrice] = useState(0);
@@ -67,6 +68,12 @@ const TraderPageContent: React.FC = () => {
     "function decimals() view returns (uint8)"
   ];
   
+  // LiquidityPoolTracker ABI
+  const liquidityPoolTrackerABI = [
+    "function getTotalActiveRedeemValue(address launchContract) external view returns (uint256)",
+    "function getNFTLiquidityRequirement(address launchContract, uint256 tokenId) external view returns (uint256)"
+  ];
+  
 
   // Setup contract instances using useMemo
   const openContract = useMemo(() => {
@@ -85,11 +92,12 @@ const TraderPageContent: React.FC = () => {
     return null;
   }, [params.contractAddress, provider]);
 
-  const tokenContractAddr = '0x32383c402d5Af4640908C5b34D44559dc133ebBA';
-  const marketDataAddr = '0x911a5B0E9968b8E4727B3a16273876038b7197D7';
-  const createAccountAddr = '0x10Efc88f1FBDb23664C275f2471758F311Df6f13';
-  const profileAddr = '0x1543bD73dCD88eeeF065E61c30408E9ea13514dD';
+  const tokenContractAddr = '0xB0B747C3A92c720f3a856E218F3f07e38939190c';
+  const marketDataAddr = '0x21A3b74c864C3157A37Eb18ECEB7B377358A4F58';
+  const createAccountAddr = '0xD4C1AEd05eC6b9FB319378d86a8e0Df131C0397C';
+  const profileAddr = '0x006208E5BDAF546245Ae5A9eece0f4B30a466241';
   const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
+  const liquidityPoolTrackerAddr = '0x72D9156b60f4aee5c5E3d476b2E63309bCB17aEF';
 
   // Rest of your state variables...
   const [isActive, setIsActive] = useState(false);
@@ -121,6 +129,7 @@ const TraderPageContent: React.FC = () => {
   const [profileContract, setProfileContract] = useState<Contract | null>(null);
   const [createContract, setCreateContract] = useState<Contract | null>(null);
   const [marketDataContract, setMarketDataContract] = useState<Contract | null>(null);
+  const [liquidityPoolTrackerContract, setLiquidityPoolTrackerContract] = useState<Contract | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
 
@@ -162,11 +171,34 @@ const TraderPageContent: React.FC = () => {
     }
   }, [activeContract, tokenAddress, provider]);
 
+  // New function to fetch the total active redeem value
+  const fetchTotalActiveRedeemValue = useCallback(async () => {
+    if (!activeContract || !liquidityPoolTrackerContract) return;
+    
+    try {
+      const redeemValue = await liquidityPoolTrackerContract.getTotalActiveRedeemValue(activeContract.target);
+      const formattedRedeemValue = ethers.formatEther(redeemValue);
+      setTotalActiveRedeemValue(formattedRedeemValue);
+      console.log(`Total Active Redeem Value: ${formattedRedeemValue} ETH`);
+    } catch (error) {
+      console.error('Error fetching total active redeem value:', error);
+      // Keep default if there's an error
+      setTotalActiveRedeemValue('-');
+    }
+  }, [activeContract, liquidityPoolTrackerContract]);
+
   useEffect(() => {
     if (tokenAddress) {
       fetchTokenDetails();
     }
   }, [tokenAddress, fetchTokenDetails]);
+
+  // Add useEffect to fetch redeem value when contracts are ready
+  useEffect(() => {
+    if (activeContract && liquidityPoolTrackerContract) {
+      fetchTotalActiveRedeemValue();
+    }
+  }, [activeContract, liquidityPoolTrackerContract, fetchTotalActiveRedeemValue]);
 
   // Add useEffect to fetch ETH price
   useEffect(() => {
@@ -473,11 +505,13 @@ const TraderPageContent: React.FC = () => {
       const profileContractInstance = new ethers.Contract(profileAddr, profileABI, signer);
       const createContractInstance = new ethers.Contract(createAccountAddr, createAccountABI, signer);
       const marketDataContractInstance = new ethers.Contract(marketDataAddr, marketDataABI, signer);
+      const liquidityPoolTrackerInstance = new ethers.Contract(liquidityPoolTrackerAddr, liquidityPoolTrackerABI, signer);
       
       setContract(marketContractInstance);
       setProfileContract(profileContractInstance);
       setCreateContract(createContractInstance);
       setMarketDataContract(marketDataContractInstance);
+      setLiquidityPoolTrackerContract(liquidityPoolTrackerInstance);
 
       // Fetch profile data
       if (profileContractInstance && params.username) {
@@ -524,7 +558,7 @@ const TraderPageContent: React.FC = () => {
     } finally {
       setIsLoadingData(false);
     }
-  }, [user, wallets, params.username, tokenContractAddr, profileAddr, createAccountAddr, marketDataAddr]);
+  }, [user, wallets, params.username, tokenContractAddr, profileAddr, createAccountAddr, marketDataAddr, liquidityPoolTrackerAddr]);
 
   // 10. Execute initWalletAndContracts when authentication is confirmed
   useEffect(() => {
@@ -671,89 +705,88 @@ const TraderPageContent: React.FC = () => {
               </div>
               
               {/* Stats Section - Updated with USD Displays */}
-              <div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-7 gap-4 bg-gradient-to-r from-fuchsia-50 to-violet-50 p-4 rounded-xl border border-violet-100">
+              <div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-8 gap-4 bg-gradient-to-r from-fuchsia-50 to-violet-50 p-4 rounded-xl border border-violet-100">
                 {/* Time Left */}
-<div className="text-center px-4">
-  {isLoadingData ? (
-    <p className="text-lg font-bold text-violet-700 animate-pulse">Loading...</p>
-  ) : currentPeriod === 'trading' && expiryTimestamp ? (
-    <>
-      <CountdownTimer 
-        expiryTimestamp={expiryTimestamp}
-        onExpire={() => {
-          setIsExpired(true);
-          setCurrentPeriod('redemption');
-        }}
-        totalDuration={curveDuration || undefined}
-        showProgressBar={true}
-      />
-      <p className="text-xs font-medium text-gray-600">Trading Ends</p>
-    </>
-  ) : currentPeriod === 'redemption' && redeemExpiryTimestamp ? (
-    <>
-      <CountdownTimer 
-        expiryTimestamp={redeemExpiryTimestamp}
-        onExpire={() => {
-          setIsFinallyExpired(true);
-          setCurrentPeriod('expired');
-        }}
-        totalDuration={redeemPeriodDuration || undefined}
-        showProgressBar={true}
-      />
-      <p className="text-xs font-medium text-gray-600">Redemption Ends</p>
-    </>
-  ) : (
-    <>
-      <p className="text-lg font-bold text-red-700">Expired</p>
-      <p className="text-xs font-medium text-gray-600">All Periods Ended</p>
-    </>
-  )}
-</div>
+                <div className="text-center px-4">
+                  {isLoadingData ? (
+                    <p className="text-lg font-bold text-violet-700 animate-pulse">Loading...</p>
+                  ) : currentPeriod === 'trading' && expiryTimestamp ? (
+                    <>
+                      <CountdownTimer 
+                        expiryTimestamp={expiryTimestamp}
+                        onExpire={() => {
+                          setIsExpired(true);
+                          setCurrentPeriod('redemption');
+                        }}
+                        totalDuration={curveDuration || undefined}
+                        showProgressBar={true}
+                      />
+                      <p className="text-xs font-medium text-gray-600">Trading Ends</p>
+                    </>
+                  ) : currentPeriod === 'redemption' && redeemExpiryTimestamp ? (
+                    <>
+                      <CountdownTimer 
+                        expiryTimestamp={redeemExpiryTimestamp}
+                        onExpire={() => {
+                          setIsFinallyExpired(true);
+                          setCurrentPeriod('expired');
+                        }}
+                        totalDuration={redeemPeriodDuration || undefined}
+                        showProgressBar={true}
+                      />
+                      <p className="text-xs font-medium text-gray-600">Redemption Ends</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-bold text-red-700">Expired</p>
+                      <p className="text-xs font-medium text-gray-600">All Periods Ended</p>
+                    </>
+                  )}
+                </div>
 
-  
-                 {/* LIQ */}
-<div className="text-center px-4">
-  <p className="text-lg font-bold text-violet-700">
-  {isLoadingData ? (
-    <span className="animate-pulse">...</span>
-  ) : (
-    <span>
-      {currentPeriod === 'trading' ? "Trading" : 
-       currentPeriod === 'redemption' ? "Redemption" : 
-       "Closed"}
-    </span>
-  )}
-  </p>
-  <p className="text-xs font-medium text-gray-600">Period</p>
+                {/* Period */}
+                <div className="text-center px-4">
+                  <p className="text-lg font-bold text-violet-700">
+                  {isLoadingData ? (
+                    <span className="animate-pulse">...</span>
+                  ) : (
+                    <span>
+                      {currentPeriod === 'trading' ? "Trading" : 
+                      currentPeriod === 'redemption' ? "Redemption" : 
+                      "Closed"}
+                    </span>
+                  )}
+                  </p>
+                  <p className="text-xs font-medium text-gray-600">Period</p>
 
-  {/* Restriction indicator below the period */}
-  {restricted && !isLoadingData && (
-    <div className="mt-1">
-    <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
-      No Selling
-    </span>
-    </div>
-  )}
-</div>
+                  {/* Restriction indicator below the period */}
+                  {restricted && !isLoadingData && (
+                    <div className="mt-1">
+                    <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                      No Selling
+                    </span>
+                    </div>
+                  )}
+                </div>
 
-                 {/* Curve Liquidity - Updated with token symbol and balance */}
-        <div className="text-center px-4">
-          <p className="text-lg font-bold text-violet-700">
-            {isLoadingData ? (
-              <span className="animate-pulse">...</span>
-            ) : (
-              <div className="flex flex-col items-center">
-                <span className="text-base font-bold">
-                  {Number(tokenBalance).toFixed(0)} ${tokenSymbol}
-                </span>
-                <span className="text-xs text-gray-500">
-                  In Contract
-                </span>
-              </div>
-            )}
-          </p>
-          <p className="text-xs font-medium text-gray-600">2% on Redeem</p>
-        </div>
+                {/* Token balance */}
+                <div className="text-center px-4">
+                  <p className="text-lg font-bold text-violet-700">
+                    {isLoadingData ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <span className="text-base font-bold">
+                          {Number(tokenBalance).toFixed(0)} ${tokenSymbol}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          In Contract
+                        </span>
+                      </div>
+                    )}
+                  </p>
+                  <p className="text-xs font-medium text-gray-600">2% on Redeem</p>
+                </div>
   
                 {/* Curve Liquidity - Updated with USD */}
                 <div className="text-center px-4">
@@ -823,18 +856,25 @@ const TraderPageContent: React.FC = () => {
                   </p>
                   <p className="text-xs font-medium text-gray-600">${tokenSymbol} MCAP</p>
                 </div>
-  
-                {/* Items on Curve 
+
+                {/* Total Active Redeem Value - NEW */}
                 <div className="text-center px-4">
                   <p className="text-lg font-bold text-violet-700">
                     {isLoadingData ? (
                       <span className="animate-pulse">...</span>
                     ) : (
-                      `${itemsOnCurve}`
+                      <div className="flex flex-col items-center">
+                        <span className="text-base font-bold">
+                          ${(Number(totalActiveRedeemValue) * ethUsdPrice).toFixed(2)}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {Number(totalActiveRedeemValue).toFixed(4)} ETH
+                        </span>
+                      </div>
                     )}
                   </p>
-                  <p className="text-xs font-medium text-gray-600">Items On Curve</p>
-                </div>*/}
+                  <p className="text-xs font-medium text-gray-600">Redeem Value</p>
+                </div>
               </div>
             </div>
           </div>
@@ -857,39 +897,41 @@ const TraderPageContent: React.FC = () => {
     
           {/* NFT Marketplace Section */}
           <NFTMarketplace 
-  nftContract={nftTokenAddress}
-  curveContract={contractAddress}
-  userAddress={walletAddress}
-  useContractData={false}
-  storeAddress={storeAddress}
-  provider={provider}
-  activeContract={activeContract}
-  launchContract={launchContract}
-  openContract={openContract}
-  curveType={curveType}
-  signer={signer}
-  pageLink={pageLink}
-  expired={isExpired}
-  isAffiliate={isAffiliate}
-  affiliateAddress={affiliateAddress}
-  finallyExpired={isFinallyExpired} // Add this prop
-  currentPeriod={currentPeriod} // Add this prop
-/>
+            nftContract={nftTokenAddress}
+            curveContract={contractAddress}
+            userAddress={walletAddress}
+            useContractData={false}
+            storeAddress={storeAddress}
+            provider={provider}
+            activeContract={activeContract}
+            launchContract={launchContract}
+            openContract={openContract}
+            curveType={curveType}
+            signer={signer}
+            pageLink={pageLink}
+            expired={isExpired}
+            isAffiliate={isAffiliate}
+            affiliateAddress={affiliateAddress}
+            finallyExpired={isFinallyExpired}
+            currentPeriod={currentPeriod}
+            redeemValue={totalActiveRedeemValue}
+          />
 
-<MyInventory
-  nftContract={nftTokenAddress}
-  curveContract={contractAddress}
-  userAddress={walletAddress}
-  useContractData={false}
-  activeContract={activeContract}
-  signer={signer}
-  marketData={marketDataContract}
-  sellingRestricted={restricted}
-  isExpired={isExpired}
-  finallyExpired={isFinallyExpired} // Add this prop
-  currentPeriod={currentPeriod} // Add this prop
-  curveType={curveType}
-/>
+          <MyInventory
+            nftContract={nftTokenAddress}
+            curveContract={contractAddress}
+            userAddress={walletAddress}
+            useContractData={false}
+            activeContract={activeContract}
+            signer={signer}
+            marketData={marketDataContract}
+            sellingRestricted={restricted}
+            isExpired={isExpired}
+            finallyExpired={isFinallyExpired}
+            currentPeriod={currentPeriod}
+            curveType={curveType}
+            trackingContract={liquidityPoolTrackerContract}
+          />
   
           {/* Activity Tabs Section */}
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-md mt-8 p-6">

@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import ShippingModal from '../componants/ShippingDetailsModal';
 
+interface TrackingContract {
+  getNFTLiquidityRequirement(launchContract: any, tokenId: string | number): Promise<bigint>;
+}
+
 interface NFTModalState {
   showSellConfirm: boolean;
   showRedeemConfirm: boolean;
@@ -59,7 +63,8 @@ interface MyInventoryProps {
   isExpired?: boolean;
   finallyExpired?: boolean;
   currentPeriod?: any
-  curveType?: any
+  curveType?: any,
+  trackingContract?: any,
 }
 
 // Helper functions
@@ -95,6 +100,82 @@ const formatEthPrice = (price: string): string => {
   }
 };
 
+// LiquidityRequirement Component with explicit typing
+const LiquidityRequirement: React.FC<{
+  trackingContract: TrackingContract | null;
+  activeContract: { target: string } | null;
+  tokenId: string | number;
+  baseRedemptionValue: string;
+  ethUsdPrice: number;
+}> = ({ 
+  trackingContract, 
+  activeContract, 
+  tokenId,
+  baseRedemptionValue,
+  ethUsdPrice
+}) => {
+  const [liquidityReq, setLiquidityReq] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchLiquidityRequirement = async () => {
+      if (!trackingContract || !activeContract || !tokenId) {
+        setLiquidityReq(baseRedemptionValue || '0.00000001');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Call the tracking contract to get the liquidity requirement
+        const liquidityRequirement = await trackingContract.getNFTLiquidityRequirement(
+          activeContract.target,
+          tokenId
+        );
+        
+        // Format the value from wei to ETH
+        const formattedValue = ethers.formatEther(liquidityRequirement);
+        setLiquidityReq(formattedValue);
+        
+        console.log(`Liquidity requirement for NFT #${tokenId}: ${formattedValue} ETH`);
+      } catch (err) {
+        console.error('Error fetching liquidity requirement:', err);
+        setError('Failed to fetch liquidity requirement');
+        setLiquidityReq(baseRedemptionValue || '0.005'); // Fallback to baseRedemptionValue
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLiquidityRequirement();
+  }, [trackingContract, activeContract, tokenId, baseRedemptionValue]);
+
+  // Show loading state
+  if (isLoading) {
+    return <span className="inline-block animate-pulse">Loading...</span>;
+  }
+
+  // Show error state with fallback value
+  if (error) {
+    return <span>{baseRedemptionValue || '0.005'} ETH</span>;
+  }
+
+  // Display the liquidity requirement with USD value if available
+  return (
+    <>
+      {liquidityReq} ETH
+      {ethUsdPrice > 0 && (
+        <span className="text-xs text-gray-500 block">
+          (${(parseFloat(liquidityReq) * ethUsdPrice).toFixed(2)})
+        </span>
+      )}
+    </>
+  );
+};
+
 const MyInventory: React.FC<MyInventoryProps> = ({
   nftContract,
   curveContract,
@@ -108,7 +189,8 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   isExpired,
   finallyExpired,
   currentPeriod,
-  curveType
+  curveType,
+  trackingContract
 }) => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -477,7 +559,7 @@ useEffect(() => {
         setModalState(prev => ({ ...prev, transactionError: '' }));
         
         // Get the orders contract
-        const ordersContractAddress = "0xCfAe2f219E22a774211B12c2F2185Ad0CB34A31e";
+        const ordersContractAddress = "0x8fD29d66c4819BBf4884C8F93Ce0d9655145Ea91";
         const ordersContractABI = [
           "function createOrder(address _collection, uint256 _tokenId, tuple(string recipientName, string streetAddress, string city, string state, string zipCode, string country, string phoneNumber, string email) _shipping) external payable nonReentrant"
         ];
@@ -973,7 +1055,7 @@ useEffect(() => {
         </div>
       )}
   
-     {/* NFT Detail Modal */}
+   {/* NFT Detail Modal with Redemption Options */}
 {showModal && selectedNFT && (
   <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
     <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 my-8 max-h-[85vh] overflow-y-auto">
@@ -994,11 +1076,11 @@ useEffect(() => {
       <div className="flex flex-col md:flex-row">
         {/* Image section - more compact */}
         <div className="md:w-1/2 p-4">
-          <div className="bg-gray-50 rounded-lg overflow-hidden shadow-md">
+          <div className="bg-gray-50 rounded-lg overflow-hidden shadow-md flex items-center justify-center">
             <img
               src={selectedNFT.image}
               alt={selectedNFT.name}
-              className="w-full h-[300px] object-contain"
+              className="w-full h-auto object-contain max-h-[300px]"
             />
           </div>
         </div>
@@ -1009,24 +1091,61 @@ useEffect(() => {
             <p className="text-gray-600 text-sm">{selectedNFT.description}</p>
           )}
           
-          {/* Important Redemption Information - more compact */}
-          <div className={`p-3 rounded-lg border text-sm ${selectedNFT.isRedeemable ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-            <div className="flex items-start gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`mt-0.5 flex-shrink-0 ${selectedNFT.isRedeemable ? 'text-amber-500' : 'text-red-500'}`}>
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          {/* Redemption Info Card - Enhanced with clearer conditions */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-200">
+            <h3 className="text-blue-800 font-semibold flex items-center gap-2 mb-2 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               </svg>
-              <div>
-                <h4 className={`font-medium text-sm ${selectedNFT.isRedeemable ? 'text-amber-800' : 'text-red-800'}`}>
-                  {selectedNFT.isRedeemable ? 'Eligible for Redemption' : 'Not Eligible for Redemption Yet'}
-                </h4>
-                <p className={`text-xs ${selectedNFT.isRedeemable ? 'text-amber-700' : 'text-red-700'}`}>
-                  {selectedNFT.isRedeemable 
-                    ? 'This NFT can be redeemed for the physical item.'
-                    : `This NFT is not yet eligible for redemption. The current price needs to reach ${selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH first.`
-                  }
+              Redemption Conditions
+            </h3>
+            
+            <div className="space-y-2">
+              {/* During Trading Period */}
+              <div className="bg-white p-2 rounded-lg border border-blue-100">
+                <h4 className="text-xs font-medium text-blue-800 mb-1">During Trading Period</h4>
+                <p className="text-xs text-blue-700">
+                  To redeem this NFT for the physical item during the trading period, its price must reach <span className="font-bold">{selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH</span> (Market Value).
                 </p>
+              </div>
+              
+              {/* After Expiry - With Liquidity Requirement */}
+              <div className="bg-white p-2 rounded-lg border border-blue-100 relative">
+                <h4 className="text-xs font-medium text-blue-800 mb-1">After Expiry (Redemption Period)</h4>
+                <div className="text-xs text-blue-700">
+                  <p className="mb-1">
+                    After curve expiry, this NFT can be redeemed when the total liquidity pool value reaches <span className="font-bold">
+                      <LiquidityRequirement 
+                        trackingContract={trackingContract} 
+                        activeContract={activeContract} 
+                        tokenId={selectedNFT.tokenId} 
+                        baseRedemptionValue={selectedNFT.attributes?.baseRedemptionValue || '0.005'}
+                        ethUsdPrice={ethUsdPrice}
+                      />
+                    </span>
+                  </p>
+                </div>
+              </div>
+              
+              {/* Current Status */}
+              <div className={`${currentPeriod === 'trading' ? 'bg-green-50 border-green-100' : 
+                               currentPeriod === 'redemption' ? 'bg-amber-50 border-amber-100' : 
+                               'bg-gray-50 border-gray-100'} 
+                              p-2 rounded-lg border`}>
+                <h4 className="text-xs font-medium mb-1 
+                      text-gray-800">Current Status</h4>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${
+                    currentPeriod === 'trading' ? 'bg-green-500' : 
+                    currentPeriod === 'redemption' ? 'bg-amber-500' : 
+                    'bg-gray-500'
+                  }`}></span>
+                  <p className="text-xs">
+                    {currentPeriod === 'trading' ? 'Trading Period Active' : 
+                     currentPeriod === 'redemption' ? 'Redemption Period Active' : 
+                     'Expired'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
