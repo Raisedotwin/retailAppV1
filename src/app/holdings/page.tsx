@@ -26,9 +26,9 @@ const HoldingsPage = () => {
   let rpcURL = EIP155_CHAINS["eip155:84532"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const tokenContractAddr = '0xB0B747C3A92c720f3a856E218F3f07e38939190c';
-  const createAccountAddr = '0xD4C1AEd05eC6b9FB319378d86a8e0Df131C0397C';
-  const profileAddr = '0x006208E5BDAF546245Ae5A9eece0f4B30a466241';
+  const tokenContractAddr = '0xeE09ffc7e0C75F8402a45df29Ec4Db879D6BB483';
+  const createAccountAddr = '0x709256bC7cF4a05CA696285d47c7B183287Ce179';
+  const profileAddr = '0xaEcF5F89F5607ED37e5f3f61011D152757C001ca';
 
   const tokenMarketABI = require("../abi/tokenMarket");
   const createAccountABI = require("../abi/createAccount");

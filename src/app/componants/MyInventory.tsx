@@ -564,7 +564,7 @@ useEffect(() => {
       setModalState(prev => ({ ...prev, transactionError: '' }));
       
       // Get the orders contract
-      const ordersContractAddress = "0x8fD29d66c4819BBf4884C8F93Ce0d9655145Ea91";
+      const ordersContractAddress = "0x8567836454f50855F63b5AEc268646e6654Cb0F9";
       const ordersContract = new ethers.Contract(ordersContractAddress, ordersAbi, signer);
       
       // Format shipping details for the contract

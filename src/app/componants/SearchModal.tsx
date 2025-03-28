@@ -46,7 +46,7 @@ const SearchModal: React.FC<SearchModalProps> = ({ visible, setVisible }) => {
     "function getAddressLaunch() external view returns (address)"
   ];
 
-  const profileAddr = '0x006208E5BDAF546245Ae5A9eece0f4B30a466241';
+  const profileAddr = '0xaEcF5F89F5607ED37e5f3f61011D152757C001ca';
   const profileABI = [
     "function getProfileByName(string memory name) external view returns (address, uint256, string memory, string memory, string memory, address, address, uint256, address)",
     "function getStoreNameByLaunchAddress(address _launchAddress) external view returns (string memory, string memory, string memory)"
