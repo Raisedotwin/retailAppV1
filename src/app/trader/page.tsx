@@ -109,6 +109,7 @@ const TraderPageContent: React.FC = () => {
   const [curveType, setCurveType] = useState<number | null>(null);
   const [activeContract, setActiveContract] = useState<Contract | null>(null);
   const [activeAddress, setActiveAddress] = useState<any>('');
+  const [ordersAbi, setOrdersAbi] = useState<any>(null);  
   
   // Add loading state indicators
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -500,6 +501,9 @@ const TraderPageContent: React.FC = () => {
       const profileABI = require('../abi/profile.json');
       const createAccountABI = require('../abi/createAccount.json');
       const marketDataABI = require('../abi/marketdata.json');
+
+      const ordersABI = require('../abi/orders.json');
+      setOrdersAbi(ordersABI);
       
       const marketContractInstance = new ethers.Contract(tokenContractAddr, tokenMarketABI, signer);
       const profileContractInstance = new ethers.Contract(profileAddr, profileABI, signer);
@@ -931,6 +935,7 @@ const TraderPageContent: React.FC = () => {
             currentPeriod={currentPeriod}
             curveType={curveType}
             trackingContract={liquidityPoolTrackerContract}
+            ordersAbi={ordersAbi}
           />
   
           {/* Activity Tabs Section */}

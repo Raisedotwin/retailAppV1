@@ -65,6 +65,7 @@ interface MyInventoryProps {
   currentPeriod?: any
   curveType?: any,
   trackingContract?: any,
+  ordersAbi?: any
 }
 
 // Helper functions
@@ -190,7 +191,8 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   finallyExpired,
   currentPeriod,
   curveType,
-  trackingContract
+  trackingContract,
+  ordersAbi
 }) => {
   const [nfts, setNfts] = useState<NFT[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -377,11 +379,11 @@ useEffect(() => {
                   ? ethers.parseEther(baseRedemptionValue) 
                   : baseValue;
                 
-                console.log('Sell Price:', ethers.formatEther(price), 'Base Redemption Value:', ethers.formatEther(baseRedemptionValueBigInt));
+                console.log('Sell Price:', ethers.formatEther(price), 'Base Redemption Value:', ethers.formatEther(baseRedemptionValue));
                 
                 // Compare sell price with base redemption value
                 // Item is redeemable if sell price is greater than or equal to base redemption value
-                isRedeemable = price >= baseRedemptionValueBigInt;
+                isRedeemable = price >= baseRedemptionValue;
                 console.log('Is Redeemable (calculated):', isRedeemable);
               }
             } catch (error) {
@@ -440,6 +442,10 @@ useEffect(() => {
       if (!activeContract) {
         throw new Error('Contract not initialized');
       }
+
+      //TESTING CONSOLE
+      console.log('is expired:', isExpired);
+
       
       setModalState(prev => ({ ...prev, isLoadingPrice: true, transactionError: '' }));
 
@@ -486,7 +492,7 @@ useEffect(() => {
       return;
     }
     
-    // Select NFT and open shipping modal instead of redeem confirmation
+    // Select NFT and open shipping modal directly
     setSelectedNFT(nft);
     setIsShippingForPayInFull(false); // Set flag to indicate this is for redemption
     setShowShippingModal(true);
@@ -544,7 +550,6 @@ useEffect(() => {
     }
   };
   
-  // Updated shipping submit handler to handle both redemption and pay in full cases
   const handleShippingSubmit = async (shippingDetails: ShippingDetails, isExpedited: boolean) => {
     console.log("Shipping details:", shippingDetails);
     console.log("Expedited shipping:", isExpedited);
@@ -552,20 +557,29 @@ useEffect(() => {
     // Close shipping modal
     setShowShippingModal(false);
     
-    if (isShippingForPayInFull && selectedNFT) {
-      // This is for pay in full
-      try {
-        setIsProcessing(true);
-        setModalState(prev => ({ ...prev, transactionError: '' }));
-        
-        // Get the orders contract
-        const ordersContractAddress = "0x8fD29d66c4819BBf4884C8F93Ce0d9655145Ea91";
-        const ordersContractABI = [
-          "function createOrder(address _collection, uint256 _tokenId, tuple(string recipientName, string streetAddress, string city, string state, string zipCode, string country, string phoneNumber, string email) _shipping) external payable nonReentrant"
-        ];
-        
-        const ordersContract = new ethers.Contract(ordersContractAddress, ordersContractABI, signer);
-        
+    if (!selectedNFT) return;
+    
+    try {
+      setIsProcessing(true);
+      setModalState(prev => ({ ...prev, transactionError: '' }));
+      
+      // Get the orders contract
+      const ordersContractAddress = "0x8fD29d66c4819BBf4884C8F93Ce0d9655145Ea91";
+      const ordersContract = new ethers.Contract(ordersContractAddress, ordersAbi, signer);
+      
+      // Format shipping details for the contract
+      const shippingDetailsForContract = [
+        shippingDetails.recipientName,
+        shippingDetails.streetAddress,
+        shippingDetails.city,
+        shippingDetails.state,
+        shippingDetails.zipCode,
+        shippingDetails.country,
+        shippingDetails.email
+      ];
+      
+      if (isShippingForPayInFull) {
+        // This is for pay in full
         // Convert payment amount to wei
         const paymentAmountWei = ethers.parseEther(modalState.paymentAmount);
         
@@ -573,19 +587,7 @@ useEffect(() => {
         console.log('Payment amount (ETH):', modalState.paymentAmount);
         console.log('Payment amount (Wei):', paymentAmountWei.toString());
         
-        // Format shipping details for the contract
-        const shippingDetailsForContract = [
-          shippingDetails.recipientName,
-          shippingDetails.streetAddress,
-          shippingDetails.city,
-          shippingDetails.state,
-          shippingDetails.zipCode,
-          shippingDetails.country,
-          shippingDetails.phoneNumber,
-          shippingDetails.email
-        ];
-        
-        // Call the createOrder function on the orders contract
+        // Call the createOrder function on the orders contract with payment
         const tx = await ordersContract.createOrder(
           nftContract, // collection address
           selectedNFT.tokenId, 
@@ -594,37 +596,59 @@ useEffect(() => {
         );
         
         console.log('Payment and order creation successful');
+      } else {
+        // This is for redemption - using createOrder but with zero ETH since it's already at redemption value
+        console.log('Redeeming NFT:', selectedNFT.tokenId);
         
-        // Reset states and close modals
-        setModalState(prev => ({
-          ...prev,
-          paymentAmount: '',
-          paymentAmountUsd: ''
-        }));
-        setShowModal(false);
+        // First, approve the orders contract to transfer the NFT
+        const erc721ABI = [
+          "function approve(address to, uint256 tokenId) external",
+          "function getApproved(uint256 tokenId) external view returns (address)"
+        ];
+
+        console.log("pay in full:", isShippingForPayInFull);
         
-        // Refresh the page or NFT list
-        window.location.reload();
+        const nftContractWithSigner = new ethers.Contract(nftContract, erc721ABI, signer);
         
-      } catch (error) {
-        console.error('Error processing payment and creating order:', error);
-        setModalState(prev => ({
-          ...prev,
-          showRedeemConfirm: true, // Show redeem confirmation with error
-          transactionError: 'Failed to process payment and create order. Please try again.'
-        }));
-      } finally {
-        setIsProcessing(false);
+        // Check if already approved
+        const approved = await nftContractWithSigner.getApproved(selectedNFT.tokenId);
+        if (approved !== ordersContractAddress) {
+          console.log('Approving orders contract to transfer NFT...');
+          const approveTx = await nftContractWithSigner.approve(ordersContractAddress, selectedNFT.tokenId);
+          console.log('Approval successful');
+        }
+        
+        // Call createOrder with 0 ETH value for redemption
+        const tx = await ordersContract.createOrder(
+          nftContract,
+          selectedNFT.tokenId,
+          shippingDetailsForContract,
+          { value: ethers.parseEther("0") }
+        );
+        
+        console.log('Redemption order created successfully');
       }
-    } else {
-      // This is for normal redemption
+      
+      // Reset states and close modals
       setModalState(prev => ({
         ...prev,
-        showSellConfirm: false,
-        showRedeemConfirm: true,
-        showPayInFullConfirm: false,
-        transactionError: ''
+        showRedeemConfirm: false,
+        paymentAmount: '',
+        paymentAmountUsd: ''
       }));
+      setShowModal(false);
+      
+      // Refresh the page or NFT list
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('Error processing order:', error);
+      setModalState(prev => ({
+        ...prev,
+        transactionError: 'Failed to process order. Please try again.'
+      }));
+    } finally {
+      setIsProcessing(false);
     }
   };
   
@@ -1328,30 +1352,26 @@ useEffect(() => {
   </div>
 )}
       
-      {/* Redeem Confirmation Modal */}
-      {modalState.showRedeemConfirm && selectedNFT && (
+     
+{/* Redeem Confirmation Modal - Updated to remove the confirm button since we now use shipping first */}
+{modalState.showRedeemConfirm && selectedNFT && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full border border-gray-200">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Redemption</h3>
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Redemption Submitted</h3>
             
             <div className="bg-green-50 p-4 rounded-lg mb-6 border border-green-100">
-              <p className="text-gray-600 mb-2">You are about to redeem this item:</p>
-              <p className="text-xl font-bold text-gray-800 mb-1">
-                {selectedNFT.name}
-              </p>
-              <p className="text-sm text-gray-500">
-                Token ID: {selectedNFT.tokenId}
-              </p>
-              <div className="mt-4 bg-yellow-50 p-3 rounded border border-yellow-100">
-                <p className="text-amber-700 text-sm font-medium">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                    <line x1="12" y1="9" x2="12" y2="13"></line>
-                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                  </svg>
-                  Once redeemed, this NFT will be burned. This action cannot be undone.
-                </p>
+              <div className="flex justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
               </div>
+              <p className="text-center text-gray-700 font-medium mb-2">
+                Your redemption request has been submitted successfully!
+              </p>
+              <p className="text-center text-sm text-gray-500">
+                You'll receive your physical item at the shipping address you provided.
+              </p>
             </div>
   
             {modalState.transactionError && (
@@ -1360,20 +1380,18 @@ useEffect(() => {
               </div>
             )}
   
-            <div className="flex gap-3">
+            <div className="flex justify-center">
               <button
-                onClick={() => setModalState(prev => ({ ...prev, showRedeemConfirm: false }))}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                onClick={() => {
+                  setModalState(prev => ({ ...prev, showRedeemConfirm: false }));
+                  setShowModal(false);
+                  // Refresh the page
+                  window.location.reload();
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg
+                        hover:bg-green-700 transition-all font-medium"
               >
-                Cancel
-              </button>
-              <button
-                onClick={() => confirmRedeem(selectedNFT)}
-                disabled={isProcessing}
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg
-                        hover:bg-green-700 transition-all disabled:opacity-50 font-medium"
-              >
-                {isProcessing ? 'Processing...' : 'Confirm Redemption'}
+                Done
               </button>
             </div>
           </div>

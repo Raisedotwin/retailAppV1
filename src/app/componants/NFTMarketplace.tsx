@@ -513,6 +513,8 @@ useEffect(() => {
       const baseValue = ethers.parseEther(baseValueformated.toString());
       const [actualPrice, , , ] = await activeContract.getBuyPriceAfterFee(baseValue);
       console.log('Actual Price:', ethers.formatEther(actualPrice));
+      console.log('Base Value:', actualPrice.toString());
+      console.log("nft attrivute base value:", nft.attributes.baseValue);
       
       // Convert price to ETH and USD
       const actualPriceEth = ethers.formatEther(actualPrice);
