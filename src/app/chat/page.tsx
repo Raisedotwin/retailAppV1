@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
+import LaunchNotification from '../componants/LaunchNotification'; // Adjust path as needed
 
 interface CurveParams {
   initialSupply: string;
@@ -36,6 +37,7 @@ interface CurveModalProps {
   isOpen: boolean;
   onClose: () => void;
   curveType: string;
+  onCreateSuccess?: (address: string, name: string) => void;
 }
 
 const Chat: React.FC = () => {
@@ -53,6 +55,11 @@ const Chat: React.FC = () => {
   const [isLoadingLaunches, setIsLoadingLaunches] = useState(false);
   const [tokenAddress, setTokenAddress] = useState<string>('');
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  // Add these new state variables to your Chat component
+  const [showLaunchNotification, setShowLaunchNotification] = useState<boolean>(false);
+  const [launchLink, setLaunchLink] = useState<string>('');
+  const [launchName, setLaunchName] = useState<string>('');
+
 
   const [curveParams, setCurveParams] = useState<CurveParams>({
     initialSupply: '',
@@ -83,18 +90,18 @@ const Chat: React.FC = () => {
   let wallet = wallets[0];
 
   // Contract addresses and ABIs
-  const createAddr = '0x709256bC7cF4a05CA696285d47c7B183287Ce179';
+  const createAddr = '0x1e32c88a657CCA75A5C195471B5a0F0A5BC7415D';
   const createABI = require("../abi/createAccount");
-  const launchFactory = '0xC2d577733c7F3286E1B4796f8170E37DdB444ea3';
+  const launchFactory = '0xFe1D845CdfEDF89b42b0a44e98A0aDC591f99BC0';
   const launchFactoryABI = require("../abi/launchFactory");
-  const openFactory = '0xF7f267a975f9B83D8E5E786e07df8013Fb6F2887';
+  const openFactory = '0x1Eacfa69EcD8BdC0C336351aEfD581f890e59160';
   const openFactoryABI = require("../abi/openFactory");
-  const profileAddr = '0xaEcF5F89F5607ED37e5f3f61011D152757C001ca';
+  const profileAddr = '0x681Fa3a6300C38973B6B9eB66df5066EA6356145';
   const profileABI = require("../abi/profile");
   const launchABI = require("../abi/launch");
   const openABI = require("../abi/open");
 
-  const tokenMarketAddr = '0xeE09ffc7e0C75F8402a45df29Ec4Db879D6BB483';
+  const tokenMarketAddr = '0x6496B718FB057bbFFA3bbE46034F05C1946D59E2';
   const tokenMarketABI = require("../abi/tokenMarket");
 
   // Then update your useEffect for Twitter username changes:
@@ -387,6 +394,33 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
     }
   };
 
+  const constructLaunchLink = async (launchAddress: string, curveName: string): Promise<void> => {
+    try {
+      const signer: any = await getSigner();
+      if (!signer) return;
+  
+      const userAddress = await signer.getAddress();
+      
+      // Get profile data from profile contract
+      const profileContract = new ethers.Contract(profileAddr, profileABI, signer);
+      const profileData = await profileContract.getProfile(userAddress);
+      
+      // Extract relevant data
+      const profileName = profileData[2]; // name is at index 2
+      const avatarUrl = profileData[4]; // avatarUrl is at index 4
+      const username = user?.twitter?.username || profileName;
+      
+      // Construct the link
+      const link = `/trader?name=${curveName || profileName}&logo=${encodeURIComponent(avatarUrl)}&username=${encodeURIComponent(username)}&contractAddress=${launchAddress}`;
+      
+      setLaunchLink(link);
+      setLaunchName(curveName);
+      setShowLaunchNotification(true);
+    } catch (error) {
+      console.error('Error constructing launch link:', error);
+    }
+  };
+
   const handleCreateCurve = async (isOpen: boolean): Promise<void> => {
     try {
       const signer:any = await getSigner();
@@ -424,29 +458,34 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
       const initialSupply = ethers.parseUnits(curveParams.initialSupply, 18);
       const timeLimit = parseInt(curveParams.timeLimit);
   
+      let tx;
       if (isOpen) {
         // Handle Open Curve creation using open contract ABI
         const openContract = new ethers.Contract(launchAddress, openABI, signer);
-        const tx = await openContract.create(
+        tx = await openContract.create(
           initialSupply,
           curveParams.name,
           curveParams.symbol,
           timeLimit,
-          curveParams.allowOthersToList // Use the value from the checkbox
+          curveParams.allowOthersToList
         );
-        alert('Open curve created successfully!');
-      } else if (!isOpen) {
+      } else {
         // Handle Launch (Closed) Curve creation using launch contract ABI
         const launchContract = new ethers.Contract(launchAddress, launchABI, signer);
-        const tx = await launchContract.create(
+        tx = await launchContract.create(
           initialSupply,
           curveParams.name,
           curveParams.symbol,
           timeLimit,
-          curveParams.allowOthersToList // Use the value from the checkbox
+          curveParams.allowOthersToList
         );
-        alert('Closed curve created successfully!');
       }
+  
+      // Wait for transaction to be mined
+      //await tx.wait();
+      
+      // Construct the launch link and show notification
+      await constructLaunchLink(launchAddress, curveParams.name);
   
       // Close the modal
       if (isOpen) {
@@ -461,7 +500,7 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
         name: '',
         symbol: '',
         timeLimit: '',
-        allowOthersToList: true // Reset to default
+        allowOthersToList: true
       });
   
     } catch (error: any) {
@@ -615,7 +654,6 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
     setRefreshKey(prevKey => prevKey + 1);
   };
 
-  // Modified launchOpenCurve function with enhanced transaction handling
   const launchOpenCurve = async () => {
     setIsLaunchingOpenCurve(true);
     try {
@@ -630,6 +668,7 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
       
       // Show pending message
       alert('Transaction submitted! Waiting for confirmation...');
+      
       
       // Wait for blockchain state to update (additional delay)
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -651,36 +690,36 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
   
   // Modified launchClosedCurve function with enhanced transaction handling
   const launchClosedCurve = async () => {
-    setIsLaunchingClosedCurve(true);
-    try {
-      const signer: any = await getSigner();
-      if (!signer) {
-        alert('Failed to get signer. Please connect your wallet.');
-        return;
-      }
-  
-      const launchFactoryContract = new ethers.Contract(launchFactory, launchFactoryABI, signer);
-      const tx = await launchFactoryContract.createTokenMarket();
-      
-      // Show pending message
-      alert('Transaction submitted! Waiting for confirmation...');
-      
-      // Wait for blockchain state to update (additional delay)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Force refresh the component
-      forceRefresh();
-      
-      // Run the check for launch
-      await checkForLaunch();
-      
-      alert('Closed curve successfully created! You can now configure it.');
-    } catch (error) {
-      console.error('Error creating closed curve token market:', error);
-      alert(`Error creating closed curve: ${'Please try again.'}`);
-    } finally {
-      setIsLaunchingClosedCurve(false);
+  setIsLaunchingClosedCurve(true);
+  try {
+    const signer: any = await getSigner();
+    if (!signer) {
+      alert('Failed to get signer. Please connect your wallet.');
+      return;
     }
+
+    const launchFactoryContract = new ethers.Contract(launchFactory, launchFactoryABI, signer);
+    const tx = await launchFactoryContract.createTokenMarket();
+    
+    // Show pending message
+    alert('Transaction submitted! Waiting for confirmation...');
+    
+    // Wait for blockchain state to update (additional delay)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Force refresh the component
+    forceRefresh();
+    
+    // Run the check for launch
+    await checkForLaunch();
+    
+    alert('Closed curve successfully created! You can now configure it.');
+  } catch (error) {
+    console.error('Error creating closed curve token market:', error);
+    alert(`Error creating closed curve: ${'Please try again.'}`);
+  } finally {
+    setIsLaunchingClosedCurve(false);
+  }
   };
 
   // Manual refresh button handler
@@ -726,12 +765,11 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
     calculateTimeDisplay(Number(newTimeLimit));
   };
 
-  // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Update the parent state with local values
     setCurveParams(localParams);
-    // Then create the curve
+    // Then create the curve and inform parent of success
     handleCreateCurve(curveType === 'Open');
   };
 
@@ -1390,6 +1428,15 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
         </div>
 
         {renderContent()}
+
+        {showLaunchNotification && (
+          <LaunchNotification
+            isOpen={showLaunchNotification}
+            onClose={() => setShowLaunchNotification(false)}
+            launchLink={launchLink}
+            launchName={launchName}
+          />
+        )}
 
         {showOpenCurveModal && (
           <CurveModal

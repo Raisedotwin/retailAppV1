@@ -20,6 +20,11 @@
 				"internalType": "address",
 				"name": "_profile",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_orders",
+				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
@@ -61,7 +66,13 @@
 			}
 		],
 		"name": "award",
-		"outputs": [],
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
 		"stateMutability": "nonpayable",
 		"type": "function"
 	},
@@ -276,6 +287,19 @@
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getOrders",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
 			}
 		],
 		"stateMutability": "view",

@@ -27,12 +27,12 @@ const SwapForm: React.FC<SwapFormProps>= ({ enableBuying = false }) => {
   let wallet = wallets[0];
 
   const tokenPoolABI = require("../abi/traderPool");
-  const profileAddr = '0xaEcF5F89F5607ED37e5f3f61011D152757C001ca';
+  const profileAddr = '0x681Fa3a6300C38973B6B9eB66df5066EA6356145';
   const profileABI = require("../abi/profile");
   const WETH_ADDRESS = "0x4200000000000000000000000000000000000006";
 
   const tokenMarketAbi = require("../abi/tokenMarket");
-  const tokenMarketAddr = '0xeE09ffc7e0C75F8402a45df29Ec4Db879D6BB483';
+  const tokenMarketAddr = '0x6496B718FB057bbFFA3bbE46034F05C1946D59E2';
   const erc20Abi = require("../abi/storetoken");
 
   const provider = useMemo(() => 

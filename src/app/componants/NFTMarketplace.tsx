@@ -789,7 +789,7 @@ useEffect(() => {
         </div>
       )}
   
- {/* NFT Detail Modal */}
+{/* NFT Detail Modal */}
 {showModal && selectedNFT && (
   <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
     <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -824,7 +824,7 @@ useEffect(() => {
         <div className="md:w-1/2 p-4 space-y-4">
           <p className="text-gray-600">{selectedNFT.description}</p>
           
-          {/* Redemption Info Card - Enhanced with clearer conditions */}
+          {/* Redemption Info Card - Modified based on curveType */}
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
             <h3 className="text-blue-800 font-semibold flex items-center gap-2 mb-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
@@ -834,12 +834,18 @@ useEffect(() => {
             </h3>
             
             <div className="space-y-3">
-              {/* During Trading Period */}
-              <div className="bg-white p-3 rounded-lg border border-blue-100">
+              {/* During Trading Period - Modified based on curveType */}
+              <div className={`bg-white p-3 rounded-lg border ${curveType === 1 ? 'border-amber-100' : 'border-blue-100'}`}>
                 <h4 className="text-sm font-medium text-blue-800 mb-1">During Trading Period</h4>
-                <p className="text-sm text-blue-700">
-                  To redeem this NFT for the physical item during the trading period, its price must reach <span className="font-bold">{selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH</span> (Market Value).
-                </p>
+                {curveType === 1 ? (
+                  <p className="text-sm text-amber-700">
+                    <span className="font-bold">Trading Only:</span> During the trading period, this NFT can only be traded. Redemption for physical items is not available until after the trading period expires.
+                  </p>
+                ) : (
+                  <p className="text-sm text-blue-700">
+                    To redeem this NFT for the physical item during the trading period, its price must reach <span className="font-bold">{selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH</span> (Market Value).
+                  </p>
+                )}
               </div>
               
               {/* After Expiry */}

@@ -56,7 +56,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data: initialData, itemsPerPage = 1
           <div className="flex items-center gap-2">
             <span className="text-2xl">📈</span>
             <h2 className="text-2xl font-bold text-emerald-600 animate-pulse">
-              Top Launches
+              Top Stores
             </h2>
           </div>
           <p className="text-gray-600 mt-1">Discover new product launches, bet on the price and aquire them before anyone else!</p>
@@ -67,7 +67,7 @@ const Holdings: React.FC<HoldingsProps> = ({ data: initialData, itemsPerPage = 1
             <thead>
               <tr className="bg-gray-100 text-left">
                 <th className="px-6 py-4 text-sm font-semibold text-gray-700">Rank</th>
-                <th className="px-6 py-4 text-sm font-semibold text-gray-700">Launch</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-700">Store</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-700">Merchant</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-700">Loyalty Token</th>
                 <th className="px-6 py-4 text-sm font-semibold text-gray-700">Launch Page</th>

@@ -10,6 +10,11 @@
 				"internalType": "address",
 				"name": "_marketData",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_liquidityTracker",
+				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
@@ -57,56 +62,6 @@
 			}
 		],
 		"name": "Initialized",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "launchContract",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "required",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "actual",
-				"type": "uint256"
-			}
-		],
-		"name": "InsufficientLiquidity",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "collection",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "uint256",
-				"name": "tokenId",
-				"type": "uint256"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "customer",
-				"type": "address"
-			}
-		],
-		"name": "OrderCreated",
 		"type": "event"
 	},
 	{
@@ -267,19 +222,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "approvalAuthority",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -353,7 +295,13 @@
 			}
 		],
 		"name": "createOrder",
-		"outputs": [],
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
 		"stateMutability": "payable",
 		"type": "function"
 	},
@@ -840,30 +788,6 @@
 			{
 				"internalType": "bool",
 				"name": "hasIncompleteOrder",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "orderUpdateApproved",
-		"outputs": [
-			{
-				"internalType": "bool",
-				"name": "",
 				"type": "bool"
 			}
 		],

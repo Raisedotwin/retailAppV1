@@ -27,7 +27,7 @@ const TraderPageContent: React.FC = () => {
   const [storeAddress, setStoreAddress] = useState('');
   const [curveMarketCap, setCurveMarketCap] = useState(''); // Use dash instead of '0'
   const [totalActiveRedeemValue, setTotalActiveRedeemValue] = useState('-'); // New state for redeem value
-  
+  const [unformattedBalance, setUnformattedBalnce] = useState('0'); // Unformatted balance for calculations
   // Add ETH price state for USD conversion
   const [ethUsdPrice, setEthUsdPrice] = useState(0);
   const [isLoadingEthPrice, setIsLoadingEthPrice] = useState(false);
@@ -92,12 +92,12 @@ const TraderPageContent: React.FC = () => {
     return null;
   }, [params.contractAddress, provider]);
 
-  const tokenContractAddr = '0xeE09ffc7e0C75F8402a45df29Ec4Db879D6BB483';
-  const marketDataAddr = '0x58F18153000919b7245e25f0E6E0C4297Fc845E3';
-  const createAccountAddr = '0x709256bC7cF4a05CA696285d47c7B183287Ce179';
-  const profileAddr = '0xaEcF5F89F5607ED37e5f3f61011D152757C001ca';
+  const tokenContractAddr = '0x6496B718FB057bbFFA3bbE46034F05C1946D59E2';
+  const marketDataAddr = '0xa83a1f2Bd6F1805a3a938c31b9c05606459c9043';
+  const createAccountAddr = '0x1e32c88a657CCA75A5C195471B5a0F0A5BC7415D';
+  const profileAddr = '0x681Fa3a6300C38973B6B9eB66df5066EA6356145';
   const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
-  const liquidityPoolTrackerAddr = '0x2cD901fFd2E5E98E76a7CeeE563736983F0F5e3f';
+  const liquidityPoolTrackerAddr = '0xc2e8C327Fff8f6B567E0b169eef7d51573b74002';
 
   // Rest of your state variables...
   const [isActive, setIsActive] = useState(false);
@@ -165,6 +165,7 @@ const TraderPageContent: React.FC = () => {
       // Format with proper decimals
       const formattedBalance = ethers.formatUnits(balance, decimals);
       setTokenBalance(formattedBalance);
+      setUnformattedBalnce(balance.toString());
       console.log(`Token Balance: ${formattedBalance} ${symbol}`);
     } catch (error) {
       console.error('Error fetching token details:', error);
@@ -708,177 +709,190 @@ const TraderPageContent: React.FC = () => {
                 </div>
               </div>
               
-              {/* Stats Section - Updated with USD Displays */}
-              <div className="w-full md:w-auto mt-6 md:mt-0 grid grid-cols-8 gap-4 bg-gradient-to-r from-fuchsia-50 to-violet-50 p-4 rounded-xl border border-violet-100">
-                {/* Time Left */}
-                <div className="text-center px-4">
-                  {isLoadingData ? (
-                    <p className="text-lg font-bold text-violet-700 animate-pulse">Loading...</p>
-                  ) : currentPeriod === 'trading' && expiryTimestamp ? (
-                    <>
-                      <CountdownTimer 
-                        expiryTimestamp={expiryTimestamp}
-                        onExpire={() => {
-                          setIsExpired(true);
-                          setCurrentPeriod('redemption');
-                        }}
-                        totalDuration={curveDuration || undefined}
-                        showProgressBar={true}
-                      />
-                      <p className="text-xs font-medium text-gray-600">Trading Ends</p>
-                    </>
-                  ) : currentPeriod === 'redemption' && redeemExpiryTimestamp ? (
-                    <>
-                      <CountdownTimer 
-                        expiryTimestamp={redeemExpiryTimestamp}
-                        onExpire={() => {
-                          setIsFinallyExpired(true);
-                          setCurrentPeriod('expired');
-                        }}
-                        totalDuration={redeemPeriodDuration || undefined}
-                        showProgressBar={true}
-                      />
-                      <p className="text-xs font-medium text-gray-600">Redemption Ends</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-lg font-bold text-red-700">Expired</p>
-                      <p className="text-xs font-medium text-gray-600">All Periods Ended</p>
-                    </>
-                  )}
-                </div>
+              {/* Stats Section - Redesigned */}
+<div className="w-full mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {/* Time and Period Card */}
+  <div className="bg-white/90 rounded-2xl shadow-sm border border-violet-100 p-4 flex flex-col items-center justify-center">
+    <div className="flex items-center justify-between w-full mb-2">
+      <h3 className="text-violet-800 font-bold text-sm uppercase tracking-wide">Status</h3>
+      <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+        currentPeriod === 'trading' ? 'bg-blue-100 text-blue-700' : 
+        currentPeriod === 'redemption' ? 'bg-amber-100 text-amber-700' : 
+        'bg-gray-100 text-gray-700'
+      }`}>
+        {isLoadingData ? "..." : 
+         currentPeriod === 'trading' ? "Trading" : 
+         currentPeriod === 'redemption' ? "Redemption" : 
+         "Closed"}
+      </div>
+    </div>
+    
+    <div className="w-full">
+      {isLoadingData ? (
+        <div className="h-12 bg-gray-100 animate-pulse rounded-lg"></div>
+      ) : currentPeriod === 'trading' && expiryTimestamp ? (
+        <>
+          <CountdownTimer 
+            expiryTimestamp={expiryTimestamp}
+            onExpire={() => {
+              setIsExpired(true);
+              setCurrentPeriod('redemption');
+            }}
+            totalDuration={curveDuration || undefined}
+            showProgressBar={true}
+          />
+          <p className="text-xs text-center font-medium text-gray-600 mt-1">Trading Ends</p>
+        </>
+      ) : currentPeriod === 'redemption' && redeemExpiryTimestamp ? (
+        <>
+          <CountdownTimer 
+            expiryTimestamp={redeemExpiryTimestamp}
+            onExpire={() => {
+              setIsFinallyExpired(true);
+              setCurrentPeriod('expired');
+            }}
+            totalDuration={redeemPeriodDuration || undefined}
+            showProgressBar={true}
+          />
+          <p className="text-xs text-center font-medium text-gray-600 mt-1">Redemption Ends</p>
+        </>
+      ) : (
+        <div className="text-center py-3">
+          <p className="text-lg font-bold text-red-700">Expired</p>
+          <p className="text-xs font-medium text-gray-600">All Periods Ended</p>
+        </div>
+      )}
+    </div>
+    
+    {/* Restriction indicator */}
+    {restricted && !isLoadingData && (
+      <div className="mt-2 bg-red-50 text-red-700 text-xs font-bold px-3 py-1 rounded-full">
+        No Selling
+      </div>
+    )}
+  </div>
 
-                {/* Period */}
-                <div className="text-center px-4">
-                  <p className="text-lg font-bold text-violet-700">
-                  {isLoadingData ? (
-                    <span className="animate-pulse">...</span>
-                  ) : (
-                    <span>
-                      {currentPeriod === 'trading' ? "Trading" : 
-                      currentPeriod === 'redemption' ? "Redemption" : 
-                      "Closed"}
-                    </span>
-                  )}
-                  </p>
-                  <p className="text-xs font-medium text-gray-600">Period</p>
+  {/* Curve Info Card */}
+  <div className="bg-white/90 rounded-2xl shadow-sm border border-violet-100 p-4">
+    <h3 className="text-violet-800 font-bold text-sm uppercase tracking-wide mb-2">Market Details</h3>
+    
+    <div className="grid grid-cols-2 gap-4">
+      {/* Curve Type */}
+      <div className="flex flex-col">
+        <p className="text-xs font-medium text-gray-600 mb-1">Store Type</p>
+        <p className="text-lg font-bold text-violet-700">
+          {isLoadingData ? (
+            <span className="h-6 w-16 bg-gray-100 animate-pulse rounded inline-block"></span>
+          ) : (
+            curveType === 1 ? "Closed" : curveType === 2 ? "Open" : ""
+          )}
+        </p>
+      </div>
+      
+      {/* Items on Curve */}
+      <div className="flex flex-col">
+        <p className="text-xs font-medium text-gray-600 mb-1">Items on Curve</p>
+        <p className="text-lg font-bold text-violet-700">
+          {isLoadingData ? (
+            <span className="h-6 w-16 bg-gray-100 animate-pulse rounded inline-block"></span>
+          ) : (
+            itemsOnCurve
+          )}
+        </p>
+      </div>
+      
+      {/* Curve Liquidity */}
+      <div className="flex flex-col">
+        <p className="text-xs font-medium text-gray-600 mb-1">Store Liquidity</p>
+        {isLoadingData ? (
+          <span className="h-6 w-16 bg-gray-100 animate-pulse rounded inline-block"></span>
+        ) : (
+          <>
+            <p className="text-lg font-bold text-violet-700">
+              ${(Number(contractBalance) * ethUsdPrice).toLocaleString(undefined, {maximumFractionDigits: 2})}
+            </p>
+            <p className="text-xs text-gray-500">
+              {Number(contractBalance).toFixed(4)} ETH
+            </p>
+          </>
+        )}
+      </div>
+      
+      {/* Curve MCAP */}
+      <div className="flex flex-col">
+        <p className="text-xs font-medium text-gray-600 mb-1">Collection MCAP</p>
+        {isLoadingData ? (
+          <span className="h-6 w-16 bg-gray-100 animate-pulse rounded inline-block"></span>
+        ) : (
+          <>
+            <p className="text-lg font-bold text-violet-700">
+              ${(Number(curveMarketCap) * ethUsdPrice).toLocaleString(undefined, {maximumFractionDigits: 2})}
+            </p>
+            <p className="text-xs text-gray-500">
+              {Number(curveMarketCap).toFixed(4)} ETH
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  </div>
 
-                  {/* Restriction indicator below the period */}
-                  {restricted && !isLoadingData && (
-                    <div className="mt-1">
-                    <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                      No Selling
-                    </span>
-                    </div>
-                  )}
-                </div>
+  {/* Token Details Card */}
+  <div className="bg-white/90 rounded-2xl shadow-sm border border-violet-100 p-4">
+    <h3 className="text-violet-800 font-bold text-sm uppercase tracking-wide mb-2">Token Details</h3>
+    
+    <div className="grid grid-cols-2 gap-4">
+      {/* Token Balance */}
+      <div className="flex flex-col">
+        <p className="text-xs font-medium text-gray-600 mb-1">${tokenSymbol} Balance</p>
+        {isLoadingData ? (
+          <span className="h-6 w-16 bg-gray-100 animate-pulse rounded inline-block"></span>
+        ) : (
+          <div>
+            <p className="text-lg font-bold text-violet-700">
+              {Number(tokenBalance).toLocaleString(undefined, {maximumFractionDigits: 0})}
+            </p>
+            <p className="text-xs text-emerald-600 font-medium">2% on Redeem</p>
+          </div>
+        )}
+      </div>
+      
+      {/* Store MCAP */}
+      <div className="flex flex-col">
+        <p className="text-xs font-medium text-gray-600 mb-1">${tokenSymbol} MCAP</p>
+        {isLoadingData ? (
+          <span className="h-6 w-16 bg-gray-100 animate-pulse rounded inline-block"></span>
+        ) : (
+          <>
+            <p className="text-lg font-bold text-violet-700">
+              ${(Number(marketCap) * ethUsdPrice).toLocaleString(undefined, {maximumFractionDigits: 2})}
+            </p>
+            <p className="text-xs text-gray-500">
+              {Number(marketCap).toFixed(4)} ETH
+            </p>
+          </>
+        )}
+      </div>
+      
+      {/* Redeem Value */}
+      <div className="flex flex-col col-span-2">
+        <p className="text-xs font-medium text-gray-600 mb-1">Total Active Redeem Value</p>
+        {isLoadingData ? (
+          <span className="h-6 w-16 bg-gray-100 animate-pulse rounded inline-block"></span>
+        ) : (
+          <div className="flex items-baseline gap-2">
+            <p className="text-lg font-bold text-violet-700">
+              ${(Number(totalActiveRedeemValue) * ethUsdPrice).toLocaleString(undefined, {maximumFractionDigits: 2})}
+            </p>
+            <p className="text-xs text-gray-500">
+              {Number(totalActiveRedeemValue).toFixed(4)} ETH
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
 
-                {/* Token balance */}
-                <div className="text-center px-4">
-                  <p className="text-lg font-bold text-violet-700">
-                    {isLoadingData ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <span className="text-base font-bold">
-                          {Number(tokenBalance).toFixed(0)} ${tokenSymbol}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          In Contract
-                        </span>
-                      </div>
-                    )}
-                  </p>
-                  <p className="text-xs font-medium text-gray-600">2% on Redeem</p>
-                </div>
-  
-                {/* Curve Liquidity - Updated with USD */}
-                <div className="text-center px-4">
-                  <p className="text-lg font-bold text-violet-700">
-                    {isLoadingData ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <span className="text-base font-bold">
-                          ${(Number(contractBalance) * ethUsdPrice).toFixed(2)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {Number(contractBalance).toFixed(4)} ETH
-                        </span>
-                      </div>
-                    )}
-                  </p>
-                  <p className="text-xs font-medium text-gray-600">Curve Liquidity</p>
-                </div>
-  
-                {/* Curve Type */}
-                <div className="text-center px-4">
-                  <p className="text-lg font-bold text-violet-700">
-                    {isLoadingData ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      curveType === 1 ? "Closed" : curveType === 2 ? "Open" : ""
-                    )}
-                  </p>
-                  <p className="text-xs font-medium text-gray-600">Curve Type</p>
-                </div>
-  
-                {/* Curve MCAP - Updated with USD */}
-                <div className="text-center px-4">
-                  <p className="text-lg font-bold text-violet-700">
-                    {isLoadingData ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <span className="text-base font-bold">
-                          ${(Number(curveMarketCap) * ethUsdPrice).toFixed(2)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {Number(curveMarketCap).toFixed(4)} ETH
-                        </span>
-                      </div>
-                    )}
-                  </p>
-                  <p className="text-xs font-medium text-gray-600">Curve MCAP</p>
-                </div>
-  
-                {/* Store MCAP - Updated with USD */}
-                <div className="text-center px-4">
-                  <p className="text-lg font-bold text-violet-700">
-                    {isLoadingData ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <span className="text-base font-bold">
-                          ${(Number(marketCap) * ethUsdPrice).toFixed(2)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {Number(marketCap).toFixed(4)} ETH
-                        </span>
-                      </div>
-                    )}
-                  </p>
-                  <p className="text-xs font-medium text-gray-600">${tokenSymbol} MCAP</p>
-                </div>
-
-                {/* Total Active Redeem Value - NEW */}
-                <div className="text-center px-4">
-                  <p className="text-lg font-bold text-violet-700">
-                    {isLoadingData ? (
-                      <span className="animate-pulse">...</span>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <span className="text-base font-bold">
-                          ${(Number(totalActiveRedeemValue) * ethUsdPrice).toFixed(2)}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {Number(totalActiveRedeemValue).toFixed(4)} ETH
-                        </span>
-                      </div>
-                    )}
-                  </p>
-                  <p className="text-xs font-medium text-gray-600">Redeem Value</p>
-                </div>
               </div>
             </div>
           </div>
@@ -936,6 +950,9 @@ const TraderPageContent: React.FC = () => {
             curveType={curveType}
             trackingContract={liquidityPoolTrackerContract}
             ordersAbi={ordersAbi}
+            curveLiqudity={contractBalance}
+            contractBalance={unformattedBalance}
+            loyaltyName={tokenSymbol}
           />
   
           {/* Activity Tabs Section */}

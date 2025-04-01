@@ -164,8 +164,8 @@ const MarketplacePage: React.FC = () => {
   }, [rpcURLs]);
   
   // Contract addresses and ABIs
-  const marketDataContractAddr = '0x58F18153000919b7245e25f0E6E0C4297Fc845E3';
-  const profileAddr = '0xaEcF5F89F5607ED37e5f3f61011D152757C001ca';
+  const marketDataContractAddr = '0xa83a1f2Bd6F1805a3a938c31b9c05606459c9043';
+  const profileAddr = '0x681Fa3a6300C38973B6B9eB66df5066EA6356145';
   
   // Simplified ABIs for the required functions
   const marketDataABI = [
