@@ -84,7 +84,7 @@ const WalletPage: React.FC = () => {
   const ordersABI = require("../abi/orders");
 
   const marketData = "0xa83a1f2Bd6F1805a3a938c31b9c05606459c9043";
-  const marketDataABI = require("../abi/marketData");
+  const marketDataABI = require("../abi/marketdata");
 
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
   const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
