@@ -7,6 +7,10 @@ import SearchModal from './SearchModal';
 import { ethers } from 'ethers';
 import { EIP155_CHAINS } from '@/data/EIP155Data';
 
+// Beta mode configuration
+const BETA_MODE = true; // Toggle this to enable/disable beta mode
+
+// Admin addresses that have full access even in beta mode
 const ADMIN_ADDRESSES = [
   '0x42b93B8d07eee075B851F5b488Ef6B7db148F470',
   '0x33DCCe8EbA08DF90047fB581a2A56548a0d697Ff'
@@ -14,7 +18,7 @@ const ADMIN_ADDRESSES = [
 
 const NavBar: React.FC = () => {
   const { account } = useAccount();
-  const { login, logout, user } = usePrivy();
+  const { login, logout, user, authenticated, ready } = usePrivy();
   const { wallets } = useWallets();
   
   const [search, setSearch] = useState('');
@@ -22,6 +26,7 @@ const NavBar: React.FC = () => {
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const [isWhitelistEnabled, setIsWhitelistEnabled] = useState(false);
   const [showWhitelistModal, setShowWhitelistModal] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -40,8 +45,27 @@ const NavBar: React.FC = () => {
   // Check if current user is an admin
   const isAdmin = useMemo(() => {
     if (!user?.wallet?.address) return false;
-    return ADMIN_ADDRESSES.includes(user.wallet.address);
+    const userAddress = user.wallet.address.toLowerCase();
+    return ADMIN_ADDRESSES.some(addr => addr.toLowerCase() === userAddress);
   }, [user?.wallet?.address]);
+
+  // Check beta access status whenever auth state changes
+  useEffect(() => {
+    // If beta mode is not enabled, everyone has access
+    if (!BETA_MODE) {
+      setHasAccess(true);
+      return;
+    }
+
+    // If not authenticated or not ready, no access
+    if (!authenticated || !ready) {
+      setHasAccess(false);
+      return;
+    }
+
+    // In beta mode, only admins have access
+    setHasAccess(isAdmin);
+  }, [authenticated, ready, isAdmin]);
 
   const checkWhitelistStatus = async (address: string): Promise<boolean> => {
     try {
@@ -148,14 +172,15 @@ const NavBar: React.FC = () => {
                 className="mr-2"
               />
               raise.win
-              <span className="ml-2 text-xs font-medium text-yellow-200 bg-gray-800 px-2 py-0.5 rounded-full">Beta</span>
+              {BETA_MODE && <span className="ml-2 text-xs font-medium text-yellow-200 bg-gray-800 px-2 py-0.5 rounded-full">Beta</span>}
             </div>
           </Link>
           {!user && (<Link href="/stake">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">How It Works</div>
           </Link>)}
 
-          {user && (
+          {user && (!BETA_MODE || hasAccess) && (
+            /* Only show these links if not in beta mode or user has access */
             <>
               <Link href="/profile">
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Profile</div>
@@ -170,6 +195,13 @@ const NavBar: React.FC = () => {
                 <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Seller Dashboard</div>
               </Link>
             </>
+          )}
+          
+          {/* If in beta mode and user is logged in but doesn't have access, show a beta message */}
+          {user && BETA_MODE && !hasAccess && (
+            <div className="text-amber-600 font-medium">
+              Beta access restricted
+            </div>
           )}
         </div>
 
@@ -216,6 +248,13 @@ const NavBar: React.FC = () => {
           )}
         </div>
       </nav>
+
+      {/* Beta Access Denied Message */}
+      {user && BETA_MODE && !hasAccess && (
+        <div className="w-full bg-amber-50 border-b border-amber-200 text-amber-800 py-2 px-4 text-center">
+          <span className="font-medium">Beta Mode Active:</span> Access to full functionality is currently restricted to administrators.
+        </div>
+      )}
 
       {/* Whitelist Modal */}
       {showWhitelistModal && (
