@@ -129,6 +129,13 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
   );
 };
 
+// Beta mode configuration
+const BETA_MODE = true; // Toggle this to enable/disable beta mode
+const APPROVED_ADDRESSES = [
+  '0x42b93B8d07eee075B851F5b488Ef6B7db148F470', 
+  '0x33DCCe8EbA08DF90047fB581a2A56548a0d697Ff'
+];
+
 // Updated MarketplacePage component with better error handling and loading states
 const MarketplacePage: React.FC = () => {
   const [nfts, setNfts] = useState<NFT[]>([]);
@@ -136,6 +143,37 @@ const MarketplacePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [ethUsdPrice, setEthUsdPrice] = useState<number>(0);
   const [loadingStatus, setLoadingStatus] = useState<string>("Initializing...");
+  const [hasAccess, setHasAccess] = useState(false);
+  
+  // Get authentication from Privy
+  const { user, authenticated, ready } = usePrivy();
+
+  // Check access status whenever auth state or beta mode changes
+  useEffect(() => {
+    // If beta mode is not enabled, everyone has access
+    if (!BETA_MODE) {
+      setHasAccess(true);
+      return;
+    }
+
+    // If not authenticated or not ready, no access
+    if (!authenticated || !ready) {
+      setHasAccess(false);
+      return;
+    }
+
+    // Check if the user has a wallet and if it's in the approved list
+    const wallets = user?.wallet?.address ? [user.wallet.address] : 
+                    user?.linkedAccounts?.filter(account => account.type === 'wallet')
+                    .map(account => account.address as string) || [];
+    
+    const hasApprovedWallet = wallets.some(wallet => 
+      APPROVED_ADDRESSES.includes(wallet.toLowerCase()) || 
+      APPROVED_ADDRESSES.includes(wallet)
+    );
+    
+    setHasAccess(hasApprovedWallet);
+  }, [authenticated, ready, user]);
 
   // Add multiple RPC URLs for fallback
   const rpcURLs = useMemo(() => [
@@ -191,6 +229,9 @@ const MarketplacePage: React.FC = () => {
 
   // Add a new useEffect to fetch the ETH/USD price with retries
   useEffect(() => {
+    // Skip fetching if user doesn't have access
+    if (!hasAccess && BETA_MODE) return;
+    
     const fetchEthPrice = async (retryCount = 0) => {
       try {
         // Try multiple price APIs
@@ -250,9 +291,15 @@ const MarketplacePage: React.FC = () => {
     const intervalId = setInterval(() => fetchEthPrice(), 5 * 60 * 1000);
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [hasAccess]);
 
   useEffect(() => {
+    // Skip fetching if user doesn't have access
+    if (!hasAccess && BETA_MODE) {
+      setLoading(false);
+      return;
+    }
+    
     const fetchNFTs = async () => {
       try {
         setLoading(true);
@@ -514,7 +561,7 @@ const MarketplacePage: React.FC = () => {
     };
     
     fetchNFTs();
-  }, [provider, marketDataContractAddr, profileAddr, ethUsdPrice]);
+  }, [provider, marketDataContractAddr, profileAddr, ethUsdPrice, hasAccess]);
 
   // New component to render NFT card with special treatment for the first item
   const renderNFTCards = () => {
@@ -546,6 +593,42 @@ const MarketplacePage: React.FC = () => {
       return <NFTCard key={`${nft.collectionAddress}-${nft.tokenId}`} nft={nft} />;
     });
   };
+
+  // Component for access denied state
+  const AccessDenied = () => (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center max-w-md mx-auto p-8 bg-white rounded-lg shadow-xl">
+        <div className="text-5xl mb-4">🔒</div>
+        <h1 className="text-2xl font-bold mb-4 text-purple-700">Access Restricted</h1>
+        <p className="text-gray-600 mb-6">
+          This marketplace is currently in beta mode and only accessible to approved wallets.
+        </p>
+        {!authenticated ? (
+          <div>
+            <p className="text-gray-700 mb-4">Please connect your wallet to continue.</p>
+            <button 
+              onClick={() => user}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition-colors duration-300"
+            >
+              Connect Wallet
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p className="text-gray-700">
+              Your wallet address is not on the approved list. Please contact the administrator 
+              for access or try connecting with an approved wallet.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // If in beta mode and user doesn't have access, show access denied page
+  if (BETA_MODE && !hasAccess) {
+    return <AccessDenied />;
+  }
 
   return (
     <>
