@@ -162,10 +162,15 @@ const MarketplacePage: React.FC = () => {
       return;
     }
 
-    // Check if the user has a wallet and if it's in the approved list
     const wallets = user?.wallet?.address ? [user.wallet.address] : 
-                    user?.linkedAccounts?.filter(account => account.type === 'wallet')
-                    .map(account => account?.address as string) || [];
+                user?.linkedAccounts?.filter(account => account.type === 'wallet')
+                .map(account => {
+                  // Add a type guard to check if the account has an address property
+                  if ('address' in account) {
+                    return account.address as string;
+                  }
+                  return '';
+                }).filter(address => address !== '') || [];
     
     const hasApprovedWallet = wallets.some(wallet => 
       APPROVED_ADDRESSES.includes(wallet.toLowerCase()) || 
