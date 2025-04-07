@@ -92,12 +92,12 @@ const TraderPageContent: React.FC = () => {
     return null;
   }, [params.contractAddress, provider]);
 
-  const tokenContractAddr = '0x6496B718FB057bbFFA3bbE46034F05C1946D59E2';
-  const marketDataAddr = '0xa83a1f2Bd6F1805a3a938c31b9c05606459c9043';
-  const createAccountAddr = '0x1e32c88a657CCA75A5C195471B5a0F0A5BC7415D';
-  const profileAddr = '0x681Fa3a6300C38973B6B9eB66df5066EA6356145';
+  const tokenContractAddr = '0xa79C2327547d953a919f385eB720689A057E5fAF';
+  const marketDataAddr = '0xF8bBbdF7AB89a7CD09F0918CdFA2904AE7A804b8';
+  const createAccountAddr = '0xC2Cff33a3931d6c19BcE739Cce24d8b22fD73024';
+  const profileAddr = '0x05d3D90AEF1fbD9b5CD16d15839C5f7B4159340f';
   const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
-  const liquidityPoolTrackerAddr = '0xc2e8C327Fff8f6B567E0b169eef7d51573b74002';
+  const liquidityPoolTrackerAddr = '0xE64419FCf31B94Bbc1786AFea4A5a7eaA77a0280';
 
   // Rest of your state variables...
   const [isActive, setIsActive] = useState(false);

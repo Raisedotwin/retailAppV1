@@ -21,11 +21,11 @@ const PositionsPage = () => {
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
 
-  const ordersAddr = "0x84214c78ce5b649B2bd62971a5eCC1c26c559e3E";
+  const ordersAddr = "0xbBB16632424aBC8Afa6e7F15066B3349CdA24eeb";
   const ordersABI = require("../abi/orders");
 
   const tokenPoolABI = require("../abi/traderPool");
-  const profileAddr = '0x681Fa3a6300C38973B6B9eB66df5066EA6356145';
+  const profileAddr = '0x05d3D90AEF1fbD9b5CD16d15839C5f7B4159340f';
   const profileABI = require("../abi/profile");
   const profileContract = useMemo(() => new ethers.Contract(profileAddr, profileABI, provider), [profileAddr, profileABI, provider]);
 

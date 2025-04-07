@@ -5,6 +5,11 @@
 				"internalType": "address",
 				"name": "_profile",
 				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_rewardCalculator",
+				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
@@ -52,37 +57,6 @@
 			}
 		],
 		"name": "Initialized",
-		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "collectionName",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "string",
-				"name": "storeLink",
-				"type": "string"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "timestamp",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "launchAddress",
-				"type": "address"
-			}
-		],
-		"name": "LaunchAdded",
 		"type": "event"
 	},
 	{
@@ -375,6 +349,11 @@
 				"internalType": "uint256",
 				"name": "tokenId",
 				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_type",
+				"type": "uint256"
 			}
 		],
 		"name": "addPendingOrder",
@@ -644,6 +623,19 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "getRewardCalculator",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "bytes32",
@@ -851,47 +843,11 @@
 						"internalType": "bool",
 						"name": "exists",
 						"type": "bool"
-					}
-				],
-				"internalType": "struct MarketData.PendingOrder[]",
-				"name": "",
-				"type": "tuple[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "collection",
-				"type": "address"
-			}
-		],
-		"name": "getUserPendingOrdersForCollection",
-		"outputs": [
-			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "collection",
-						"type": "address"
 					},
 					{
 						"internalType": "uint256",
-						"name": "tokenId",
+						"name": "orderType",
 						"type": "uint256"
-					},
-					{
-						"internalType": "bool",
-						"name": "exists",
-						"type": "bool"
 					}
 				],
 				"internalType": "struct MarketData.PendingOrder[]",
@@ -1124,6 +1080,11 @@
 				"internalType": "uint256",
 				"name": "tokenId",
 				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_value",
+				"type": "uint256"
 			}
 		],
 		"name": "removeTokenFromLaunch",
@@ -1206,55 +1167,6 @@
 			{
 				"internalType": "bool",
 				"name": "",
-				"type": "bool"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "userCollectionTokenStore",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "user",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "storeAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "collectionAddress",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "tokenId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "exists",
 				"type": "bool"
 			}
 		],

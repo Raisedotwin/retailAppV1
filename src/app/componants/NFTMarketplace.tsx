@@ -647,7 +647,7 @@ useEffect(() => {
               <path d="M20 13.5v3.37a2.06 2.06 0 0 1-1.11 1.83l-6 3.08a1.93 1.93 0 0 1-1.78 0l-6-3.08A2.06 2.06 0 0 1 4 16.87V13.5"></path>
             </svg>
             <h2 className="text-2xl font-bold text-white">
-              Marketplace Items
+              Available For Pre-Order
             </h2>
             {/* Status labels */}
             <div className="flex gap-2 ml-4">

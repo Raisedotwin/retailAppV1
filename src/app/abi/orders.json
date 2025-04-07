@@ -282,11 +282,6 @@
 						"internalType": "string",
 						"name": "country",
 						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "email",
-						"type": "string"
 					}
 				],
 				"internalType": "struct Orders.ShippingDetails",
@@ -295,13 +290,7 @@
 			}
 		],
 		"name": "createOrder",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
+		"outputs": [],
 		"stateMutability": "payable",
 		"type": "function"
 	},
@@ -329,6 +318,119 @@
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_customer",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_collection",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
+			}
+		],
+		"name": "getCustomerOrder",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "address",
+						"name": "collection",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "tokenId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "customer",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "store",
+						"type": "address"
+					},
+					{
+						"components": [
+							{
+								"internalType": "string",
+								"name": "recipientName",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "streetAddress",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "city",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "state",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "zipCode",
+								"type": "string"
+							},
+							{
+								"internalType": "string",
+								"name": "country",
+								"type": "string"
+							}
+						],
+						"internalType": "struct Orders.ShippingDetails",
+						"name": "shipping",
+						"type": "tuple"
+					},
+					{
+						"internalType": "string",
+						"name": "trackingNumber",
+						"type": "string"
+					},
+					{
+						"internalType": "enum Orders.OrderStatus",
+						"name": "status",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint256",
+						"name": "timestamp",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "expiration",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "orderType",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct Orders.Order",
+				"name": "",
+				"type": "tuple"
 			}
 		],
 		"stateMutability": "view",
@@ -402,11 +504,6 @@
 								"internalType": "string",
 								"name": "country",
 								"type": "string"
-							},
-							{
-								"internalType": "string",
-								"name": "email",
-								"type": "string"
 							}
 						],
 						"internalType": "struct Orders.ShippingDetails",
@@ -442,124 +539,6 @@
 				"internalType": "struct Orders.Order[]",
 				"name": "",
 				"type": "tuple[]"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_collection",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "_merchant",
-				"type": "address"
-			}
-		],
-		"name": "getIncompleteOrdersCreatedInTime",
-		"outputs": [
-			{
-				"components": [
-					{
-						"internalType": "address",
-						"name": "collection",
-						"type": "address"
-					},
-					{
-						"internalType": "uint256",
-						"name": "tokenId",
-						"type": "uint256"
-					},
-					{
-						"internalType": "address",
-						"name": "customer",
-						"type": "address"
-					},
-					{
-						"internalType": "address",
-						"name": "store",
-						"type": "address"
-					},
-					{
-						"components": [
-							{
-								"internalType": "string",
-								"name": "recipientName",
-								"type": "string"
-							},
-							{
-								"internalType": "string",
-								"name": "streetAddress",
-								"type": "string"
-							},
-							{
-								"internalType": "string",
-								"name": "city",
-								"type": "string"
-							},
-							{
-								"internalType": "string",
-								"name": "state",
-								"type": "string"
-							},
-							{
-								"internalType": "string",
-								"name": "zipCode",
-								"type": "string"
-							},
-							{
-								"internalType": "string",
-								"name": "country",
-								"type": "string"
-							},
-							{
-								"internalType": "string",
-								"name": "email",
-								"type": "string"
-							}
-						],
-						"internalType": "struct Orders.ShippingDetails",
-						"name": "shipping",
-						"type": "tuple"
-					},
-					{
-						"internalType": "string",
-						"name": "trackingNumber",
-						"type": "string"
-					},
-					{
-						"internalType": "enum Orders.OrderStatus",
-						"name": "status",
-						"type": "uint8"
-					},
-					{
-						"internalType": "uint256",
-						"name": "timestamp",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "expiration",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "orderType",
-						"type": "uint256"
-					}
-				],
-				"internalType": "struct Orders.Order[]",
-				"name": "_orders",
-				"type": "tuple[]"
-			},
-			{
-				"internalType": "uint256",
-				"name": "incompleteCount",
-				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -621,9 +600,14 @@
 				"internalType": "address",
 				"name": "_merchant",
 				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_tokenId",
+				"type": "uint256"
 			}
 		],
-		"name": "getStoreOrders",
+		"name": "getStoreOrder",
 		"outputs": [
 			{
 				"components": [
@@ -678,11 +662,6 @@
 								"internalType": "string",
 								"name": "country",
 								"type": "string"
-							},
-							{
-								"internalType": "string",
-								"name": "email",
-								"type": "string"
 							}
 						],
 						"internalType": "struct Orders.ShippingDetails",
@@ -715,14 +694,14 @@
 						"type": "uint256"
 					}
 				],
-				"internalType": "struct Orders.Order[]",
-				"name": "_orders",
-				"type": "tuple[]"
+				"internalType": "struct Orders.Order",
+				"name": "",
+				"type": "tuple"
 			},
 			{
-				"internalType": "uint256",
-				"name": "pendingCount",
-				"type": "uint256"
+				"internalType": "bool",
+				"name": "isPending",
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -859,11 +838,6 @@
 					{
 						"internalType": "string",
 						"name": "country",
-						"type": "string"
-					},
-					{
-						"internalType": "string",
-						"name": "email",
 						"type": "string"
 					}
 				],

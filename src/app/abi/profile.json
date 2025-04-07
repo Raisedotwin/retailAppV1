@@ -52,6 +52,31 @@
 		"anonymous": false,
 		"inputs": [
 			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "launchAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "expectedDelivery",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "updatedBy",
+				"type": "address"
+			}
+		],
+		"name": "ExpectedDeliverySet",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
 				"indexed": false,
 				"internalType": "uint64",
 				"name": "version",
@@ -593,6 +618,25 @@
 		"inputs": [
 			{
 				"internalType": "address",
+				"name": "_launchAddress",
+				"type": "address"
+			}
+		],
+		"name": "getExpectedDelivery",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
 				"name": "merchant",
 				"type": "address"
 			},
@@ -945,6 +989,25 @@
 	{
 		"inputs": [
 			{
+				"internalType": "address",
+				"name": "_launchAddress",
+				"type": "address"
+			}
+		],
+		"name": "hasExpectedDelivery",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "bytes32",
 				"name": "role",
 				"type": "bytes32"
@@ -1169,6 +1232,24 @@
 			}
 		],
 		"name": "setAdminAddress",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_launchAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_expectedDelivery",
+				"type": "uint256"
+			}
+		],
+		"name": "setExpectedDelivery",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

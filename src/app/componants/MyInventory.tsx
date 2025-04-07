@@ -587,7 +587,7 @@ useEffect(() => {
       setModalState(prev => ({ ...prev, transactionError: '' }));
       
       // Get the orders contract
-      const ordersContractAddress = "0x84214c78ce5b649B2bd62971a5eCC1c26c559e3E";
+      const ordersContractAddress = "0xbBB16632424aBC8Afa6e7F15066B3349CdA24eeb";
       const ordersContract = new ethers.Contract(ordersContractAddress, ordersAbi, signer);
       
       // Format shipping details for the contract
@@ -840,7 +840,7 @@ useEffect(() => {
         <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
       </svg>
       <h2 className="text-2xl font-bold text-white">
-        My NFT Inventory
+        My Inventory
       </h2>
     </div>
     <div className="flex items-center gap-4">

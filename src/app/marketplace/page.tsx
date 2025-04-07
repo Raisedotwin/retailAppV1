@@ -207,8 +207,8 @@ const MarketplacePage: React.FC = () => {
   }, [rpcURLs]);
   
   // Contract addresses and ABIs
-  const marketDataContractAddr = '0xa83a1f2Bd6F1805a3a938c31b9c05606459c9043';
-  const profileAddr = '0x681Fa3a6300C38973B6B9eB66df5066EA6356145';
+  const marketDataContractAddr = '0xF8bBbdF7AB89a7CD09F0918CdFA2904AE7A804b8';
+  const profileAddr = '0x05d3D90AEF1fbD9b5CD16d15839C5f7B4159340f';
   
   // Simplified ABIs for the required functions
   const marketDataABI = [
@@ -686,10 +686,10 @@ const MarketplacePage: React.FC = () => {
         <div className="max-w-8xl mx-auto">
           <div className="text-center mb-12">
             <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-              NFT Marketplace
+              Available For Pre-Order!
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Discover and collect unique physical items backed by blockchain technology ⚡️
+              Get ahead of the curve on amazing deals! buy now and redeem later as demand grows ⚡️ Or trade in your order for profit
             </p>
             {/* ETH price indicator */}
             {ethUsdPrice > 0 && (
