@@ -12,6 +12,7 @@ import AffiliateLink from '../componants/AffiliateLink';
 import AffiliateDashboard from '../componants/AffiliateDashboard';
 import MyInventory from '../componants/MyInventory';
 import CountdownTimer from '../componants/CountdownTimer';
+import EditLaunch from '../componants/EditLaunch';
 
 const TraderPageContent: React.FC = () => {
   const searchParams = useSearchParams();
@@ -32,6 +33,9 @@ const TraderPageContent: React.FC = () => {
   const [ethUsdPrice, setEthUsdPrice] = useState(0);
   const [isLoadingEthPrice, setIsLoadingEthPrice] = useState(false);
   const [restricted, setRestricted] = useState(false);
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [lastUpdatedSetting, setLastUpdatedSetting] = useState<string | null>(null);
   
   // Extract parameters first - do this synchronously at component initialization
   const name = searchParams.get('name');
@@ -100,7 +104,7 @@ const TraderPageContent: React.FC = () => {
   const liquidityPoolTrackerAddr = '0xE64419FCf31B94Bbc1786AFea4A5a7eaA77a0280';
 
   // Rest of your state variables...
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, setIsActive] = useState(true);
   const [profile, setProfile] = useState<any>(null);
   const [signer, setSigner] = useState<any>(null);
   const [nftTokenAddress, setNftTokenAddress] = useState<string>('');
@@ -145,6 +149,18 @@ const TraderPageContent: React.FC = () => {
   const [redeemExpiryTimestamp, setRedeemExpiryTimestamp] = useState<number | null>(null);
   const [isFinallyExpired, setIsFinallyExpired] = useState(false);
   const [currentPeriod, setCurrentPeriod] = useState<'trading' | 'redemption' | 'expired'>('trading');
+
+  const handleSettingUpdated = (settingType: 'whitelist' | 'trading' | 'deliveryTime' | 'whitelistToggle') => {
+    setLastUpdatedSetting(settingType);
+    // If needed, you can refresh specific data based on what was updated
+    if (settingType === 'whitelist') {
+      // Refresh whitelist data
+    } else if (settingType === 'trading') {
+      // Refresh trading status
+    } else if (settingType === 'deliveryTime') {
+      // Refresh delivery time
+    }
+  };
 
   const fetchTokenDetails = useCallback(async () => {
     if (!activeContract || !tokenAddress || !provider) return;
@@ -536,7 +552,7 @@ const TraderPageContent: React.FC = () => {
           
           // Check active status
           const isClaimed = await profileContractInstance.isLaunchRegistered(nativeAddr);
-          setIsActive(isClaimed);
+          //setIsActive(isClaimed);
           
           // Set profile
           setProfile(profile);
@@ -684,18 +700,31 @@ const TraderPageContent: React.FC = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                  <div className="flex items-center gap-4">
-                    <p className="text-gray-600 font-medium">@{params.username}</p>
-                    <span className={`
-                      text-sm font-medium px-3 py-1 rounded-full
-                      ${isActive 
-                        ? "text-green-700 bg-green-100/80" 
-                        : "text-pink-700 bg-pink-100/80"
-                      }
-                    `}>
-                      {isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
+    <div className="flex items-center gap-4">
+      <p className="text-gray-600 font-medium">@{params.username}</p>
+      
+      {walletAddress && traderAddress && walletAddress.toLowerCase() === traderAddress.toLowerCase() ? (
+  <button 
+    className="text-sm font-medium px-3 py-1 rounded-full text-white bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:shadow-md transition-all duration-200"
+    onClick={() => {
+      // Replace this with:
+      setIsEditModalOpen(true);
+    }}
+  >
+    Edit Page
+  </button>
+) : (
+  <span className={`
+    text-sm font-medium px-3 py-1 rounded-full
+    ${isActive 
+      ? "text-green-700 bg-green-100/80" 
+      : "text-pink-700 bg-pink-100/80"
+    }
+  `}>
+    {isActive ? 'Active' : 'Inactive'}
+  </span>
+)}
+    </div>
                   
                   {/* Address Components */}
                   <div className="flex flex-col sm:flex-row sm:justify-end gap-2 mt-1 md:mt-0">
@@ -914,6 +943,16 @@ const TraderPageContent: React.FC = () => {
               </p>
             </div>
           )}
+
+          {/* Edit Launch Modal */}
+          <EditLaunch
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            contractAddress={activeAddress}
+            activeContract={activeContract}
+            signer={signer}
+            onUpdateSuccess={handleSettingUpdated}
+          />
     
           {/* NFT Marketplace Section */}
           <NFTMarketplace 
@@ -956,6 +995,25 @@ const TraderPageContent: React.FC = () => {
             contractBalance={unformattedBalance}
             loyaltyName={tokenSymbol}
           />
+
+        {lastUpdatedSetting && (
+          <div className="fixed bottom-4 right-4 bg-green-100 border border-green-200 text-green-800 px-4 py-3 rounded-xl shadow-lg z-50 animate-fade-in-up">
+          <p className="flex items-center">
+          <span className="mr-2">✅</span>
+            {lastUpdatedSetting === 'whitelist' && 'Whitelist updated successfully'}
+            {lastUpdatedSetting === 'trading' && 'Trading status update requested'}
+            {lastUpdatedSetting === 'deliveryTime' && 'Expected delivery time updated'}
+          <button 
+            onClick={() => setLastUpdatedSetting(null)}
+            className="ml-3 text-green-700 hover:text-green-900"
+          >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          </button>
+          </p>
+        </div>
+      )}
   
           {/* Activity Tabs Section */}
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-md mt-8 p-6">

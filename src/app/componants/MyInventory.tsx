@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
 import ShippingModal from '../componants/ShippingDetailsModal';
 import LoyaltyTokensModal from '../componants/LoyaltyTokensModal';
@@ -6,6 +6,20 @@ import LoyaltyTokensModal from '../componants/LoyaltyTokensModal';
 interface TrackingContract {
   getNFTLiquidityRequirement(launchContract: any, tokenId: string | number): Promise<bigint>;
 }
+
+// Add this to your existing interfaces section
+interface RewardState {
+  rewardEth: string;
+  rewardUsd: string;
+  isLoading: boolean;
+  error: string | null;
+}
+
+// Add these constants before the MyInventory component
+const REWARDS_TRACKER_ADDRESS = "0xceBf8556045ace05342Fb2D221C0E3CB22be3C1D";
+const REWARDS_TRACKER_ABI = [
+  "function calculateReward(address curveAddress, uint256 tokenId) external view returns (uint256)"
+];
 
 interface NFTModalState {
   showSellConfirm: boolean;
@@ -223,6 +237,14 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   const [loyaltyTokens, setLoyaltyTokens] = useState<string>('0');
   const [showLoyaltyModal, setShowLoyaltyModal] = useState<boolean>(false);
 
+    // Add new state for reward calculation
+    const [rewardState, setRewardState] = useState<RewardState>({
+      rewardEth: '0',
+      rewardUsd: '0',
+      isLoading: false,
+      error: null
+    });
+
 
   const [modalState, setModalState] = useState<NFTModalState>({
     showSellConfirm: false,
@@ -235,6 +257,59 @@ const MyInventory: React.FC<MyInventoryProps> = ({
     paymentAmount: '', // Initialize new payment amount state
     paymentAmountUsd: '' // Initialize new payment amount USD state
   });
+
+  // Create a rewardsTracker contract instance using useMemo
+  const rewardsTrackerContract = useMemo(() => {
+    if (signer) {
+      return new ethers.Contract(REWARDS_TRACKER_ADDRESS, REWARDS_TRACKER_ABI, signer);
+    }
+    return null;
+  }, [signer]);
+  
+  // Add the fetchRedemptionReward function to calculate the reward
+  const fetchRedemptionReward = async (curveAddr: string, tokenId: string) => {
+    if (!rewardsTrackerContract || !curveAddr || !tokenId) {
+      setRewardState(prev => ({
+        ...prev,
+        error: 'Contract or token data not initialized',
+        isLoading: false
+      }));
+      return;
+    }
+    
+    try {
+      setRewardState(prev => ({ ...prev, isLoading: true, error: null }));
+      
+      // Call the contract function to get the reward
+      const reward = await rewardsTrackerContract.calculateReward(curveAddr, tokenId);
+      
+      // Format the result from Wei to ETH
+      const rewardEth = ethers.formatEther(reward);
+      
+      // Calculate USD value if ethUsdPrice is available
+      const rewardUsd = ethUsdPrice > 0 
+        ? (parseFloat(rewardEth) * ethUsdPrice).toFixed(2) 
+        : '0';
+      
+      console.log(`Redemption reward for NFT #${tokenId}: ${rewardEth} ETH (${rewardUsd} USD)`);
+      
+      setRewardState({
+        rewardEth,
+        rewardUsd,
+        isLoading: false,
+        error: null
+      });
+      
+    } catch (error) {
+      console.error('Error fetching redemption reward:', error);
+      setRewardState({
+        rewardEth: '0',
+        rewardUsd: '0',
+        isLoading: false,
+        error: 'Failed to calculate reward'
+      });
+    }
+  };
 
   // Fetch ETH price
   useEffect(() => {
@@ -443,9 +518,29 @@ useEffect(() => {
   fetchUserNFTs();
 }, [nftContract, signer, userAddress, ethUsdPrice, activeContract]);
 
+  // Update the handleNFTClick function to fetch the reward when an NFT is selected
   const handleNFTClick = (nft: NFT) => {
     setSelectedNFT(nft);
     setShowModal(true);
+    
+    // Reset reward state
+    setRewardState({
+      rewardEth: '0',
+      rewardUsd: '0',
+      isLoading: true,
+      error: null
+    });
+    
+    // Fetch the redemption reward
+    if (activeContract && activeContract.target) {
+      fetchRedemptionReward(activeContract.target, nft.tokenId);
+    } else {
+      setRewardState(prev => ({
+        ...prev,
+        error: 'Contract not initialized',
+        isLoading: false
+      }));
+    }
   };
 
   const handleSell = async (nft: NFT) => {
@@ -598,7 +693,6 @@ useEffect(() => {
         shippingDetails.state,
         shippingDetails.zipCode,
         shippingDetails.country,
-        shippingDetails.email
       ];
       
       // First, approve the orders contract to transfer the NFT
@@ -1115,7 +1209,7 @@ useEffect(() => {
         </div>
       )}
   
-  {/* NFT Detail Modal with Redemption Options */}
+{/* NFT Detail Modal with Redemption Options */}
 {showModal && selectedNFT && (
   <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
     <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 my-8 max-h-[85vh] overflow-y-auto">
@@ -1142,6 +1236,51 @@ useEffect(() => {
               alt={selectedNFT.name}
               className="w-full h-auto object-contain max-h-[300px]"
             />
+          </div>
+          
+          {/* Add Redemption Reward Section - NEW */}
+          <div className="mt-4 bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded-lg border border-green-200">
+            <h3 className="text-green-800 font-semibold flex items-center gap-2 mb-2 text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              Estimated Redemption Reward
+            </h3>
+            
+            <div className="bg-white p-3 rounded-lg border border-green-100">
+              {rewardState.isLoading ? (
+                <div className="flex items-center justify-center py-2">
+                  <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-blue-500 border-r-2 rounded-full"></div>
+                  <span className="text-gray-600 text-sm">Calculating reward...</span>
+                </div>
+              ) : rewardState.error ? (
+                <div className="text-red-500 text-sm flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  Failed to calculate reward
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-gray-700 text-sm">Reward after curve expiry:</span>
+                    <span className="text-lg font-bold text-green-600">{rewardState.rewardEth} ETH</span>
+                  </div>
+                  {ethUsdPrice > 0 && (
+                    <div className="flex justify-end text-sm text-gray-500">
+                      (${rewardState.rewardUsd})
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-600 mt-2">
+                    This is your estimated additional reward when you redeem this item after the trading period ends.
+                  </p>
+                </>
+              )}
+            </div>
           </div>
         </div>
         

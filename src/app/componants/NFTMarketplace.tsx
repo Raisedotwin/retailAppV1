@@ -1,12 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ethers } from 'ethers';
 
+const REWARDS_TRACKER_ADDRESS = "0xceBf8556045ace05342Fb2D221C0E3CB22be3C1D";
+const REWARDS_TRACKER_ABI = [
+  "function calculateDynamicPriceLevelModifier(address curveAddress, uint256 purchasePrice) public view returns (uint256)"
+];
+
 interface NFTModalState {
   showPurchaseConfirm: boolean;
   actualPrice: string;
-  actualPriceUsd: string;  // Added USD price
+  actualPriceUsd: string;
   isLoadingPrice: boolean;
   purchaseError: string;
+  // Add new property for the price level modifier
+  priceLevelModifier: string;
+  isLoadingModifier: boolean;
 }
 
 interface NFT {
@@ -167,16 +175,64 @@ const NFTMarketplace: React.FC<NFTMarketplaceProps> = ({
   const [ethUsdPrice, setEthUsdPrice] = useState<number>(0);
   const [isLoadingEthPrice, setIsLoadingEthPrice] = useState(false);
 
+    // Initialize the new field in the modalState
   const [modalState, setModalState] = useState<NFTModalState>({
-    showPurchaseConfirm: false,
-    actualPrice: '',
-    actualPriceUsd: '', // Added USD price
-    isLoadingPrice: false,
-    purchaseError: ''
+      showPurchaseConfirm: false,
+      actualPrice: '',
+      actualPriceUsd: '',
+      isLoadingPrice: false,
+      purchaseError: '',
+      priceLevelModifier: '',
+      isLoadingModifier: false
   });
-  
+
   const itemsPerPage = 4;
 
+  // Create a rewardsTracker contract instance
+  const rewardsTrackerContract = useMemo(() => {
+    if (provider) {
+      return new ethers.Contract(REWARDS_TRACKER_ADDRESS, REWARDS_TRACKER_ABI, provider);
+    }
+    return null;
+  }, [provider]);
+
+    // Add a function to fetch the price level modifier
+    const fetchPriceLevelModifier = async (curveAddr: string, purchasePrice: string) => {
+      if (!rewardsTrackerContract) return "0";
+      
+      try {
+        setModalState(prev => ({ ...prev, isLoadingModifier: true }));
+        
+        // Convert price to Wei for the contract call
+        const priceInWei = ethers.parseEther(purchasePrice);
+        
+        // Call the contract function
+        const modifier = await rewardsTrackerContract.calculateDynamicPriceLevelModifier(
+          curveAddr,
+          priceInWei
+        );
+        
+        // Format the result (it's in basis points - divide by 100 to get percentage)
+        const modifierPercentage = (Number(modifier) / 100).toFixed(2);
+        
+        setModalState(prev => ({ 
+          ...prev, 
+          priceLevelModifier: modifierPercentage,
+          isLoadingModifier: false 
+        }));
+        
+        return modifierPercentage;
+      } catch (error) {
+        console.error("Error fetching price level modifier:", error);
+        setModalState(prev => ({ 
+          ...prev, 
+          priceLevelModifier: "0.00",
+          isLoadingModifier: false 
+        }));
+        return "0.00";
+      }
+    };
+  
   // Add useEffect to fetch ETH price
   useEffect(() => {
     const fetchEthPrice = async () => {
@@ -499,45 +555,59 @@ useEffect(() => {
     console.log("base redemption value:", listingForm.baseValue);
   };
 
-  const handlePurchase = async (nft: NFT) => {
-    try {
-      if (!activeContract || !nft.attributes?.baseRedemptionValue) {
-        throw new Error('Contract or NFT data not initialized');
+    // Modify the handlePurchase function to also fetch the price level modifier
+    const handlePurchase = async (nft: NFT) => {
+      try {
+        if (!activeContract || !nft.attributes?.baseRedemptionValue) {
+          throw new Error('Contract or NFT data not initialized');
+        }
+    
+        // First, get the actual price
+        setModalState(prev => ({ 
+          ...prev, 
+          isLoadingPrice: true, 
+          purchaseError: '',
+          isLoadingModifier: true
+        }));
+  
+        const baseValueformated = Number(nft.attributes.baseValue);
+  
+        const baseValue = ethers.parseEther(baseValueformated.toString());
+        const [actualPrice, , , ] = await activeContract.getBuyPriceAfterFee(baseValue);
+        console.log('Actual Price:', ethers.formatEther(actualPrice));
+        console.log('Base Value:', actualPrice.toString());
+        console.log("nft attribute base value:", nft.attributes.baseValue);
+        
+        // Convert price to ETH and USD
+        const actualPriceEth = ethers.formatEther(actualPrice);
+        const actualPriceUsd = (parseFloat(actualPriceEth) * ethUsdPrice).toFixed(2);
+        
+        // Show confirmation modal with actual price
+        setModalState(prev => ({
+          ...prev,
+          showPurchaseConfirm: true,
+          actualPrice: actualPriceEth,
+          actualPriceUsd: actualPriceUsd,
+          isLoadingPrice: false
+        }));
+        
+        // Fetch the price level modifier
+        await fetchPriceLevelModifier(
+          activeContract.target,
+          actualPriceEth
+        );
+        
+      } catch (error) {
+        console.error('Error getting NFT price:', error);
+        setModalState(prev => ({
+          ...prev,
+          isLoadingPrice: false,
+          isLoadingModifier: false,
+          purchaseError: 'Error calculating price. Please try again.'
+        }));
       }
-  
-      // First, get the actual price
-      setModalState(prev => ({ ...prev, isLoadingPrice: true, purchaseError: '' }));
-
-      const baseValueformated = Number(nft.attributes.baseValue);
-
-      const baseValue = ethers.parseEther(baseValueformated.toString());
-      const [actualPrice, , , ] = await activeContract.getBuyPriceAfterFee(baseValue);
-      console.log('Actual Price:', ethers.formatEther(actualPrice));
-      console.log('Base Value:', actualPrice.toString());
-      console.log("nft attrivute base value:", nft.attributes.baseValue);
-      
-      // Convert price to ETH and USD
-      const actualPriceEth = ethers.formatEther(actualPrice);
-      const actualPriceUsd = (parseFloat(actualPriceEth) * ethUsdPrice).toFixed(2);
-      
-      // Show confirmation modal with actual price
-      setModalState(prev => ({
-        ...prev,
-        showPurchaseConfirm: true,
-        actualPrice: actualPriceEth,
-        actualPriceUsd: actualPriceUsd,
-        isLoadingPrice: false
-      }));
-    } catch (error) {
-      console.error('Error getting NFT price:', error);
-      setModalState(prev => ({
-        ...prev,
-        isLoadingPrice: false,
-        purchaseError: 'Error calculating price. Please try again.'
-      }));
-    }
-  };
-  
+    };
+    
   const confirmPurchase = async (nft: NFT) => {
     try {
       setIsProcessing(true);
@@ -647,10 +717,10 @@ useEffect(() => {
               <path d="M20 13.5v3.37a2.06 2.06 0 0 1-1.11 1.83l-6 3.08a1.93 1.93 0 0 1-1.78 0l-6-3.08A2.06 2.06 0 0 1 4 16.87V13.5"></path>
             </svg>
             <h2 className="text-2xl font-bold text-white">
-              Available For Pre-Order
+              Pre Order
             </h2>
             {/* Status labels */}
-            <div className="flex gap-2 ml-4">
+               <div className="flex gap-2 ml-4">
               {isOpenForAll && (
                 <span className="px-3 py-1 bg-green-500/20 text-white text-sm font-medium rounded-full border border-green-500/30">
                   Open For All
@@ -661,6 +731,9 @@ useEffect(() => {
                   Whitelist Required
                 </span>
               )}
+              <span className="px-3 py-1 bg-purple-500/20 text-white text-sm font-medium rounded-full border border-purple-500/30">
+                Ships: +7d After Redemption
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -818,6 +891,37 @@ useEffect(() => {
               className="w-full object-contain h-auto max-h-[350px]"
             />
           </div>
+          
+          {/* Add Price Level Modifier Section - NEW */}
+          <div className="mt-4 bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+            <h3 className="text-green-800 font-semibold flex items-center gap-2 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                <path d="M12 8c-2.8 0-5 2.2-5 5 0 2.8 2.2 5 5 5 2.8 0 5-2.2 5-5 0-2.8-2.2-5-5-5z"></path>
+                <path d="m15 8-3-4-3 4"></path>
+                <path d="m15 16-3 4-3-4"></path>
+              </svg>
+              Redemption Price Bonus
+            </h3>
+            
+            <div className="bg-white p-3 rounded-lg border border-green-100">
+              {modalState.isLoadingModifier ? (
+                <div className="flex items-center justify-center py-2">
+                  <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-blue-500 border-r-2 rounded-full"></div>
+                  <span className="text-gray-600">Calculating bonus...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-gray-700 text-sm">Estimated price bonus:</span>
+                    <span className="text-lg font-bold text-green-600">{modalState.priceLevelModifier}%</span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Buying at this price will give you a <span className="font-medium text-green-600">{modalState.priceLevelModifier}%</span> bonus when you redeem at the end of the curve.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
         </div>
         
         {/* Info section */}
@@ -863,9 +967,9 @@ useEffect(() => {
               
               {/* Current Status */}
               <div className={`${currentPeriod === 'trading' ? 'bg-green-50 border-green-100' : 
-                               currentPeriod === 'redemption' ? 'bg-amber-50 border-amber-100' : 
-                               'bg-gray-50 border-gray-100'} 
-                              p-3 rounded-lg border`}>
+                              currentPeriod === 'redemption' ? 'bg-amber-50 border-amber-100' : 
+                              'bg-gray-50 border-gray-100'} 
+                            p-3 rounded-lg border`}>
                 <h4 className="text-sm font-medium mb-1 
                       text-gray-800">Current Status</h4>
                 <div className="flex items-center gap-2">
@@ -876,8 +980,8 @@ useEffect(() => {
                   }`}></span>
                   <p className="text-sm">
                     {currentPeriod === 'trading' ? 'Trading Period Active' : 
-                     currentPeriod === 'redemption' ? 'Redemption Period Active' : 
-                     'Expired'}
+                    currentPeriod === 'redemption' ? 'Redemption Period Active' : 
+                    'Expired'}
                   </p>
                 </div>
               </div>
@@ -911,54 +1015,54 @@ useEffect(() => {
             </div>
           </div>
           
-         {/* Attributes grid */}
-<div className="bg-gray-50 p-3 rounded-lg">
-  <h3 className="font-semibold text-gray-800 mb-2">Attributes</h3>
-  <div className="grid grid-cols-2 gap-2">
-    <div className="bg-white p-2 rounded-lg border border-gray-100">
-      <p className="text-xs text-gray-500">Size</p>
-      <p className="font-medium">{selectedNFT.attributes?.size || 'Large'}</p>
-    </div>
-    <div className="bg-white p-2 rounded-lg border border-gray-100">
-      <p className="text-xs text-gray-500">Category</p>
-      <p className="font-medium">{selectedNFT.attributes?.category || 'Footwear'}</p>
-    </div>
-    <div className="bg-white p-2 rounded-lg border border-gray-100">
-      <p className="text-xs text-gray-500">Condition</p>
-      <p className="font-medium">{selectedNFT.attributes?.condition || 'New'}</p>
-    </div>
-    <div className="bg-white p-2 rounded-lg border border-gray-100">
-      <p className="text-xs text-gray-500">Shipping</p>
-      <p className="font-medium">{selectedNFT.attributes?.shipping || 'Worldwide'}</p>
-    </div>
-    <div className="bg-white p-2 rounded-lg border border-gray-100">
-      <p className="text-xs text-gray-500">Market Value</p>
-      <p className="font-medium">
-        {selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH
-        {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
-          <span className="block text-xs text-gray-500">
-            (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
-          </span>
-        )}
-      </p>
-    </div>
-    <div className="bg-white p-2 rounded-lg border border-blue-100">
-      <p className="text-xs text-blue-500">Pool at Expiry</p>
-      <p className="font-medium text-blue-700">
-        {redeemValue ? 
-          `${(Number(redeemValue) + Number(selectedNFT.attributes?.baseRedemptionValue || '0.005')).toFixed(5)}` : 
-          `${(Number(selectedNFT.attributes?.baseRedemptionValue || '0.005') + 0.01).toFixed(5)}`} ETH
-        {ethUsdPrice > 0 && (
-          <span className="block text-xs text-blue-500">
-            (${((Number(redeemValue || 0.01) + Number(selectedNFT.attributes?.baseRedemptionValue || 0.005)) * ethUsdPrice).toFixed(2)})
-          </span>
-        )}
-      </p>
-    </div>
-  </div>
-</div>
+        {/* Attributes grid */}
+        <div className="bg-gray-50 p-3 rounded-lg">
+          <h3 className="font-semibold text-gray-800 mb-2">Attributes</h3>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white p-2 rounded-lg border border-gray-100">
+              <p className="text-xs text-gray-500">Size</p>
+              <p className="font-medium">{selectedNFT.attributes?.size || 'Large'}</p>
+            </div>
+            <div className="bg-white p-2 rounded-lg border border-gray-100">
+              <p className="text-xs text-gray-500">Category</p>
+              <p className="font-medium">{selectedNFT.attributes?.category || 'Footwear'}</p>
+            </div>
+            <div className="bg-white p-2 rounded-lg border border-gray-100">
+              <p className="text-xs text-gray-500">Condition</p>
+              <p className="font-medium">{selectedNFT.attributes?.condition || 'New'}</p>
+            </div>
+            <div className="bg-white p-2 rounded-lg border border-gray-100">
+              <p className="text-xs text-gray-500">Shipping</p>
+              <p className="font-medium">{selectedNFT.attributes?.shipping || 'Worldwide'}</p>
+            </div>
+            <div className="bg-white p-2 rounded-lg border border-gray-100">
+              <p className="text-xs text-gray-500">Market Value</p>
+              <p className="font-medium">
+                {selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH
+                {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
+                  <span className="block text-xs text-gray-500">
+                    (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
+                  </span>
+                )}
+              </p>
+            </div>
+            <div className="bg-white p-2 rounded-lg border border-blue-100">
+              <p className="text-xs text-blue-500">Pool at Expiry</p>
+              <p className="font-medium text-blue-700">
+                {redeemValue ? 
+                  `${(Number(redeemValue) + Number(selectedNFT.attributes?.baseRedemptionValue || '0.005')).toFixed(5)}` : 
+                  `${(Number(selectedNFT.attributes?.baseRedemptionValue || '0.005') + 0.01).toFixed(5)}`} ETH
+                {ethUsdPrice > 0 && (
+                  <span className="block text-xs text-blue-500">
+                    (${((Number(redeemValue || 0.01) + Number(selectedNFT.attributes?.baseRedemptionValue || 0.005)) * ethUsdPrice).toFixed(2)})
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
       
       {/* Footer with actions */}
       <div className="flex justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50">
@@ -974,7 +1078,86 @@ useEffect(() => {
           className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
         >
           {modalState.isLoadingPrice ? 'Calculating Price...' : 
-           isProcessing ? 'Processing...' : 'Purchase Now'}
+          isProcessing ? 'Processing...' : 'Purchase Now'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Purchase Confirmation Modal */}
+{modalState.showPurchaseConfirm && selectedNFT && (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-xl shadow-xl max-w-md w-full border border-gray-200">
+      <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Purchase</h3>
+      
+      {/* Expired Curve Notice */}
+      {expired && (
+        <div className="bg-red-50 border border-red-200 p-3 rounded-lg mb-4">
+          <div className="flex items-start gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500 mt-0.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div>
+              <h4 className="text-red-800 font-medium">Expired Curve</h4>
+              <p className="text-red-700 text-sm">
+                This curve has expired. You cannot purchase NFTs on this marketplace at this time.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-100">
+        <p className="text-gray-600 mb-2">Actual price to pay:</p>
+        <p className="text-2xl font-bold text-blue-600 mb-1">
+          ${modalState.actualPriceUsd}
+        </p>
+        <p className="text-sm text-gray-500">
+          {modalState.actualPrice} ETH
+        </p>
+      </div>
+      
+      {/* Add Price Level Modifier to Purchase Confirmation Modal - NEW */}
+      <div className="bg-green-50 p-4 rounded-lg mb-4 border border-green-100">
+        <div className="flex justify-between items-center mb-1">
+          <p className="text-gray-600">Redemption price bonus:</p>
+          {modalState.isLoadingModifier ? (
+            <div className="flex items-center">
+              <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-green-500 border-r-2 rounded-full"></div>
+              <span className="text-sm text-gray-500">Loading...</span>
+            </div>
+          ) : (
+            <p className="text-xl font-bold text-green-600">{modalState.priceLevelModifier}%</p>
+          )}
+        </div>
+        <p className="text-sm text-gray-600">
+          This purchase will qualify for a {modalState.priceLevelModifier}% bonus during end-of-curve redemptions.
+        </p>
+      </div>
+
+      {modalState.purchaseError && (
+        <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4">
+          {modalState.purchaseError}
+        </div>
+      )}
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => setModalState(prev => ({ ...prev, showPurchaseConfirm: false }))}
+          className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => confirmPurchase(selectedNFT)}
+          disabled={isProcessing || expired}
+          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg
+                  hover:bg-blue-700 transition-all disabled:opacity-50 font-medium"
+        >
+          {isProcessing ? 'Processing...' : expired ? 'Curve Expired' : 'Confirm Purchase'}
         </button>
       </div>
     </div>
