@@ -15,10 +15,20 @@ interface RewardState {
   error: string | null;
 }
 
+// 1. Add new interface for discount state (add near the RewardState interface)
+interface DiscountState {
+  discountPercent: number;
+  purchasePriceEth: string;
+  purchasePriceUsd: string;
+  isLoading: boolean;
+  error: string | null;
+}
+
 // Add these constants before the MyInventory component
 const REWARDS_TRACKER_ADDRESS = "0xceBf8556045ace05342Fb2D221C0E3CB22be3C1D";
 const REWARDS_TRACKER_ABI = [
-  "function calculateReward(address curveAddress, uint256 tokenId) external view returns (uint256)"
+  "function calculateReward(address curveAddress, uint256 tokenId) external view returns (uint256)",
+  "function getNFTInfo(address curveAddress, uint256 tokenId) external view returns (uint256 weight, uint256 purchasePrice, uint256 purchaseTime, bool isActive)"
 ];
 
 interface NFTModalState {
@@ -228,6 +238,14 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   const [itemsPerPage, setItemsPerPage] = useState<number>(4);
   const [ethUsdPrice, setEthUsdPrice] = useState<number>(0);
   const [isLoadingEthPrice, setIsLoadingEthPrice] = useState(false);
+
+  const [discountState, setDiscountState] = useState<DiscountState>({
+    discountPercent: 0,
+    purchasePriceEth: '0',
+    purchasePriceUsd: '0',
+    isLoading: false,
+    error: null
+  });
   
   // State for shipping modal
   const [showShippingModal, setShowShippingModal] = useState(false);
@@ -267,7 +285,7 @@ const MyInventory: React.FC<MyInventoryProps> = ({
   }, [signer]);
   
   // Add the fetchRedemptionReward function to calculate the reward
-  const fetchRedemptionReward = async (curveAddr: string, tokenId: string) => {
+  const fetchRedemptionReward = async (curveAddr: any, tokenId: any) => {
     if (!rewardsTrackerContract || !curveAddr || !tokenId) {
       setRewardState(prev => ({
         ...prev,
@@ -282,6 +300,7 @@ const MyInventory: React.FC<MyInventoryProps> = ({
       
       // Call the contract function to get the reward
       const reward = await rewardsTrackerContract.calculateReward(curveAddr, tokenId);
+      console.log(`Redemption reward for NFT #${tokenId}: ${reward.toString()}`);
       
       // Format the result from Wei to ETH
       const rewardEth = ethers.formatEther(reward);
@@ -310,6 +329,76 @@ const MyInventory: React.FC<MyInventoryProps> = ({
       });
     }
   };
+
+// Simplified discount calculation function - all calculations done in ETH
+const calculateDiscount = async (curveAddr: string, tokenId: string, currentPriceEth: number, redemptionValueEth: number) => {
+  if (!rewardsTrackerContract || !curveAddr || !tokenId) {
+    setDiscountState(prev => ({
+      ...prev,
+      error: 'Contract or token data not initialized',
+      isLoading: false
+    }));
+    return;
+  }
+  
+  try {
+    setDiscountState(prev => ({ ...prev, isLoading: true, error: null }));
+    
+    // Call the contract function to get the NFT info including purchase price
+    const [weight, purchasePrice, purchaseTime, isActive] = await rewardsTrackerContract.getNFTInfo(curveAddr, tokenId);
+    
+    // Format the purchase price from Wei to ETH
+    const purchasePriceEth = parseFloat(ethers.formatEther(purchasePrice));
+    console.log(`Original purchase price for NFT #${tokenId}: ${purchasePriceEth} ETH`);
+    
+    // Calculate USD value if ethUsdPrice is available
+    const purchasePriceUsd = ethUsdPrice > 0 
+      ? (purchasePriceEth * ethUsdPrice).toFixed(2) 
+      : '0';
+    
+    // SIMPLIFIED CALCULATION
+    // For this specific use case:
+    // The discount is how much OFF you get from the full price
+    // If full price is 0.01 ETH and you're paying 0.0003 ETH, that's 97% off
+    
+    // Calculate the additional amount needed to reach redemption value
+    const additionalPaymentNeeded = Math.max(0, redemptionValueEth - currentPriceEth);
+    
+    // Calculate discount percentage: (full price - what you need to pay) / full price * 100
+    const fullPrice = redemptionValueEth; // The full redemption value
+    const discountAmount = fullPrice - additionalPaymentNeeded;
+    const discountPercent = Math.round((discountAmount / fullPrice) * 100);
+    
+    console.log(`Simplified discount calculation for NFT #${tokenId}:`);
+    console.log(`- Redemption value (full price): ${redemptionValueEth} ETH`);
+    console.log(`- Current price: ${currentPriceEth} ETH`);
+    console.log(`- Additional payment needed: ${additionalPaymentNeeded} ETH`);
+    console.log(`- Discount amount: ${discountAmount} ETH`);
+    console.log(`- Discount percent: ${discountPercent}%`);
+    
+    // If the discount is close to 100%, cap it at 97% for UX reasons
+    const cappedDiscountPercent = discountPercent > 97 ? 97 : discountPercent;
+    
+    setDiscountState({
+      discountPercent: cappedDiscountPercent,
+      purchasePriceEth: purchasePriceEth.toString(),
+      purchasePriceUsd: purchasePriceUsd,
+      isLoading: false,
+      error: null
+    });
+    
+  } catch (error) {
+    console.error('Error calculating discount:', error);
+    setDiscountState({
+      discountPercent: 0,
+      purchasePriceEth: '0',
+      purchasePriceUsd: '0',
+      isLoading: false,
+      error: 'Failed to calculate discount'
+    });
+  }
+};
+
 
   // Fetch ETH price
   useEffect(() => {
@@ -519,29 +608,55 @@ useEffect(() => {
 }, [nftContract, signer, userAddress, ethUsdPrice, activeContract]);
 
   // Update the handleNFTClick function to fetch the reward when an NFT is selected
-  const handleNFTClick = (nft: NFT) => {
-    setSelectedNFT(nft);
-    setShowModal(true);
+  // 5. Update the handleNFTClick function to calculate discount
+const handleNFTClick = (nft: NFT) => {
+  setSelectedNFT(nft);
+  setShowModal(true);
+  
+  // Reset reward state
+  setRewardState({
+    rewardEth: '0',
+    rewardUsd: '0',
+    isLoading: true,
+    error: null
+  });
+  
+  // Reset discount state
+  setDiscountState({
+    discountPercent: 0,
+    purchasePriceEth: '0',
+    purchasePriceUsd: '0',
+    isLoading: true,
+    error: null
+  });
+  
+  // Fetch the redemption reward
+  if (activeContract && activeContract.target) {
+    fetchRedemptionReward(activeContract.target, nft.tokenId);
     
-    // Reset reward state
-    setRewardState({
-      rewardEth: '0',
-      rewardUsd: '0',
-      isLoading: true,
-      error: null
-    });
-    
-    // Fetch the redemption reward
-    if (activeContract && activeContract.target) {
-      fetchRedemptionReward(activeContract.target, nft.tokenId);
-    } else {
-      setRewardState(prev => ({
-        ...prev,
-        error: 'Contract not initialized',
-        isLoading: false
-      }));
+    // Calculate discount if the NFT is not already redeemable
+    if (!nft.isRedeemable && nft.attributes?.baseRedemptionValue) {
+      calculateDiscount(
+        activeContract.target, 
+        nft.tokenId, 
+        nft.priceEth,
+        parseFloat(nft.attributes.baseRedemptionValue)
+      );
     }
-  };
+  } else {
+    setRewardState(prev => ({
+      ...prev,
+      error: 'Contract not initialized',
+      isLoading: false
+    }));
+    
+    setDiscountState(prev => ({
+      ...prev,
+      error: 'Contract not initialized',
+      isLoading: false
+    }));
+  }
+};
 
   const handleSell = async (nft: NFT) => {
     try {
@@ -987,13 +1102,13 @@ useEffect(() => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
              
-{currentNFTs.map((nft) => (
+             {currentNFTs.map((nft) => (
   <div
     key={nft.id}
     onClick={() => handleNFTClick(nft)}
     className="bg-white rounded-xl overflow-hidden border border-gray-200 hover:border-purple-300
              shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-5px] cursor-pointer
-             relative" // Added relative positioning for absolute label
+             relative"
   >
     <div className="aspect-square overflow-hidden relative">
       <img
@@ -1008,15 +1123,25 @@ useEffect(() => {
         </div>
       )}
       
-      {/* Redeemable badge - only show if showRedeemableLabel is true */}
+      {/* Modified badge - show either Redeemable, Non-Redeemable for closed curves, or Discount percentage */}
       {showRedeemableLabel && (
-        <div className={`absolute top-3 left-3 px-3 py-1 rounded-full shadow-md font-bold text-xs uppercase
-                       ${nft.isRedeemable
-                          ? 'bg-green-500 text-white animate-pulse' 
-                          : 'bg-red-500 text-white'}`}
-        >
-          {nft.isRedeemable ? 'Redeemable' : 'Not Redeemable'}
-        </div>
+        nft.isRedeemable ? (
+          <div className="absolute top-3 left-3 px-3 py-1 rounded-full shadow-md font-bold text-xs uppercase
+                       bg-green-500 text-white animate-pulse">
+            REDEEMABLE
+          </div>
+          //or curv is ovr 
+        ) : curveType === 1 ? (
+          <div className="absolute top-3 left-3 px-3 py-1 rounded-full shadow-md font-bold text-xs uppercase
+                       bg-gray-500 text-white">
+            NON-REDEEMABLE
+          </div>
+        ) : (
+          <div className="absolute top-3 left-3 px-3 py-1 rounded-full shadow-md font-bold text-xs uppercase
+                       bg-orange-500 text-white">
+            DISCOUNTED
+          </div>
+        )
       )}
       
       {/* Closed Curve Badge - show only when curveType is 1 */}
@@ -1070,7 +1195,7 @@ useEffect(() => {
                        bg-blue-500 text-white hover:bg-blue-600
                        disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Pay Full
+              Get Now!
             </button>
           )}
         </div>
@@ -1209,16 +1334,41 @@ useEffect(() => {
         </div>
       )}
   
-{/* NFT Detail Modal with Redemption Options */}
-{showModal && selectedNFT && (
+  {showModal && selectedNFT && (
   <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
     <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 my-8 max-h-[85vh] overflow-y-auto">
-      {/* Modal header with close button */}
-      <div className="flex justify-between items-center p-3 border-b border-gray-200 sticky top-0 bg-white z-10">
-        <h2 className="text-lg font-bold text-gray-800">{selectedNFT.name}</h2>
+      {/* Modal header with close button and status badge */}
+      <div className="flex justify-between items-center p-4 border-b border-gray-200 sticky top-0 bg-white z-10">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold text-gray-800">{selectedNFT.name}</h2>
+          {/* Status badge in header - updated for closed curves */}
+          {selectedNFT.isRedeemable ? (
+            <span className="bg-green-500 text-white text-xs font-bold px-3 py-0.5 rounded-full uppercase">
+              Redeemable
+            </span>
+          ) : curveType === 1 ? (
+            <span className="bg-gray-500 text-white text-xs font-bold px-3 py-0.5 rounded-full uppercase">
+              Non-Redeemable
+            </span>
+          ) : (
+            <span className="bg-gradient-to-r from-orange-500 to-yellow-500 text-white text-xs font-bold px-3 py-0.5 rounded-full uppercase">
+              {discountState.isLoading ? (
+                <span className="flex items-center">
+                  <div className="animate-spin mr-1 h-3 w-3 border-t-2 border-white border-r-2 rounded-full"></div>
+                  Loading...
+                </span>
+              ) : discountState.error ? (
+                "Discount"
+              ) : (
+                // If discount is 100%, show as 0% OFF
+                discountState.discountPercent === 100 ? "0% OFF" : `${discountState.discountPercent}% OFF`
+              )}
+            </span>
+          )}
+        </div>
         <button 
           onClick={() => setShowModal(false)}
-          className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+          className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -1228,9 +1378,9 @@ useEffect(() => {
       </div>
       
       <div className="flex flex-col md:flex-row">
-        {/* Image section - more compact */}
-        <div className="md:w-1/2 p-4">
-          <div className="bg-gray-50 rounded-lg overflow-hidden shadow-md flex items-center justify-center">
+        {/* Left column - Image and primary info */}
+        <div className="md:w-1/2 p-4 border-r border-gray-100">
+          <div className="bg-gray-50 rounded-lg overflow-hidden shadow-md">
             <img
               src={selectedNFT.image}
               alt={selectedNFT.name}
@@ -1238,96 +1388,216 @@ useEffect(() => {
             />
           </div>
           
-          {/* Add Redemption Reward Section - NEW */}
-          <div className="mt-4 bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded-lg border border-green-200">
-            <h3 className="text-green-800 font-semibold flex items-center gap-2 mb-2 text-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
-                <circle cx="12" cy="12" r="10"></circle>
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-              </svg>
-              Estimated Redemption Reward
-            </h3>
-            
-            <div className="bg-white p-3 rounded-lg border border-green-100">
-              {rewardState.isLoading ? (
-                <div className="flex items-center justify-center py-2">
-                  <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-blue-500 border-r-2 rounded-full"></div>
-                  <span className="text-gray-600 text-sm">Calculating reward...</span>
+          {/* Description under image */}
+          {selectedNFT.description && (
+            <div className="mt-4 text-gray-600 text-sm p-3 bg-gray-50 rounded-lg">
+              <p>{selectedNFT.description}</p>
+            </div>
+          )}
+          
+          {/* Pricing and Status info */}
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Current Price</h4>
+              <div className="font-bold text-gray-800">${selectedNFT.priceUsd.toFixed(2)}</div>
+              <div className="text-xs text-gray-500">{selectedNFT.priceEth.toFixed(5)} ETH</div>
+            </div>
+            <div className="bg-gray-50 p-3 rounded-lg">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Redemption Price</h4>
+              <div className="font-bold text-gray-800">
+                {selectedNFT.attributes?.baseRedemptionValue || 'N/A'} ETH
+              </div>
+              {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
+                <div className="text-xs text-gray-500">
+                  (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
                 </div>
-              ) : rewardState.error ? (
-                <div className="text-red-500 text-sm flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                  </svg>
-                  Failed to calculate reward
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-gray-700 text-sm">Reward after curve expiry:</span>
-                    <span className="text-lg font-bold text-green-600">{rewardState.rewardEth} ETH</span>
-                  </div>
-                  {ethUsdPrice > 0 && (
-                    <div className="flex justify-end text-sm text-gray-500">
-                      (${rewardState.rewardUsd})
-                    </div>
-                  )}
-                  <p className="text-sm text-gray-600 mt-2">
-                    This is your estimated additional reward when you redeem this item after the trading period ends.
-                  </p>
-                </>
               )}
             </div>
           </div>
-        </div>
-        
-        {/* Info section */}
-        <div className="md:w-1/2 p-4 space-y-3">
-          {selectedNFT.description && (
-            <p className="text-gray-600 text-sm">{selectedNFT.description}</p>
+          
+          {/* Buy Now Discount Section - only for non-redeemable NFTs and NOT closed curves */}
+          {!selectedNFT.isRedeemable && selectedNFT.attributes?.baseRedemptionValue && curveType !== 1 && (
+            <div className="mt-4 bg-gradient-to-r from-orange-50 to-yellow-50 p-4 rounded-lg border border-orange-200">
+              <h3 className="text-orange-800 font-semibold flex items-center gap-2 mb-3 text-md">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
+                Get Now Discount
+              </h3>
+              
+              <div className="bg-white p-3 rounded-lg border border-orange-100">
+                {discountState.isLoading ? (
+                  <div className="flex items-center justify-center py-3">
+                    <div className="animate-spin mr-2 h-5 w-5 border-t-2 border-orange-500 border-r-2 rounded-full"></div>
+                    <span className="text-gray-600">Calculating discount...</span>
+                  </div>
+                ) : discountState.error ? (
+                  <div className="text-red-500 flex items-center justify-center py-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="12"></line>
+                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    Failed to calculate discount
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-gray-700">Your price:</span>
+                      <span className="text-2xl font-bold text-orange-600">
+                        {/* Show "No Discount" for 100% discount */}
+                        {discountState.discountPercent === 100 ? "No Discount" : `${discountState.discountPercent}% OFF`}
+                      </span>
+                    </div>
+                    
+                    <div className="bg-orange-50 p-3 rounded-lg mb-3">
+                      {/*<div className="grid grid-cols-2 gap-2 text-sm">*/}
+                        <div>
+                          <p className="text-xs text-gray-500 mb-1">Original purchase:</p>
+                          <p className="text-gray-700 font-medium">{discountState.purchasePriceEth} ETH</p>
+                          {ethUsdPrice > 0 && (
+                            <p className="text-xs text-gray-500">${discountState.purchasePriceUsd}</p>
+                          )}
+                        </div>
+                        {/*<div>
+                          <p className="text-xs text-gray-500 mb-1">Current market value:</p>
+                          <p className="text-gray-700 font-medium">{selectedNFT.priceEth.toFixed(5)} ETH</p>
+                          {ethUsdPrice > 0 && (
+                            <p className="text-xs text-gray-500">${selectedNFT.priceUsd.toFixed(2)}</p>
+                          )}
+                        </div>
+                      </div>*/}
+                              
+                    {/*<p className="text-sm text-gray-600 mb-3">
+                      Pay the remaining amount to get this item at a discount from its full redemption value of {selectedNFT.attributes.baseRedemptionValue} ETH.
+                    </p>*/}
+                    </div>
+                    
+                    {/* Call to action button - with colored background and 0% OFF handling */}
+                    {curveType === 2 && !isExpired && (
+                      <button
+                        onClick={() => handlePayInFull(selectedNFT)}
+                        disabled={isProcessing}
+                        className="w-full py-2.5 bg-orange-500 text-white rounded-lg font-medium
+                                hover:bg-orange-600 transition-all disabled:opacity-50 flex items-center justify-center"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-white border-r-2 rounded-full"></div>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            Get Now {discountState.discountPercent === 100 ? "" : `at ${discountState.discountPercent}% OFF`}
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           )}
           
-          {/* Redemption Info Card - Enhanced with clearer conditions */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-200">
-            <h3 className="text-blue-800 font-semibold flex items-center gap-2 mb-2 text-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+          {/* Closed Curve Information Section - replaces discount section for closed curves */}
+          {!selectedNFT.isRedeemable && curveType === 1 && (
+            <div className="mt-4 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 rounded-lg border border-amber-200">
+              <h3 className="text-amber-800 font-semibold flex items-center gap-2 mb-3 text-md">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                Closed Curve Information
+              </h3>
+              
+              <div className="bg-white p-3 rounded-lg border border-amber-100">
+                <p className="text-gray-700 mb-3">
+                  This NFT is part of a closed curve offering. It has the following characteristics:
+                </p>
+                
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600 mt-1">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                    </svg>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium text-gray-700">Trading Period Only:</span> During the trading period, this NFT can only be traded, not redeemed.
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600 mt-1">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium text-gray-700">Redemption Period:</span> Redemption will be available after the trading period expires.
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-start gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600 mt-1">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium text-gray-700">Value Requirement:</span> The NFT must reach its redemption value of {selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH to be redeemable.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="bg-amber-50 p-3 rounded-lg">
+                  <p className="text-sm text-amber-800">
+                    <span className="font-bold">Current Status:</span> This NFT is not yet eligible for redemption. You may hold it until the redemption period or sell it on the market.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Right column - Detailed information */}
+        <div className="md:w-1/2 p-4 space-y-4">
+          {/* Redemption Info Card */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
+            <h3 className="text-blue-800 font-semibold flex items-center gap-2 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               </svg>
               Redemption Conditions
             </h3>
             
-            <div className="space-y-2">
-              {/* During Trading Period - Modified based on curveType */}
-              <div className={`bg-white p-2 rounded-lg border ${curveType === 1 ? 'border-amber-100' : 'border-blue-100'}`}>
-                <h4 className="text-xs font-medium text-blue-800 mb-1">During Trading Period</h4>
+            <div className="space-y-3">
+              {/* During Trading Period */}
+              <div className={`bg-white p-3 rounded-lg border ${curveType === 1 ? 'border-amber-100' : 'border-blue-100'}`}>
+                <h4 className="text-sm font-medium text-blue-800 mb-1">During Trading Period</h4>
                 {curveType === 1 ? (
-                  <p className="text-xs text-amber-700">
+                  <p className="text-sm text-amber-700">
                     <span className="font-bold">Trading Only:</span> During the trading period, this NFT can only be traded. Redemption will be available after the trading period expires.
                   </p>
                 ) : (
-                  <p className="text-xs text-blue-700">
+                  <p className="text-sm text-blue-700">
                     To redeem this NFT for the physical item during the trading period, its price must reach <span className="font-bold">{selectedNFT.attributes?.baseRedemptionValue || '0.005'} ETH</span> (Market Value).
                   </p>
                 )}
               </div>
               
-              {/* After Expiry - With Liquidity Requirement */}
-              <div className="bg-white p-2 rounded-lg border border-blue-100 relative">
-                <h4 className="text-xs font-medium text-blue-800 mb-1">After Expiry (Redemption Period)</h4>
-                <div className="text-xs text-blue-700">
-                  <p className="mb-1">
-                    After curve expiry, this NFT can be redeemed when the total liquidity pool value reaches <span className="font-bold">
-                      <LiquidityRequirement 
-                        trackingContract={trackingContract} 
-                        activeContract={activeContract} 
-                        tokenId={selectedNFT.tokenId} 
-                        baseRedemptionValue={selectedNFT.attributes?.baseRedemptionValue || '0.005'}
-                        ethUsdPrice={ethUsdPrice}
-                      />
-                    </span>
+              {/* After Expiry */}
+              <div className="bg-white p-3 rounded-lg border border-blue-100">
+                <h4 className="text-sm font-medium text-blue-800 mb-1">After Expiry (Redemption Period)</h4>
+                <div className="text-sm text-blue-700">
+                  <p>
+                    After curve expiry, this NFT can be redeemed when the total liquidity pool value reaches:
+                  </p>
+                  <p className="font-bold mt-1">
+                    <LiquidityRequirement 
+                      trackingContract={trackingContract} 
+                      activeContract={activeContract} 
+                      tokenId={selectedNFT.tokenId} 
+                      baseRedemptionValue={selectedNFT.attributes?.baseRedemptionValue || '0.005'}
+                      ethUsdPrice={ethUsdPrice}
+                    />
                   </p>
                 </div>
               </div>
@@ -1336,16 +1606,15 @@ useEffect(() => {
               <div className={`${currentPeriod === 'trading' ? 'bg-green-50 border-green-100' : 
                                currentPeriod === 'redemption' ? 'bg-amber-50 border-amber-100' : 
                                'bg-gray-50 border-gray-100'} 
-                              p-2 rounded-lg border`}>
-                <h4 className="text-xs font-medium mb-1 
-                      text-gray-800">Current Status</h4>
+                              p-3 rounded-lg border`}>
+                <h4 className="text-sm font-medium mb-1 text-gray-800">Current Status</h4>
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${
+                  <span className={`w-3 h-3 rounded-full ${
                     currentPeriod === 'trading' ? 'bg-green-500' : 
                     currentPeriod === 'redemption' ? 'bg-amber-500' : 
                     'bg-gray-500'
                   }`}></span>
-                  <p className="text-xs">
+                  <p className="text-sm font-medium">
                     {currentPeriod === 'trading' ? 'Trading Period Active' : 
                      currentPeriod === 'redemption' ? 'Redemption Period Active' : 
                      'Expired'}
@@ -1355,90 +1624,105 @@ useEffect(() => {
             </div>
           </div>
           
-          {/* Details & Attributes in a more compact format */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <h3 className="font-semibold text-gray-800 text-sm">Details</h3>
-              <div className="bg-gray-50 p-3 rounded-lg text-sm">
-                <div className="space-y-1.5">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 text-xs">Current Price:</span>
-                    <span className="font-medium text-xs">
-                      ${selectedNFT.priceUsd.toFixed(2)}
-                      <span className="block text-gray-500 text-xs">{selectedNFT.priceEth.toFixed(5)} ETH</span>
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 text-xs">Token ID:</span>
-                    <span className="text-green-600 text-xs">{selectedNFT.tokenId}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 text-xs">Status:</span>
-                    <span className={`font-medium px-2 py-0.5 rounded-full text-xs ${
-                      selectedNFT.isRedeemable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedNFT.isRedeemable ? 'Redeemable' : 'Not Redeemable'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Redemption Reward Section */}
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 rounded-lg border border-green-200">
+            <h3 className="text-green-800 font-semibold flex items-center gap-2 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              Estimated Redemption Reward
+            </h3>
             
-            <div className="space-y-2">
-              <h3 className="font-semibold text-gray-800 text-sm">Market Value</h3>
-              <div className="bg-gray-50 p-3 rounded-lg text-sm h-[calc(100%-24px)]">
-                <div className="flex items-center justify-between h-full">
-                  <span className="text-gray-600 text-xs">Redemption Price:</span>
-                  <div className="text-right">
-                    <p className="text-gray-700 font-medium">
-                      {selectedNFT.attributes?.baseRedemptionValue || 'N/A'} ETH
-                    </p>
-                    {ethUsdPrice > 0 && selectedNFT.attributes?.baseRedemptionValue && (
-                      <span className="block text-xs text-gray-500">
-                        (${(parseFloat(selectedNFT.attributes.baseRedemptionValue) * ethUsdPrice).toFixed(2)})
-                      </span>
-                    )}
-                  </div>
+            <div className="bg-white p-3 rounded-lg border border-green-100">
+              {rewardState.isLoading ? (
+                <div className="flex items-center justify-center py-3">
+                  <div className="animate-spin mr-2 h-5 w-5 border-t-2 border-blue-500 border-r-2 rounded-full"></div>
+                  <span className="text-gray-600">Calculating reward...</span>
                 </div>
+              ) : rewardState.error ? (
+                <div className="text-red-500 flex items-center py-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  Failed to calculate reward
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-gray-700">Reward after curve expiry:</span>
+                    <div className="text-right">
+                      <span className="text-xl font-bold text-green-600">{rewardState.rewardEth} ETH</span>
+                      {ethUsdPrice > 0 && (
+                        <div className="text-sm text-gray-500">
+                          (${rewardState.rewardUsd})
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 bg-green-50 p-2 rounded">
+                    This is your estimated additional reward when you redeem this item after the trading period ends.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {/* Attributes section */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <h3 className="font-semibold text-gray-800 mb-3">Attributes</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Size</p>
+                <p className="text-gray-700 font-medium">{selectedNFT.attributes?.size || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Category</p>
+                <p className="text-gray-700 font-medium">{selectedNFT.attributes?.category || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Condition</p>
+                <p className="text-gray-700 font-medium">{selectedNFT.attributes?.condition || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Shipping</p>
+                <p className="text-gray-700 font-medium">{selectedNFT.attributes?.shipping || 'N/A'}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Token ID</p>
+                <p className="text-green-600 font-medium">{selectedNFT.tokenId}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Status</p>
+                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                  selectedNFT.isRedeemable ? 'bg-green-100 text-green-800' :
+                  curveType === 1 ? 'bg-gray-100 text-gray-800' :
+                  'bg-orange-100 text-orange-800'
+                }`}>
+                  {selectedNFT.isRedeemable ? 'Redeemable' : 
+                   curveType === 1 ? 'Non-Redeemable' :
+                   discountState.isLoading ? 'Calculating...' : 
+                   discountState.discountPercent === 100 ? '0% OFF' : `${discountState.discountPercent}% OFF`}
+                </span>
               </div>
             </div>
           </div>
           
-          {/* Attributes grid - more compact */}
-          <div>
-            <h3 className="font-semibold text-gray-800 text-sm mb-2">Attributes</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <p className="text-xs text-gray-500">Size</p>
-                <p className="text-gray-700 font-medium text-sm">{selectedNFT.attributes?.size || 'N/A'}</p>
-              </div>
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <p className="text-xs text-gray-500">Category</p>
-                <p className="text-gray-700 font-medium text-sm">{selectedNFT.attributes?.category || 'N/A'}</p>
-              </div>
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <p className="text-xs text-gray-500">Condition</p>
-                <p className="text-gray-700 font-medium text-sm">{selectedNFT.attributes?.condition || 'N/A'}</p>
-              </div>
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <p className="text-xs text-gray-500">Shipping</p>
-                <p className="text-gray-700 font-medium text-sm">{selectedNFT.attributes?.shipping || 'N/A'}</p>
-              </div>
-            </div>
-          </div>
-          
-          {/* Action buttons with conditional Pay in Full button */}
-          <div className="flex justify-end gap-3 pt-2">
+          {/* Action buttons */}
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-200 mt-4">
             <button
               onClick={() => setShowModal(false)}
-              className="px-4 py-1.5 bg-gray-100 text-gray-700 rounded-lg font-medium text-sm hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
             >
               Close
             </button>
             <button 
               onClick={() => handleSell(selectedNFT)}
               disabled={isProcessing || modalState.isLoadingPrice || sellingRestricted || isExpired}
-              className="px-4 py-1.5 bg-purple-600 text-white rounded-lg font-medium text-sm
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium
                 hover:bg-purple-700 transition-all
                 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1448,7 +1732,7 @@ useEffect(() => {
             <button 
               onClick={() => handleRedeem(selectedNFT)}
               disabled={isProcessing || !selectedNFT.isRedeemable || (curveType === 1 && currentPeriod === 'trading')}
-              className={`px-4 py-1.5 rounded-lg font-medium text-sm transition-all
+              className={`px-4 py-2 rounded-lg font-medium transition-all
                         disabled:opacity-50 disabled:cursor-not-allowed
                         ${selectedNFT.isRedeemable && !(curveType === 1 && currentPeriod === 'trading')
                           ? 'bg-green-600 text-white hover:bg-green-700' 
@@ -1457,16 +1741,18 @@ useEffect(() => {
             >
               {isProcessing ? 'Processing...' : 'Redeem'}
             </button>
-            {/* Conditional Pay in Full button in modal - only show when curveType is 2 and not expired */}
+            {/* Conditional Pay in Full button - only show for curve type 2 (not for closed curves) */}
             {curveType === 2 && !isExpired && !selectedNFT.isRedeemable && (
               <button 
                 onClick={() => handlePayInFull(selectedNFT)}
                 disabled={isProcessing}
-                className="px-4 py-1.5 rounded-lg font-medium text-sm transition-all
-                          bg-blue-600 text-white hover:bg-blue-700
+                className="px-4 py-2 rounded-lg font-medium transition-all
+                          bg-orange-500 text-white hover:bg-orange-600
                           disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isProcessing ? 'Processing...' : 'Pay in Full'}
+                {isProcessing ? 'Processing...' : 
+                 discountState.isLoading ? 'Buy Now' : 
+                 discountState.discountPercent === 100 ? 'Buy Now' : `${discountState.discountPercent}% OFF`}
               </button>
             )}
           </div>
@@ -1577,6 +1863,8 @@ useEffect(() => {
           </div>
         </div>
       )}
+
+      
 
       {/* New Pay in Full Confirmation Modal */}
       {modalState.showPayInFullConfirm && selectedNFT && (

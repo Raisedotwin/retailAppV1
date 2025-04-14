@@ -12,7 +12,8 @@ interface CurveParams {
   name: string;
   symbol: string;
   timeLimit: string;
-  allowOthersToList: boolean; // Add this new field
+  allowOthersToList: boolean;
+  disableTrading: boolean; // New parameter
 }
 
 interface LaunchData {
@@ -66,8 +67,10 @@ const Chat: React.FC = () => {
     name: '',
     symbol: '',
     timeLimit: '',
-    allowOthersToList: true // Default to true
+    allowOthersToList: true, // Default to true
+    disableTrading: false // Default to false (trading enabled)
   });
+
   const [storeFormData, setStoreFormData] = useState<StoreFormData>({
     name: '',
     description: '',
@@ -500,7 +503,8 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
         name: '',
         symbol: '',
         timeLimit: '',
-        allowOthersToList: true
+        allowOthersToList: true,
+        disableTrading: false // Default to false (trading enabled)
       });
   
     } catch (error: any) {
@@ -568,7 +572,8 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
     name: curveParams.name,
     symbol: curveParams.symbol,
     timeLimit: curveParams.timeLimit,
-    allowOthersToList: curveParams.allowOthersToList
+    allowOthersToList: curveParams.allowOthersToList,
+    disableTrading: curveParams.disableTrading // Include the new parameter
   });
   
   // State variables for launch detection
@@ -605,6 +610,17 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
     }
     
     setFormattedTime(timeString || 'Less than a minute');
+  };
+
+  // Function to handle trading toggle
+  const handleTradingToggle = () => {
+    // Toggle the disableTrading state
+    setLocalParams({...localParams, disableTrading: !localParams.disableTrading});
+    
+    // If trading is being disabled, show a popup
+    if (!localParams.disableTrading) {
+      alert('Trading has been disabled for this curve.');
+    }
   };
 
   // Function to check for launch address - improved with retry mechanism
@@ -690,36 +706,36 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
   
   // Modified launchClosedCurve function with enhanced transaction handling
   const launchClosedCurve = async () => {
-  setIsLaunchingClosedCurve(true);
-  try {
-    const signer: any = await getSigner();
-    if (!signer) {
-      alert('Failed to get signer. Please connect your wallet.');
-      return;
-    }
+    setIsLaunchingClosedCurve(true);
+    try {
+      const signer: any = await getSigner();
+      if (!signer) {
+        alert('Failed to get signer. Please connect your wallet.');
+        return;
+      }
 
-    const launchFactoryContract = new ethers.Contract(launchFactory, launchFactoryABI, signer);
-    const tx = await launchFactoryContract.createTokenMarket();
-    
-    // Show pending message
-    alert('Transaction submitted! Waiting for confirmation...');
-    
-    // Wait for blockchain state to update (additional delay)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Force refresh the component
-    forceRefresh();
-    
-    // Run the check for launch
-    await checkForLaunch();
-    
-    alert('Closed curve successfully created! You can now configure it.');
-  } catch (error) {
-    console.error('Error creating closed curve token market:', error);
-    alert(`Error creating closed curve: ${'Please try again.'}`);
-  } finally {
-    setIsLaunchingClosedCurve(false);
-  }
+      const launchFactoryContract = new ethers.Contract(launchFactory, launchFactoryABI, signer);
+      const tx = await launchFactoryContract.createTokenMarket();
+      
+      // Show pending message
+      alert('Transaction submitted! Waiting for confirmation...');
+      
+      // Wait for blockchain state to update (additional delay)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Force refresh the component
+      forceRefresh();
+      
+      // Run the check for launch
+      await checkForLaunch();
+      
+      alert('Closed curve successfully created! You can now configure it.');
+    } catch (error) {
+      console.error('Error creating closed curve token market:', error);
+      alert(`Error creating closed curve: ${'Please try again.'}`);
+    } finally {
+      setIsLaunchingClosedCurve(false);
+    }
   };
 
   // Manual refresh button handler
@@ -744,7 +760,8 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
       name: curveParams.name,
       symbol: curveParams.symbol,
       timeLimit: curveParams.timeLimit,
-      allowOthersToList: curveParams.allowOthersToList
+      allowOthersToList: curveParams.allowOthersToList,
+      disableTrading: curveParams.disableTrading // Include the new parameter
     });
     
     // Calculate formatted time based on initial timeLimit
@@ -775,7 +792,7 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex justify-center items-center z-50">
-      <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-purple-500/20 max-w-2xl w-full mx-4">
+      <div className="bg-gradient-to-b from-gray-900 to-black p-8 rounded-2xl shadow-2xl border border-purple-500/20 max-w-3xl w-full mx-4 overflow-y-auto max-h-[90vh]">
         <h3 className="text-2xl font-bold text-white mb-6">Create {curveType} Curve</h3>
         
         {/* Launch button section */}
@@ -866,11 +883,40 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
           )}
         </div>
         
-        {/* The rest of your component remains the same */}
+        {/* NEW SECTION: Trading Toggle - Redesigned to match screenshot */}
+        <div className={`mb-6 bg-gray-800/50 rounded-xl p-4 border border-gray-700/50 ${!launchDetected && 'opacity-70'}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="disableTrading"
+                checked={localParams.disableTrading}
+                onChange={handleTradingToggle}
+                className="h-5 w-5 rounded border-gray-600 text-purple-500 focus:ring-purple-500 focus:ring-offset-gray-800"
+                disabled={!launchDetected}
+              />
+              <label htmlFor="disableTrading" className={`ml-2 block text-white ${!launchDetected && 'opacity-70'}`}>
+                Disable trading on this curve
+              </label>
+            </div>
+            <div className={`px-3 py-1 rounded-full text-xs ${
+              localParams.disableTrading 
+                ? 'bg-red-500/20 text-red-400'
+                : 'bg-green-500/20 text-green-400'
+            }`}>
+              Trading {localParams.disableTrading ? 'Disabled' : 'Enabled'}
+            </div>
+          </div>
+          <p className={`text-gray-400 text-xs mt-2 ${!launchDetected && 'opacity-70'}`}>
+            Users will {localParams.disableTrading ? 'not' : ''} be able to trade tokens on this curve {localParams.disableTrading ? 'until you enable trading' : 'as soon as it\'s created'}.
+          </p>
+        </div>
+        
+        {/* List A Product Or Category Of Products section */}
         <h4 className="text-lg font-semibold text-white mb-4">List A Product Or Category Of Products</h4>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Token Details Row */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Token Details Row - widened layout */}
+          <div className="grid grid-cols-3 gap-6">
             <div>
               <label className="block text-gray-400 text-sm mb-2">Product Name</label>
               <input
@@ -909,7 +955,7 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
             </div>
           </div>
   
-          {/* Time Parameters Row - MODIFIED */}
+          {/* Time Parameters Row */}
           <div className="grid grid-cols-3 gap-4">
             <div className={curveType === 'Open' ? '' : 'col-span-3'}>
               <label className="block text-gray-400 text-sm mb-2">Time Until Curve Expiry</label>
@@ -987,6 +1033,7 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
     </div>
   );
 };
+
   const renderContent = () => {
     if (activeTab === 'marketplace') {
       return (

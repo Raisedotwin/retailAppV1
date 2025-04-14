@@ -264,7 +264,7 @@ const TraderPageContent: React.FC = () => {
   //http://localhost:3000
   // 2. Set up the page link (synchronous operation)
   const pageLink = useMemo(() => {
-    return `https://popcurves.vercel.app/trader?name=${params.name}&logo=${params.logo}&username=${params.username}&contractAddress=${params.contractAddress}`;
+    return `http://localhost:3000/trader?name=${params.name}&logo=${params.logo}&username=${params.username}&contractAddress=${params.contractAddress}`;
   }, [params.name, params.logo, params.username, params.contractAddress]);
 
   // 3. Check auth status early

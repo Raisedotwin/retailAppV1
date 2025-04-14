@@ -130,7 +130,9 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
 };
 
 // Beta mode configuration
-const BETA_MODE = true; // Toggle this to enable/disable beta mode
+// Configuration parameters
+const BETA_MODE = false; // Toggle this to enable/disable beta mode
+const MAINTENANCE_MODE = true; // Toggle this to enable/disable maintenance mode
 const APPROVED_ADDRESSES = [
   '0x42b93B8d07eee075B851F5b488Ef6B7db148F470', 
   '0x33DCCe8EbA08DF90047fB581a2A56548a0d697Ff'
@@ -599,6 +601,52 @@ const MarketplacePage: React.FC = () => {
     });
   };
 
+  // Maintenance Mode Component
+const MaintenancePage: React.FC = () => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-purple-900 via-indigo-800 to-blue-900">
+    <div className="max-w-md w-full mx-auto p-8 bg-white rounded-xl shadow-2xl text-center relative overflow-hidden">
+      {/* Decorative elements */}
+      <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500"></div>
+      <div className="absolute -top-20 -left-20 w-40 h-40 bg-purple-200 rounded-full opacity-20"></div>
+      <div className="absolute -bottom-20 -right-20 w-40 h-40 bg-blue-200 rounded-full opacity-20"></div>
+      
+      {/* Icon */}
+      <div className="relative mb-6">
+        <div className="w-24 h-24 bg-purple-100 rounded-full mx-auto flex items-center justify-center">
+          <svg className="w-12 h-12 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+        </div>
+        <div className="absolute -right-2 top-0 animate-bounce">
+          <svg className="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"></path>
+          </svg>
+        </div>
+      </div>
+      
+      {/* Content */}
+      <h1 className="text-3xl font-extrabold text-gray-900 mb-3">Site Under Maintenance</h1>
+      <p className="text-lg text-gray-600 mb-6">
+        We're currently upgrading our marketplace to provide you with an even better experience.
+      </p>
+      <p className="text-gray-500 mb-8">
+        Please check back soon! Our team is working hard to get everything up and running.
+      </p>
+      
+      {/* Progress bar */}
+      <div className="w-full bg-gray-200 rounded-full h-3 mb-6">
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 h-3 rounded-full w-3/4 animate-pulse"></div>
+      </div>
+      
+      {/* Contact info */}
+      <div className="text-sm text-gray-500">
+        <p>For urgent inquiries, please contact us at:</p>
+        <p className="font-medium text-purple-600">support@yourmarketplace.com</p>
+      </div>
+    </div>
+  </div>
+);
+
   // Component for access denied state
   const AccessDenied = () => (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -634,6 +682,10 @@ const MarketplacePage: React.FC = () => {
   if (BETA_MODE && !hasAccess) {
     return <AccessDenied />;
   }
+
+if (MAINTENANCE_MODE) {
+  return <MaintenancePage />;
+}
 
   return (
     <>

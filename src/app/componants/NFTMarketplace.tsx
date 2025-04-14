@@ -825,7 +825,7 @@ useEffect(() => {
                                disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {modalState.isLoadingPrice ? 'Checking...' : 
-                       isProcessing ? 'Processing...' : 'Buy Now'}
+                       isProcessing ? 'Processing...' : 'Reserve'}
                     </button>
                   </div>
                 </div>
@@ -1078,7 +1078,7 @@ useEffect(() => {
           className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all disabled:opacity-50"
         >
           {modalState.isLoadingPrice ? 'Calculating Price...' : 
-          isProcessing ? 'Processing...' : 'Purchase Now'}
+          isProcessing ? 'Processing...' : 'Reserve Now'}
         </button>
       </div>
     </div>
