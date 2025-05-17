@@ -1292,39 +1292,37 @@ const fetchTwitterProfileImage = async (username: string): Promise<string> => {
             </form>
           </div>
 
-        {/* Curves Section */}
-        <div className="mt-8 grid grid-cols-2 gap-4">
-          <button
-            onClick={() => setShowOpenCurveModal(true)}
-            className="p-6 bg-gray-800/30 backdrop-blur-md rounded-2xl border border-gray-700/50 hover:border-purple-500/50 transition-all duration-200 group"
-          >
-          <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 p-4 rounded-xl mb-4 group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all duration-200">
-            <span className="text-2xl">🔓</span>
-          </div>
-          <h3 className="text-xl font-semibold text-white mb-2">Open Curves</h3>
-          <p className="text-gray-400 text-sm mb-2">Create an open trading curve</p>
-          <div className="bg-purple-500/10 rounded-lg p-3 mt-2">
-          <p className="text-xs text-gray-400 leading-relaxed">
-            Customers can redeem or order items during the price discovery period.
-          </p>
-          </div>
-          </button>
-          <button
-            onClick={() => setShowClosedCurveModal(true)}
-            className="p-6 bg-gray-800/30 backdrop-blur-md rounded-2xl border border-gray-700/50 hover:border-pink-500/50 transition-all duration-200 group"
-          >
-          <div className="bg-gradient-to-r from-pink-500/20 to-purple-500/20 p-4 rounded-xl mb-4 group-hover:from-pink-500/30 group-hover:to-purple-500/30 transition-all duration-200">
-            <span className="text-2xl">🔒</span>
-          </div>
-          <h3 className="text-xl font-semibold text-white mb-2">Closed Curves</h3>
-            <p className="text-gray-400 text-sm mb-2">Create a closed trading curve</p>
-            <div className="bg-pink-500/10 rounded-lg p-3 mt-2">
-            <p className="text-xs text-gray-400 leading-relaxed">
-              Redemptions or orders can only be made after the price discovery period ends.
-            </p>
-          </div>
-          </button>
-        </div>
+{/* Curves Section */}
+<div className="mt-8 grid grid-cols-2 gap-4">
+  <button
+    onClick={() => setShowOpenCurveModal(true)}
+    className="p-6 bg-gray-800/30 backdrop-blur-md rounded-2xl border border-gray-700/50 hover:border-purple-500/50 transition-all duration-200 group text-left"
+  >
+    <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 p-4 rounded-xl mb-4 group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all duration-200">
+      <span className="text-2xl">🔓</span>
+    </div>
+    <h3 className="text-xl font-semibold text-white mb-2">Create Smart Store</h3>
+    <p className="text-gray-400 text-sm mb-2">Start One Today!</p>
+    <div className="bg-purple-500/10 rounded-lg p-3 mt-2">
+      <p className="text-xs text-gray-400 leading-relaxed">
+        Retail shops where products start at below-market prices and rise naturally with demand, rewarding early customers with the best deals.
+      </p>
+    </div>
+  </button>
+  
+  <div className="p-6 bg-gray-800/30 backdrop-blur-md rounded-2xl border border-gray-700/50 opacity-70 cursor-not-allowed">
+    <div className="bg-gradient-to-r from-pink-500/10 to-purple-500/10 p-4 rounded-xl mb-4">
+      <span className="text-2xl">🔒</span>
+    </div>
+    <h3 className="text-xl font-semibold text-white mb-2">Product Launches</h3>
+    <p className="text-gray-400 text-sm mb-2">Coming Soon</p>
+    <div className="bg-pink-500/10 rounded-lg p-3 mt-2">
+      <p className="text-xs text-gray-400 leading-relaxed">
+        Our product launch feature is currently under development. Stay tuned!
+      </p>
+    </div>
+  </div>
+</div>
         </div>
       );
     }

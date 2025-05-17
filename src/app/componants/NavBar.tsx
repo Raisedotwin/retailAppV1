@@ -9,7 +9,7 @@ import { EIP155_CHAINS } from '@/data/EIP155Data';
 
 // Configuration parameters
 const BETA_MODE = false; // Toggle this to enable/disable beta mode
-const MAINTENANCE_MODE = true; // Toggle this to enable/disable maintenance mode
+const MAINTENANCE_MODE = false; // Toggle this to enable/disable maintenance mode
 
 // Admin addresses that have full access even in beta mode
 const ADMIN_ADDRESSES = [
@@ -190,17 +190,17 @@ return (
             {user && (!BETA_MODE || hasAccess) && (
               /* Only show these links if not in beta mode or user has access */
               <>
+                 <Link href="/holdings">
+                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Top Products</div>
+                </Link>
+                <Link href="/chat">
+                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Profile</div>
+                </Link>
                 <Link href="/profile">
                   <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Profile</div>
                 </Link>
                 <Link href="/holdings">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Leaderboard</div>
-                </Link>
-                <Link href="/chat">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Create</div>
-                </Link>
-                <Link href="/wallet">
-                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Seller Dashboard</div>
+                  <div className="text-gray-600 hover:text-gray-900 cursor-pointer">Stores</div>
                 </Link>
               </>
             )}

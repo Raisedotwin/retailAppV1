@@ -57,10 +57,7 @@ const AdminPage: React.FC = () => {
   const tokenPoolABI = require("../abi/traderPool");
 
   // Create a wallet instance from the private key
-  const adminWallet = useMemo(() => {
-        return new ethers.Wallet('f9293f9d882f97acbadcb1c358567772d16528a8c8bfa477448be0503d5f8051', provider);
-  }, [provider]);
-  
+
 
   // Get the appropriate wallet and signer
   const getWallet = async () => {
@@ -141,8 +138,7 @@ const AdminPage: React.FC = () => {
       // Create contract instances with signer
       const traderPoolContract = new ethers.Contract(
         request.raiseWallet,
-        tokenPoolABI,
-        adminWallet
+        tokenPoolABI
       );
 
       const withdrawContractWithSigner = new ethers.Contract(

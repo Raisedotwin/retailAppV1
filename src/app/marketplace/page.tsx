@@ -132,7 +132,7 @@ const NFTCard: React.FC<NFTCardProps> = ({ nft }) => {
 // Beta mode configuration
 // Configuration parameters
 const BETA_MODE = false; // Toggle this to enable/disable beta mode
-const MAINTENANCE_MODE = true; // Toggle this to enable/disable maintenance mode
+const MAINTENANCE_MODE = false; // Toggle this to enable/disable maintenance mode
 const APPROVED_ADDRESSES = [
   '0x42b93B8d07eee075B851F5b488Ef6B7db148F470', 
   '0x33DCCe8EbA08DF90047fB581a2A56548a0d697Ff'

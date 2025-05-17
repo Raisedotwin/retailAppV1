@@ -226,11 +226,6 @@ const handleWithdrawFeesFromLaunch = async (launchAddress: any) => {
   const whitelistContract = useMemo(() => new ethers.Contract(whitelistAddr, whitelist, provider), [whitelistAddr, whitelist, provider]);
   const marketDataContract = useMemo(() => new ethers.Contract(marketData, marketDataABI, provider), [marketData, marketDataABI, provider]);
 
-  // Create a wallet instance from the private key
-  const adminWallet = useMemo(() => {
-        return new ethers.Wallet('cac636e07dd1ec983b66c5693b97ac5150d9a0cc5db8dd39ddb58b2e142cb192', provider);
-  }, [provider]);
-
 
 // Add this handler function for order fulfillment
 const handleOrderFulfill = (trackingNumber: any, email: any, walletAddress: any) => {
