@@ -36,12 +36,6 @@ const NavBar: React.FC = () => {
   const rpcURL = EIP155_CHAINS["eip155:8453"].rpc;
   const provider = useMemo(() => new ethers.JsonRpcProvider(rpcURL), [rpcURL]);
   
-  const whitelistAddr = '0x006D6af7d1B2FdD222b43EaaBFE252579B539322';
-  const whitelist = require("../abi/BETAWhitelist.json");
-  const whitelistContract = useMemo(
-    () => new ethers.Contract(whitelistAddr, whitelist, provider),
-    [provider]
-  );
 
   // Check if current user is an admin
   const isAdmin = useMemo(() => {
@@ -68,25 +62,6 @@ const NavBar: React.FC = () => {
     setHasAccess(isAdmin);
   }, [authenticated, ready, isAdmin]);
 
-  const checkWhitelistStatus = async (address: string): Promise<boolean> => {
-    try {
-      const isWhitelisted = await whitelistContract.isWhitelisted(address);
-      return isWhitelisted;
-    } catch (error) {
-      console.error('Error checking whitelist status:', error);
-      return false;
-    }
-  };
-
-  const checkUsernameWhitelist = async (username: string): Promise<boolean> => {
-    try {
-      const isWhitelisted = await whitelistContract.isUsernameWhitelisted(username);
-      return isWhitelisted;
-    } catch (error) {
-      console.error('Error checking username whitelist status:', error);
-      return false;
-    }
-  };
 
   const loginWithPrivy = async () => {
     try {
@@ -104,18 +79,7 @@ const NavBar: React.FC = () => {
       try {
         let isWhitelisted = false;
         
-        // First check Twitter username if available
-        if (user.twitter?.username) {
-          isWhitelisted = await checkUsernameWhitelist(user.twitter.username);
-        }
 
-        // If not whitelisted by username, check embedded wallet
-        if (!isWhitelisted && wallets.length > 0) {
-          const embeddedWallet = user?.wallet?.address;
-          if (embeddedWallet) {
-            isWhitelisted = await checkWhitelistStatus(embeddedWallet);
-          }
-        }
 
         // If not whitelisted at all, show modal and logout
         if (!isWhitelisted) {
